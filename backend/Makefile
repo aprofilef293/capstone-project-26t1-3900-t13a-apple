@@ -1,4 +1,4 @@
-.PHONY: install dev format lint fix check test docker-up docker-down clean loc
+.PHONY: install dev format lint fix check test all docker-up docker-down clean loc
 
 install:
 	poetry install
@@ -21,6 +21,8 @@ check:
 
 test:
 	poetry run pytest
+
+all: format fix lint test
 
 docker-up:
 	docker compose up -d
