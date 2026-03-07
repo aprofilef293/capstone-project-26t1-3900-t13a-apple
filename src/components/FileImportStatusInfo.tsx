@@ -1,10 +1,10 @@
-import { CheckCircle } from "lucide-react";
+import { CheckCircle, XCircle } from "lucide-react";
 import { Progress } from "./ui/progress";
 import { useStore } from "../store/useStore";
 import { formatDate } from "../lib/utils";
 
 export function FileImportStatusInfo() {
-    const { fileName, importStatus, importProgress, importDate } = useStore();
+    const { fileName, importStatus, importProgress, importDate, importError } = useStore();
     
     return (
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -29,6 +29,12 @@ export function FileImportStatusInfo() {
                     <div className="flex items-center gap-1.5 text-green-500">
                         <span className="text-xs">Complete</span>
                         <CheckCircle className="w-4 h-4" />
+                    </div>
+                )}
+                {importStatus === 'error' && (
+                    <div className="flex items-center gap-1.5 text-red-500">
+                        <span className="text-xs">Failed</span>
+                        <XCircle className="w-4 h-4" />
                     </div>
                 )}
                 {importStatus === 'idle' && (
