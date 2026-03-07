@@ -111,7 +111,7 @@ export function NodeDetailsPanel() {
                 <h2 className="text-xl font-bold text-sidebar-foreground mb-1 leading-tight">{node.label}</h2>
             </div>
 
-            <ScrollArea className="flex-1 pb-6 px-6 pt-6">
+            <ScrollArea className="flex-1 min-h-0 pb-6 px-6 pt-6">
                 {/* Connections */}
                 <div className="mb-8">
                     <h3 className="text-xs font-bold text-sidebar-foreground mb-3 flex items-center gap-2 uppercase tracking-wider">

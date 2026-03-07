@@ -18,34 +18,66 @@ export function ExplorerToolbar({
     viewMode: "graph" | "hierarchy";
     onViewModeChange: (mode: "graph" | "hierarchy") => void;
 }) {
-    const { nodes, edges, viewLevel, searchQuery } = useStore();
+    const { nodes, edges, viewLevel, searchQuery, selectedNodeId } = useStore();
 
     const deferredSearchQuery = useDeferredValue(searchQuery);
 
-    // Calculate visible stats based on current filters
+    // Calculate visible stats based on current filters and community isolation
     const { visibleNodeCount, visibleEdgeCount } = useMemo(() => {
         const lowerQuery = deferredSearchQuery.toLowerCase();
-        const visibleNodes = nodes.filter(n => {
-            const nodeViewLevel = (n.attributes as Record<string, unknown>)?.viewLevel;
-            const level = typeof nodeViewLevel === 'number' ? nodeViewLevel : 1;
-            return level >= viewLevel &&
-                (!deferredSearchQuery || (n.label || "").toLowerCase().includes(lowerQuery));
+        const baseFilteredNodes = nodes.filter(n => {
+            const level = ((n.attributes as Record<string, unknown>)?.viewLevel as number) ?? 1;
+            const matchesSearch = !!selectedNodeId || !lowerQuery || (n.label || "").toLowerCase().includes(lowerQuery);
+            return level >= viewLevel && matchesSearch;
         });
 
-        const visibleNodeIds = new Set(visibleNodes.map(n => n.id));
+        let finalNodeIds: Set<string>;
+
+        if (selectedNodeId) {
+            const selectedNode = nodes.find(n => n.id === selectedNodeId);
+            if (!selectedNode) {
+                finalNodeIds = new Set(baseFilteredNodes.map(n => n.id));
+            } else {
+                const selectedLouvain = (selectedNode.attributes as Record<string, unknown>)?.louvain;
+
+                const relatedIds = new Set<string>();
+                relatedIds.add(selectedNodeId);
+
+                // Add neighbors
+                for (const edge of edges) {
+                    if (edge.source === selectedNodeId) relatedIds.add(edge.target);
+                    else if (edge.target === selectedNodeId) relatedIds.add(edge.source);
+                }
+
+                // Add community members
+                if (selectedLouvain !== undefined) {
+                    for (const node of nodes) {
+                        if ((node.attributes as Record<string, unknown>)?.louvain === selectedLouvain) {
+                            relatedIds.add(node.id);
+                        }
+                    }
+                }
+                const visibleIds = baseFilteredNodes
+                    .filter(n => relatedIds.has(n.id))
+                    .map(n => n.id);
+                finalNodeIds = new Set(visibleIds);
+            }
+        } else {
+            finalNodeIds = new Set(baseFilteredNodes.map(n => n.id));
+        }
 
         // Edges are only visible if both source and target are visible
         const visibleEdges = edges.filter(e =>
-            visibleNodeIds.has(e.source) && visibleNodeIds.has(e.target)
+            finalNodeIds.has(e.source) && finalNodeIds.has(e.target)
         );
 
-        return { visibleNodeCount: visibleNodes.length, visibleEdgeCount: visibleEdges.length };
-    }, [nodes, edges, viewLevel, deferredSearchQuery]);
+        return { visibleNodeCount: finalNodeIds.size, visibleEdgeCount: visibleEdges.length };
+    }, [nodes, edges, viewLevel, deferredSearchQuery, selectedNodeId]);
 
     return (
-        <div className="absolute top-6 left-6 right-6 z-20 flex gap-4 pointer-events-none transition-all duration-300">
+        <div className="absolute top-6 left-6 right-6 z-20 flex items-start justify-between gap-4 pointer-events-none transition-all duration-300">
             {/* View Toggles */}
-            <div className="flex bg-sidebar/95 backdrop-blur-sm border border-sidebar-border rounded-lg p-1.5 shadow-sm pointer-events-auto">
+            <div className="flex shrink-0 bg-sidebar/95 backdrop-blur-sm border border-sidebar-border rounded-lg p-1.5 shadow-sm pointer-events-auto">
                 {VIEW_MODES.map(({ mode, label, icon: Icon }) => (
                     <Button
                         key={mode}
@@ -64,10 +96,12 @@ export function ExplorerToolbar({
             </div>
 
             {/* Search Bar */}
-            <ExplorerSearch />
+            <div className="flex-1 flex justify-center min-w-0">
+                <ExplorerSearch />
+            </div>
 
             {/* Metrics Badge */}
-            <div className="absolute right-0 top-0 bg-sidebar/95 backdrop-blur-sm border border-sidebar-border rounded-lg px-2.5 py-1.5 shadow-sm text-[10px] sm:text-xs font-medium flex flex-col items-end gap-0.5 text-muted-foreground pointer-events-auto leading-tight">
+            <div className="bg-sidebar/95 shrink-0 backdrop-blur-sm border border-sidebar-border rounded-lg px-2.5 py-1.5 shadow-sm text-[10px] sm:text-xs font-medium flex flex-col items-end gap-0.5 text-muted-foreground pointer-events-auto leading-tight">
                 <span><strong className="text-foreground">{visibleNodeCount.toLocaleString()}</strong> Nodes</span>
                 <span><strong className="text-foreground">{visibleEdgeCount.toLocaleString()}</strong> Connections</span>
             </div>
