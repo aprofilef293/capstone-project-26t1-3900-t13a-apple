@@ -27,6 +27,16 @@ interface ExplorerState {
     setSelectedNodeId: (id: string | null) => void;
     setGraphData: (nodes: GraphNode[], edges: GraphEdge[]) => void;
     setSearchQuery: (query: string) => void;
+    // File import
+    fileName: string | null;
+    importStatus: 'idle' | 'loading' | 'complete'| 'error';
+    importError: string | null;
+    importProgress: number;
+    importDate: Date | null;
+    startFileImport: (fileName: string) => void;
+    setImportProgress: (progress: number) => void;
+    completeImport: () => void;
+    failImport: (error: string) => void;
 }
 
 export const useStore = create<ExplorerState>((set) => ({
@@ -36,5 +46,15 @@ export const useStore = create<ExplorerState>((set) => ({
     searchQuery: "",
     setSelectedNodeId: (id) => set({ selectedNodeId: id }),
     setGraphData: (nodes, edges) => set({ nodes, edges }),
-    setSearchQuery: (query) => set({ searchQuery: query })
+    setSearchQuery: (query) => set({ searchQuery: query }),
+    // File import
+    fileName: null,
+    importStatus: 'idle',
+    importProgress: 0,
+    importDate: null,
+    importError: null,
+    startFileImport: (fileName) => set({ fileName, importStatus: 'loading', importProgress: 0, importDate: new Date() }),
+    setImportProgress: (progress) => set({ importProgress: progress }),
+    completeImport: () => set({ importStatus: 'complete', importProgress: 100 }),
+    failImport: (error) => set({ importStatus: 'error', importError: error }),
 }));
