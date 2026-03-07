@@ -89,8 +89,7 @@ def get_graph(
     limit: int = Query(
         200,
         le=1000,
-        description="Maximum number of OntologyTerm nodes to return (max 1000). "
-        "Edges are capped at 3x this value.",
+        description="Maximum number of OntologyTerm nodes to return (max 1000). Edges are capped at 3x this value.",
     ),
 ):
     """Fetch OntologyTerm nodes and their relationships from Memgraph.
