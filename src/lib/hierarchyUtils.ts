@@ -68,9 +68,37 @@ export function buildHierarchyFromGraph(nodes: GraphNode[], edges: GraphEdge[]):
         }
     });
 
-    // If there are no roots , just return nodes with some visual structure
+    // If there are no roots, treat all nodes as roots (disconnected scatter plot)
     if (rootNodes.length === 0 && nodes.length > 0) {
-        return nodes.map(n => nodeMap.get(n.id)!);
+        rootNodes.push(...nodes.map(n => nodeMap.get(n.id)!));
+    }
+
+    if (rootNodes.length > 50) {
+        const groupedRoots = new Map<string, HierarchyNode>();
+        const getGroupKey = (name: string): string => {
+            const firstChar = (name || '').charAt(0).toUpperCase();
+            return /[A-Z]/.test(firstChar) ? firstChar : '#';
+        };
+
+        rootNodes.forEach(node => {
+            const key = getGroupKey(node.name);
+            if (!groupedRoots.has(key)) {
+                groupedRoots.set(key, {
+                    id: `group-${key}`,
+                    name: `Library ${key}`,
+                    type: 'folder',
+                    children: []
+                });
+            }
+            groupedRoots.get(key)!.children!.push(node);
+        });
+
+        // Return alphabetically sorted A-Z folders
+        return Array.from(groupedRoots.values()).sort((a, b) => {
+            if (a.name === 'Library #') return 1;
+            if (b.name === 'Library #') return -1;
+            return a.name.localeCompare(b.name);
+        });
     }
 
     return rootNodes;

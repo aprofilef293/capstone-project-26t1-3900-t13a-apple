@@ -1,8 +1,11 @@
-import { useEffect, useCallback, useMemo, useRef, forwardRef, useImperativeHandle } from "react";
+import { useEffect, useCallback, useMemo, useRef, forwardRef, useImperativeHandle, useDeferredValue } from "react";
 import { SigmaContainer, useSigma, useRegisterEvents, useCamera } from "@react-sigma/core";
 import "@react-sigma/core/lib/style.css";
 import { useStore } from "../store/useStore";
 import { useTheme } from "./theme-provider";
+import { NodeBorderProgram } from "@sigma/node-border";
+import { EdgeLineProgram } from "sigma/rendering";
+import { adjustColorBrightness } from "../lib/utils";
 
 /** Scale factor applied to a selected node. */
 const SELECTED_SCALE = 1.25;
@@ -19,6 +22,9 @@ interface NodeAttributes {
     highlighted?: boolean;
     hidden?: boolean;
     nodeType?: string;
+    type?: string;
+    borderColor?: string;
+    borderSize?: number;
     [key: string]: unknown;
 }
 
@@ -40,6 +46,7 @@ interface SigmaDrawingSettings {
 export interface GraphViewRef {
     zoomIn: () => void;
     zoomOut: () => void;
+    resetCamera: () => void;
 }
 
 // ---------------------------------------------------------------------------
@@ -50,28 +57,92 @@ const GraphManager = forwardRef<GraphViewRef, unknown>((_, ref) => {
     const sigma = useSigma();
     const camera = useCamera({ duration: 250 });
     const registerEvents = useRegisterEvents();
-    const { nodes, edges, selectedNodeId, setSelectedNodeId, searchQuery } = useStore();
+    const { nodes, edges, selectedNodeId, setSelectedNodeId, searchQuery, viewLevel } = useStore();
     const lastClickedNodeRef = useRef(false);
+    const { resolvedTheme } = useTheme();
+    const isDark = resolvedTheme === "dark";
+
+    // Defer the search query to prevent input lag on heavy graphs
+    const deferredSearchQuery = useDeferredValue(searchQuery);
+
+
 
     useImperativeHandle(ref, () => ({
         zoomIn: camera.zoomIn,
         zoomOut: camera.zoomOut,
+        resetCamera: () => camera.reset({ duration: 500 }),
     }));
 
     // Sync graph data from store → Sigma
     useEffect(() => {
         const graph = sigma.getGraph();
-        graph.clear();
+        const themeEdgeColor = isDark ? "rgba(255,255,255,0.15)" : "rgba(0,0,0,0.15)";
 
+        if (graph.order === 0 && nodes.length > 0) {
+            // Massive initial load – format for Graphology native import
+            const importNodes = nodes.map(({ type, ...data }) => ({
+                key: data.id,
+                attributes: { ...data, nodeType: type }
+            }));
+
+            const importEdges = edges.map((e) => ({
+                key: e.id,
+                source: e.source,
+                target: e.target,
+                attributes: { ...e, color: themeEdgeColor }
+            }));
+
+            graph.import({
+                nodes: importNodes,
+                edges: importEdges
+            });
+            return;
+        }
+
+        // --- Incremental updates (Graph already has data) ---
+        // 1. Determine incoming node/edge IDs
+        const incomingNodeIds = new Set(nodes.map(n => n.id));
+        const incomingEdgeIds = new Set(edges.map(e => e.id));
+
+        // 2. Remove nodes and edges that no longer exist
+        graph.forEachNode((id: string) => {
+            if (!incomingNodeIds.has(id)) {
+                graph.dropNode(id);
+            }
+        });
+
+        graph.forEachEdge((id: string) => {
+            if (!incomingEdgeIds.has(id)) {
+                graph.dropEdge(id);
+            }
+        });
+
+        // 3. Add or update nodes with static X/Y positions
         for (const { type, ...data } of nodes) {
-            graph.addNode(data.id, { ...data, nodeType: type });
-        }
-        for (const edge of edges) {
-            graph.addEdge(edge.source, edge.target, { ...edge });
+            if (!graph.hasNode(data.id)) {
+                graph.addNode(data.id, { ...data, nodeType: type });
+            } else {
+                graph.mergeNodeAttributes(data.id, {
+                    ...data,
+                    nodeType: type,
+                    x: data.x,
+                    y: data.y
+                });
+            }
         }
 
-        requestAnimationFrame(() => camera.reset({ duration: 500 }));
-    }, [nodes, edges, sigma, camera]);
+        // 4. Add or update edges with theme-aware color
+        for (const edge of edges) {
+            const edgeAttrs = { ...edge, color: themeEdgeColor };
+            if (!graph.hasEdge(edge.id)) {
+                graph.addEdgeWithKey(edge.id, edge.source, edge.target, edgeAttrs);
+            } else {
+                graph.mergeEdgeAttributes(edge.id, edgeAttrs);
+            }
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [nodes, edges, isDark, sigma]);
+
 
     // Click interactions
     useEffect(() => {
@@ -90,42 +161,90 @@ const GraphManager = forwardRef<GraphViewRef, unknown>((_, ref) => {
         });
     }, [registerEvents, setSelectedNodeId, sigma]);
 
-    // Highlight & enlarge the selected node via nodeReducer
+    const largestNodesIds = useMemo(() => {
+        const communityMaxNodes = new Map<string | number, { id: string; size: number }>();
+
+        nodes.forEach(node => {
+            const attrs = node.attributes as Record<string, unknown>;
+            const louvain = attrs?.louvain as string | number | undefined;
+            const size = node.size ?? DEFAULT_NODE_SIZE;
+
+            const isHub = attrs?.viewLevel === 5;
+
+            if (louvain !== undefined) {
+                const currentMax = communityMaxNodes.get(louvain);
+                if (!currentMax || size > currentMax.size) {
+                    communityMaxNodes.set(louvain, { id: node.id, size });
+                }
+            } else if (isHub) {
+                communityMaxNodes.set(`hub-${node.id}`, { id: node.id, size });
+            }
+        });
+
+        return new Set(Array.from(communityMaxNodes.values()).map(n => n.id));
+    }, [nodes]);
+
     useEffect(() => {
         sigma.setSetting("nodeReducer", (node: string, data: NodeAttributes) => {
-            if (node !== selectedNodeId) return data;
+            const isSelected = node === selectedNodeId;
+            const originalSize = data.size ?? DEFAULT_NODE_SIZE;
+            const finalSize = isSelected ? originalSize * SELECTED_SCALE : originalSize;
 
-            return {
+            const newData = {
                 ...data,
-                size: (nodes.find((n) => n.id === node)?.size ?? DEFAULT_NODE_SIZE) * SELECTED_SCALE,
-                highlighted: true,
+                size: finalSize,
+                highlighted: isSelected,
             };
+
+            if (largestNodesIds.has(node)) {
+                newData.type = "border";
+                newData.borderColor = isDark ? "#ffffff" : "#000000";
+                newData.borderSize = 0.15; // Proportional border size
+
+                if (data.color) {
+                    newData.color = adjustColorBrightness(data.color, isDark ? 25 : -20);
+                }
+            }
+
+            return newData;
         });
 
         return () => {
             sigma.setSetting("nodeReducer", null);
         };
-    }, [selectedNodeId, nodes, sigma]);
+    }, [selectedNodeId, largestNodesIds, isDark, sigma]);
 
-    // Search filtering – hide non-matching nodes and their edges
     useEffect(() => {
         const graph = sigma.getGraph();
-        const query = searchQuery.toLowerCase();
+        // Calculate lowercase query once per render instead of per node
+        const query = deferredSearchQuery.toLowerCase();
 
+        // Track visible nodes so we can efficiently filter edges without querying graph attributes 
+        const visibleNodes = new Set<string>();
+
+        // 1. Update node visibility
         graph.forEachNode((id: string, attrs: NodeAttributes) => {
-            const matches = !searchQuery || String(attrs.label ?? "").toLowerCase().includes(query);
-            graph.setNodeAttribute(id, "hidden", !matches);
+            const matchesSearch = !query || String(attrs.label ?? "").toLowerCase().includes(query);
+            const nodeViewLevel = (attrs.attributes as Record<string, unknown>)?.viewLevel;
+            const level = typeof nodeViewLevel === 'number' ? nodeViewLevel : 1;
+            const matchesLevel = level >= viewLevel;
+
+            const isVisible = matchesSearch && matchesLevel;
+            graph.setNodeAttribute(id, "hidden", !isVisible);
+
+            if (isVisible) {
+                visibleNodes.add(id);
+            }
         });
 
+        // 2. Update edge visibility (edge is hidden if EITHER source or target is hidden)
         graph.forEachEdge(
             (edge: string, _attrs: EdgeAttributes, source: string, target: string) => {
-                const hidden =
-                    (graph.getNodeAttribute(source, "hidden") as boolean | undefined) ||
-                    (graph.getNodeAttribute(target, "hidden") as boolean | undefined);
-                graph.setEdgeAttribute(edge, "hidden", !!hidden);
+                const hidden = !visibleNodes.has(source) || !visibleNodes.has(target);
+                graph.setEdgeAttribute(edge, "hidden", hidden);
             },
         );
-    }, [searchQuery, sigma]);
+    }, [deferredSearchQuery, viewLevel, sigma]);
 
     return null;
 });
@@ -192,6 +311,10 @@ export const GraphView = forwardRef<GraphViewRef, unknown>((_, ref) => {
         () => ({
             allowInvalidContainer: true,
             renderLabels: true,
+            renderEdgeLabels: false, // Don't render text on edges
+            labelDensity: 0.5, // Only show labels for prominent nodes when zoomed out
+            labelGridCellSize: 100, // Increase grid size to cull overlapping labels
+            zoomToSizeRatioFunction: (ratio: number) => ratio,
             labelFont: "Inter, system-ui, sans-serif",
             labelSize: 11,
             labelWeight: "500",
@@ -211,6 +334,13 @@ export const GraphView = forwardRef<GraphViewRef, unknown>((_, ref) => {
                 ctx.fillStyle = colours.label;
                 ctx.fillText(data.label, data.x + data.size + 4, data.y + settings.labelSize / 3);
             },
+            nodeProgramClasses: {
+                border: NodeBorderProgram,
+            },
+            edgeProgramClasses: {
+                line: EdgeLineProgram,
+            },
+            defaultEdgeType: "line",
         }),
         [colours, drawOverlay],
     );
