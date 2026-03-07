@@ -1,18 +1,41 @@
 [project]
-name = "backend"
+name = "obo-explorer-backend"
 version = "0.1.0"
-description = ""
-authors = [
-    {name = "aprofilef293",email = "w08084975@gmail.com"}
-]
+description = "FastAPI backend for OBO Ontology Explorer"
 readme = "README.md"
-requires-python = ">=3.14"
-dependencies = [
-]
+requires-python = ">=3.11"
 
 [tool.poetry]
-packages = [{include = "backend", from = "src"}]
+name = "obo-explorer-backend"
+version = "0.1.0"
+description = "FastAPI backend for OBO Ontology Explorer"
+package-mode = false
+
+[tool.poetry.dependencies]
+python = "^3.11"
+fastapi = {version = ">=0.115.0", extras = ["standard"]}
+uvicorn = {version = ">=0.34.0", extras = ["standard"]}
+pydantic = ">=2.10.0"
+pydantic-settings = ">=2.7.0"
+neo4j = ">=5.27.0"
+pronto = ">=2.5.0"
+python-multipart = ">=0.0.18"
+httpx = ">=0.28.0"
+
+[tool.poetry.group.dev.dependencies]
+pytest = ">=8.0"
+ruff = ">=0.8.0"
 
 [build-system]
-requires = ["poetry-core>=2.0.0,<3.0.0"]
+requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
+
+[tool.ruff]
+line-length = 120
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I"]
+
+[tool.ruff.format]
+quote-style = "double"
