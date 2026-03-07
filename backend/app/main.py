@@ -36,6 +36,11 @@ def create_app() -> FastAPI:
     app = FastAPI(
         title="OBO Explorer API",
         version="0.1.0",
+        description=(
+            "REST API for browsing OBO ontology graphs stored in Memgraph. "
+            "Returns nodes and edges in Graphology JSON format for rendering "
+            "with Sigma.js on the frontend."
+        ),
         lifespan=lifespan,
     )
     app.add_middleware(

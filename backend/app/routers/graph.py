@@ -79,9 +79,26 @@ def _build_graph_data(node_records: list[dict], edge_records: list[dict]) -> Gra
     return GraphData(nodes=nodes, edges=edges)
 
 
-@router.get("/", response_model=GraphData)
-def get_graph(request: Request, limit: int = Query(200, le=1000)):
-    """Return all graph nodes and edges, paginated by limit."""
+@router.get(
+    "/",
+    response_model=GraphData,
+    summary="Get ontology graph",
+)
+def get_graph(
+    request: Request,
+    limit: int = Query(
+        200,
+        le=1000,
+        description="Maximum number of OntologyTerm nodes to return (max 1000). "
+        "Edges are capped at 3x this value.",
+    ),
+):
+    """Fetch OntologyTerm nodes and their relationships from Memgraph.
+
+    Nodes are arranged in a circular layout and color-coded by namespace
+    (biological_process, molecular_function, cellular_component).
+    The response conforms to the Graphology JSON serialization format.
+    """
     mg = request.app.state.memgraph
     node_records = mg.execute_read(
         "MATCH (n:OntologyTerm) RETURN n LIMIT $limit",
