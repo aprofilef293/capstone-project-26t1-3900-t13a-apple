@@ -107,6 +107,32 @@ const GraphManager = forwardRef<GraphViewRef, unknown>((_, ref) => {
         };
     }, [selectedNodeId, nodes, sigma]);
 
+    // Highlight connected edges in red when node is selected
+    useEffect(() => {        
+        const graph = sigma.getGraph();
+        
+        sigma.setSetting("edgeReducer", (edge: string, data: EdgeAttributes) => {
+            // Get source and target from the graph using the edge key
+            const source = graph.source(edge);
+            const target = graph.target(edge);
+            
+            const isConnected = selectedNodeId && (source === selectedNodeId || target === selectedNodeId);
+            
+            if (isConnected) {
+                return {
+                    ...data,
+                    color: "#ef4444", // Red highlighted edges 
+                };
+            }
+            
+            return data;
+        });
+
+        return () => {
+            sigma.setSetting("edgeReducer", null);
+        };
+    }, [selectedNodeId, sigma]);
+
     // Search filtering – hide non-matching nodes and their edges
     useEffect(() => {
         const graph = sigma.getGraph();
