@@ -1,6 +1,6 @@
 import math
 
-from fastapi import APIRouter, Query, Request
+from fastapi import APIRouter, HTTPException, Query, Request
 
 from app.models.graph import GraphData, SerializedEdge, SerializedNode
 
@@ -79,6 +79,55 @@ def _build_graph_data(node_records: list[dict], edge_records: list[dict]) -> Gra
     return GraphData(nodes=nodes, edges=edges)
 
 
+def _build_graph_data_from_paths(records: list[dict]) -> GraphData:
+    """Build GraphData from MATCH results that return n, r, m columns."""
+    seen_node_ids: set[str] = set()
+    all_node_props: list[dict] = []
+    edge_tuples: list[tuple[str, str, str]] = []
+
+    for record in records:
+        n = record.get("n")
+        m = record.get("m")
+        if n:
+            n_props = dict(n) if hasattr(n, "items") else n
+            if n_props.get("id") and n_props["id"] not in seen_node_ids:
+                seen_node_ids.add(n_props["id"])
+                all_node_props.append(n_props)
+        if m:
+            m_props = dict(m) if hasattr(m, "items") else m
+            if m_props.get("id") and m_props["id"] not in seen_node_ids:
+                seen_node_ids.add(m_props["id"])
+                all_node_props.append(m_props)
+
+        r = record.get("r")
+        if r and n and m:
+            n_id = (dict(n) if hasattr(n, "items") else n).get("id", "")
+            m_id = (dict(m) if hasattr(m, "items") else m).get("id", "")
+            rel_type = dict(r).get("type", "RELATES_TO") if hasattr(r, "items") else "RELATES_TO"
+            if n_id and m_id:
+                edge_tuples.append((n_id, m_id, rel_type))
+
+    total = len(all_node_props)
+    nodes = [_node_from_record(props, i, total) for i, props in enumerate(all_node_props)]
+
+    seen_edge_ids: set[str] = set()
+    edges: list[SerializedEdge] = []
+    for source, target, rel_type in edge_tuples:
+        edge_id = f"{source}-{rel_type}-{target}"
+        if edge_id not in seen_edge_ids:
+            seen_edge_ids.add(edge_id)
+            edges.append(
+                SerializedEdge(
+                    key=edge_id,
+                    source=source,
+                    target=target,
+                    attributes={"color": "#334155", "type": rel_type, "label": rel_type},
+                )
+            )
+
+    return GraphData(nodes=nodes, edges=edges)
+
+
 @router.get(
     "/",
     response_model=GraphData,
@@ -110,3 +159,43 @@ def get_graph(
         {"limit": limit * 3},
     )
     return _build_graph_data(node_records, edge_records)
+
+
+@router.get(
+    "/node/{node_id}",
+    response_model=GraphData,
+    summary="Get node neighborhood",
+)
+def get_node_neighborhood(request: Request, node_id: str, depth: int = Query(1, ge=1, le=3)):
+    """Return a node and its neighbors up to `depth` hops."""
+    mg = request.app.state.memgraph
+
+    check = mg.execute_read("MATCH (n:OntologyTerm {id: $id}) RETURN n", {"id": node_id})
+    if not check:
+        raise HTTPException(status_code=404, detail=f"Node '{node_id}' not found")
+
+    cypher = (
+        f"MATCH (n:OntologyTerm {{id: $id}})-[r*1..{depth}]-(m:OntologyTerm) "
+        "WITH n, m "
+        "OPTIONAL MATCH (n)-[r2]-(m) "
+        "RETURN n, r2 AS r, m"
+    )
+    records = mg.execute_read(cypher, {"id": node_id})
+    return _build_graph_data_from_paths(records)
+
+
+@router.get(
+    "/search",
+    response_model=GraphData,
+    summary="Search graph nodes",
+)
+def search_graph(request: Request, q: str = Query(..., min_length=1)):
+    """Search nodes by name and return matching subgraph with neighbors."""
+    mg = request.app.state.memgraph
+    records = mg.execute_read(
+        "MATCH (n:OntologyTerm) WHERE toLower(n.name) CONTAINS toLower($q) "
+        "OPTIONAL MATCH (n)-[r]-(m:OntologyTerm) "
+        "RETURN n, r, m LIMIT 100",
+        {"q": q},
+    )
+    return _build_graph_data_from_paths(records)
