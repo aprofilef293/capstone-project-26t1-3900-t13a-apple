@@ -30,6 +30,16 @@ interface ExplorerState {
     setSearchQuery: (query: string) => void;
     setViewLevel: (level: number) => void;
     fetchGraphData: () => Promise<void>;
+    // File import
+    fileName: string | null;
+    importStatus: 'idle' | 'loading' | 'complete' | 'error';
+    importError: string | null;
+    importProgress: number;
+    importDate: Date | null;
+    startFileImport: (fileName: string) => void;
+    setImportProgress: (progress: number) => void;
+    completeImport: () => void;
+    failImport: (error: string) => void;
 }
 
 // Convert Graphology JSON format to our store format
@@ -86,5 +96,15 @@ export const useStore = create<ExplorerState>((set) => ({
             const { nodes, edges } = mapTestData();
             set({ nodes, edges });
         }
-    }
+    },
+    // File import
+    fileName: null,
+    importStatus: 'idle',
+    importProgress: 0,
+    importDate: null,
+    importError: null,
+    startFileImport: (fileName) => set({ fileName, importStatus: 'loading', importProgress: 0, importDate: new Date() }),
+    setImportProgress: (progress) => set({ importProgress: progress }),
+    completeImport: () => set({ importStatus: 'complete', importProgress: 100 }),
+    failImport: (error) => set({ importStatus: 'error', importError: error }),
 }));

@@ -2,6 +2,8 @@ import { FileUp } from "lucide-react";
 import { Button } from "./ui/button";
 import { cn } from "../lib/utils";
 import { useNavigate } from "@tanstack/react-router";
+import { useStore } from "@/store/useStore";
+import { useRef } from "react";
 
 interface UploadBoxProps {
     className?: string;
@@ -15,8 +17,18 @@ export function UploadBox({
     description = "or click to browse from your computer",
 }: UploadBoxProps) {
     const navigate = useNavigate();
+    const inputRef = useRef<HTMLInputElement>(null);
+    const startFileImport = useStore((s) => s.startFileImport);
 
     const handleUpload = () => {
+        navigate({ to: '/manager' });
+        inputRef.current?.click()
+    };
+
+    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        startFileImport(file.name);
         navigate({ to: '/manager' });
     };
 
@@ -28,6 +40,14 @@ export function UploadBox({
             <h3 className="text-xl font-semibold text-sidebar-foreground mb-2">{title}</h3>
             <p className="text-sm text-sidebar-foreground/60 mb-8">{description}</p>
             <div className="flex items-center gap-4 flex-col sm:flex-row">
+                <input
+                    ref={inputRef}
+                    type="file"
+                    accept=".obo,.owl"
+                    className="hidden"
+                    onChange={handleFileChange}
+                />
+                
                 <Button className="bg-blue-600 hover:bg-blue-700 text-white shadow-sm px-8" onClick={handleUpload}>
                     Select File
                 </Button>
