@@ -165,9 +165,27 @@ def get_graph(
     "/node/{node_id}",
     response_model=GraphData,
     summary="Get node neighborhood",
+    description="Return the variable-depth neighborhood of a single OntologyTerm node. "
+    "The response includes the target node, all neighbors within the requested depth, "
+    "and the edges between them. Returns 404 if the node does not exist.",
+    response_description="Subgraph containing the target node, its neighbors, and connecting edges.",
 )
-def get_node_neighborhood(request: Request, node_id: str, depth: int = Query(1, ge=1, le=3)):
-    """Return a node and its neighbors up to `depth` hops."""
+def get_node_neighborhood(
+    request: Request,
+    node_id: str,
+    depth: int = Query(
+        1,
+        ge=1,
+        le=3,
+        description="Number of hops from the target node (1–3). Higher values return a larger neighborhood.",
+    ),
+):
+    """Return the variable-depth neighborhood of a single OntologyTerm node.
+
+    Looks up the node identified by *node_id* and traverses up to *depth*
+    hops to collect neighboring nodes and the edges that connect them.
+    Returns **404** if no node with the given ID exists in the graph.
+    """
     mg = request.app.state.memgraph
 
     check = mg.execute_read("MATCH (n:OntologyTerm {id: $id}) RETURN n", {"id": node_id})
@@ -188,9 +206,26 @@ def get_node_neighborhood(request: Request, node_id: str, depth: int = Query(1, 
     "/search",
     response_model=GraphData,
     summary="Search graph nodes",
+    description="Perform a case-insensitive substring search over OntologyTerm node names. "
+    "Matching nodes are returned together with their immediate neighbors and connecting edges. "
+    "Results are capped at 100 rows.",
+    response_description="Subgraph of matching nodes, their neighbors, and connecting edges.",
 )
-def search_graph(request: Request, q: str = Query(..., min_length=1)):
-    """Search nodes by name and return matching subgraph with neighbors."""
+def search_graph(
+    request: Request,
+    q: str = Query(
+        ...,
+        min_length=1,
+        description="Case-insensitive search term matched against node names using CONTAINS.",
+    ),
+):
+    """Search OntologyTerm nodes by name and return the matching subgraph.
+
+    Performs a case-insensitive CONTAINS match on the *name* property of
+    every OntologyTerm node. Each matching node is returned along with its
+    immediate neighbors and the edges between them. The total number of
+    result rows is limited to 100.
+    """
     mg = request.app.state.memgraph
     records = mg.execute_read(
         "MATCH (n:OntologyTerm) WHERE toLower(n.name) CONTAINS toLower($q) "
