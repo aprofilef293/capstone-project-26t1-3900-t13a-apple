@@ -1,6 +1,6 @@
 // Functions to connect to backend
 
-async function fetchGraphData(endpoint = '/graph') {
+export async function fetchGraphData(endpoint = '/graph') {
     const response = await fetch(endpoint);
     if (!response.ok) {
         throw new Error(`Failed to fetch from ${endpoint}: ${response.statusText}`);
@@ -11,7 +11,7 @@ async function fetchGraphData(endpoint = '/graph') {
 // Can use to get upload/processing progress from backend
 export function listenToSSE(
     endpoint: string,
-    onMessage: (data: any) => void,
+    onMessage: (data: unknown) => void,
     onError?: (error: Event) => void
 ): () => void {
     const eventSource = new EventSource(endpoint);
@@ -20,7 +20,7 @@ export function listenToSSE(
         try {
             const parsedData = JSON.parse(event.data);
             onMessage(parsedData);
-        } catch (err) {
+        } catch {
             // Fallback to raw string if it's not JSON
             onMessage(event.data);
         }

@@ -5,7 +5,7 @@ import { formatDate } from "../lib/utils";
 
 export function FileImportStatusInfo() {
     const { fileName, importStatus, importProgress, importDate, importError } = useStore();
-    
+
     return (
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             {/* File */}
@@ -33,7 +33,7 @@ export function FileImportStatusInfo() {
                 )}
                 {importStatus === 'error' && (
                     <div className="flex items-center gap-1.5 text-red-500">
-                        <span className="text-xs">Failed</span>
+                        <span className="text-xs">Failed{importError ? `: ${importError}` : ''}</span>
                         <XCircle className="w-4 h-4" />
                     </div>
                 )}

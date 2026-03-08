@@ -79,26 +79,53 @@ const GraphManager = forwardRef<GraphViewRef, unknown>((_, ref) => {
     const deferredSearchQuery = useDeferredValue(searchQuery);
 
     const largestNodesIds = useMemo(() => {
+        if (!nodes || nodes.length === 0) return new Set<string>();
+
+        // Calculate Global Size Percentiles & Average
+        const sizes = nodes.map(n => Number(n.size ?? GRAPH_CONFIG.DEFAULT_NODE_SIZE)).sort((a, b) => a - b);
+        const sum = sizes.reduce((acc, val) => acc + val, 0);
+        const mean = sum / sizes.length;
+
+        // Find the top 5% threshold
+        const p95Index = Math.floor(sizes.length * 0.95);
+        const top5PercentSize = sizes[p95Index] || 0;
+
+        const prominentIds = new Set<string>();
         const communityMaxNodes = new Map<string | number, { id: string; size: number }>();
+        const communityCounts = new Map<string | number, number>();
 
         nodes.forEach(node => {
+            const id = node.id as string;
             const attrs = node.attributes as Record<string, unknown>;
-            const louvain = attrs?.louvain as string | number | undefined;
-            const size = node.size ?? GRAPH_CONFIG.DEFAULT_NODE_SIZE;
-
+            const size = Number(node.size ?? GRAPH_CONFIG.DEFAULT_NODE_SIZE);
             const isHub = attrs?.viewLevel === 5;
+            const louvain = attrs?.louvain as string | number | undefined;
+            if (isHub) {
+                prominentIds.add(id);
+            }
+
+            if (size >= top5PercentSize && size > mean) {
+                prominentIds.add(id);
+            }
 
             if (louvain !== undefined) {
+                communityCounts.set(louvain, (communityCounts.get(louvain) || 0) + 1);
+
                 const currentMax = communityMaxNodes.get(louvain);
                 if (!currentMax || size > currentMax.size) {
-                    communityMaxNodes.set(louvain, { id: node.id, size });
+                    communityMaxNodes.set(louvain, { id, size });
                 }
-            } else if (isHub) {
-                communityMaxNodes.set(`hub-${node.id}`, { id: node.id, size });
             }
         });
 
-        return new Set(Array.from(communityMaxNodes.values()).map(n => n.id));
+        communityMaxNodes.forEach((maxNode, louvainKey) => {
+            const count = communityCounts.get(louvainKey) || 0;
+            if (count > 1 && maxNode.size > mean * 0.5) {
+                prominentIds.add(maxNode.id);
+            }
+        });
+
+        return prominentIds;
     }, [nodes]);
 
     // Calculate community and neighbor isolation sets
@@ -115,7 +142,7 @@ const GraphManager = forwardRef<GraphViewRef, unknown>((_, ref) => {
         const neighborNodes = new Set<string>(graph.neighbors(selectedNodeId));
 
         if (selectedLouvain !== undefined) {
-            graph.forEachNode((node: string, attrs: any) => {
+            graph.forEachNode((node: string, attrs: unknown) => {
                 const nodeAttrs = (attrs as NodeAttributes).attributes as Record<string, unknown> | undefined;
                 if (nodeAttrs?.louvain === selectedLouvain) {
                     communityNodes.add(node);
@@ -181,7 +208,7 @@ const GraphManager = forwardRef<GraphViewRef, unknown>((_, ref) => {
             // Fallback or default reset
             camera.reset({ duration: GRAPH_CONFIG.ANIMATION_DURATION });
         },
-    }), [isolationData, selectedNodeId, sigma]);
+    }), [camera, isolationData, selectedNodeId, sigma]);
 
     useEffect(() => {
         const graph = sigma.getGraph();
@@ -202,10 +229,10 @@ const GraphManager = forwardRef<GraphViewRef, unknown>((_, ref) => {
             return;
         }
 
-        const currentNodes = new Set(graph.nodes());
-        const currentEdges = new Set(graph.edges());
-        const incomingNodeIds = new Set(nodes.map(n => n.id));
-        const incomingEdgeIds = new Set(edges.map(e => e.id));
+        const currentNodes = new Set(graph.nodes() as string[]);
+        const currentEdges = new Set(graph.edges() as string[]);
+        const incomingNodeIds = new Set(nodes.map(n => n.id as string));
+        const incomingEdgeIds = new Set(edges.map(e => e.id as string));
 
         currentNodes.forEach(id => !incomingNodeIds.has(id) && graph.dropNode(id));
         currentEdges.forEach(id => !incomingEdgeIds.has(id) && graph.dropEdge(id));
@@ -439,7 +466,7 @@ export const GraphView = forwardRef<GraphViewRef, unknown>((_, ref) => {
             },
             defaultEdgeType: "line",
         }),
-        [colours, drawOverlay],
+        [colours, drawOverlay, isDark],
     );
 
     return (

@@ -42,7 +42,7 @@ export function HierarchyView() {
         return baseHierarchyData
             .map(filterNode)
             .filter((node): node is HierarchyNode => node !== null);
-    }, [baseHierarchyData, searchQuery]);
+    }, [baseHierarchyData, deferredSearchQuery]);
 
     return (
         <div className="flex h-full w-full bg-background overflow-hidden relative">

@@ -37,7 +37,7 @@ interface ExplorerState {
     importError: string | null;
     importProgress: number;
     importDate: Date | null;
-    startFileImport: (file: File) => Promise<void>;
+    startFileImport: (fileName: string) => void;
     setImportProgress: (progress: number) => void;
     completeImport: () => void;
     failImport: (error: string) => void;
@@ -45,8 +45,8 @@ interface ExplorerState {
 
 // Convert Graphology JSON format to our store format
 const mapTestData = () => {
-    const rawEdges = testData.edges as any[];
-    const rawNodes = testData.nodes as any[];
+    const rawEdges = (testData as any).edges as any[];
+    const rawNodes = (testData as any).nodes as any[];
 
     // 2. Map nodes directly from backend payload attributes
     const nodes = rawNodes.map((n) => {
