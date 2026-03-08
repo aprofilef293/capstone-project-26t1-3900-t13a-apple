@@ -47,7 +47,6 @@ export function UploadBox({
                     className="hidden"
                     onChange={handleFileChange}
                 />
-                
                 <Button className="bg-blue-600 hover:bg-blue-700 text-white shadow-sm px-8" onClick={handleUpload}>
                     Select File
                 </Button>
