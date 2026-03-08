@@ -28,7 +28,7 @@ export function UploadBox({
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
-        startFileImport(file.name);
+        startFileImport(file);
         navigate({ to: '/manager' });
     };
 

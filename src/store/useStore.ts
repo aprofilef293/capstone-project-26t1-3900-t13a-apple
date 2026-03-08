@@ -33,7 +33,7 @@ interface ExplorerState {
     importError: string | null;
     importProgress: number;
     importDate: Date | null;
-    startFileImport: (fileName: string) => void;
+    startFileImport: (file: File) => void;
     setImportProgress: (progress: number) => void;
     completeImport: () => void;
     failImport: (error: string) => void;
@@ -53,7 +53,26 @@ export const useStore = create<ExplorerState>((set) => ({
     importProgress: 0,
     importDate: null,
     importError: null,
-    startFileImport: (fileName) => set({ fileName, importStatus: 'loading', importProgress: 0, importDate: new Date() }),
+    startFileImport: async (file) => {
+        const uploadData = new FormData();
+        uploadData.append(
+            file.name,
+            file
+        )
+        try {
+            const response = await fetch("/obo-file-upload", {
+                method: 'POST',
+                body: uploadData,
+            })
+            if (!response.ok) {
+                throw new Error(response.statusText)
+            }
+            set({ fileName: file.name, importStatus: 'loading', importProgress: 0, importDate: new Date() })
+        } catch (error) {
+            console.error("Error importing file", error);
+            set({ fileName: file.name, importStatus: 'error', importDate: new Date() })
+        }
+    },
     setImportProgress: (progress) => set({ importProgress: progress }),
     completeImport: () => set({ importStatus: 'complete', importProgress: 100 }),
     failImport: (error) => set({ importStatus: 'error', importError: error }),
