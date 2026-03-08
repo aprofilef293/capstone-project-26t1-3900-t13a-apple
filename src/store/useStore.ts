@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import testData from '../data/test_data.json';
+import * as api from '../lib/api';
 
 export interface GraphNode {
     id: string;
@@ -44,8 +45,8 @@ interface ExplorerState {
 
 // Convert Graphology JSON format to our store format
 const mapTestData = () => {
-    const rawEdges = testData.edges as any[];
-    const rawNodes = testData.nodes as any[];
+    const rawEdges = (testData as any).edges as any[];
+    const rawNodes = (testData as any).nodes as any[];
 
     // 2. Map nodes directly from backend payload attributes
     const nodes = rawNodes.map((n) => {
@@ -85,11 +86,7 @@ export const useStore = create<ExplorerState>((set) => ({
     setViewLevel: (level) => set({ viewLevel: level }),
     fetchGraphData: async () => {
         try {
-            const response = await fetch("/graph");
-            if (!response.ok) {
-                throw new Error("Failed to fetch graph data");
-            }
-            const data = await response.json();
+            const data = await api.fetchGraphData("/graph");
             set({ nodes: data.nodes || [], edges: data.edges || [] });
         } catch (error) {
             console.error("Error fetching graph data, falling back to test_data.json:", error);
