@@ -1,21 +1,23 @@
 import { ChevronRight, Folder, File, ChevronDown } from "lucide-react";
-import { useMemo, useState, useEffect } from "react";
+import { useMemo, useState, useEffect, useDeferredValue, memo } from "react";
 import { cn } from "../../lib/utils";
 import { useStore } from "../../store/useStore";
 import { buildHierarchyFromGraph } from "../../lib/hierarchyUtils";
 import type { HierarchyNode } from "../../lib/hierarchyUtils";
 
 export function HierarchyView() {
-    const { nodes, edges, selectedNodeId, setSelectedNodeId, searchQuery } = useStore();
+    const { nodes, edges, searchQuery } = useStore();
 
     // Dynamically build the hierarchy tree from the flat graph data
     const baseHierarchyData = useMemo(() => {
         return buildHierarchyFromGraph(nodes, edges);
     }, [nodes, edges]);
 
+    const deferredSearchQuery = useDeferredValue(searchQuery);
+
     const hierarchyData = useMemo(() => {
-        if (!searchQuery) return baseHierarchyData;
-        const lowerQuery = searchQuery.toLowerCase();
+        if (!deferredSearchQuery) return baseHierarchyData;
+        const lowerQuery = deferredSearchQuery.toLowerCase();
 
         const filterNode = (node: HierarchyNode): HierarchyNode | null => {
             const matchesQuery = node.name.toLowerCase().includes(lowerQuery);
@@ -40,7 +42,7 @@ export function HierarchyView() {
         return baseHierarchyData
             .map(filterNode)
             .filter((node): node is HierarchyNode => node !== null);
-    }, [baseHierarchyData, searchQuery]);
+    }, [baseHierarchyData, deferredSearchQuery]);
 
     return (
         <div className="flex h-full w-full bg-background overflow-hidden relative">
@@ -61,9 +63,7 @@ export function HierarchyView() {
                                     key={node.id}
                                     node={node}
                                     level={0}
-                                    selectedNodeId={selectedNodeId}
-                                    onSelect={setSelectedNodeId}
-                                    defaultExpanded={!!searchQuery}
+                                    defaultExpanded={!!deferredSearchQuery}
                                 />
                             ))}
                         </div>
@@ -79,25 +79,21 @@ export function HierarchyView() {
 }
 
 // Recursive Tree Node Component
-function TreeNode({
+const TreeNode = memo(function TreeNode({
     node,
     level,
-    selectedNodeId,
-    onSelect,
     defaultExpanded
 }: {
     node: HierarchyNode;
     level: number;
-    selectedNodeId: string | null;
-    onSelect: (id: string) => void;
     defaultExpanded?: boolean;
 }) {
-    // Auto-expand if the selected node is this node or we're at the root
-    const [isOpen, setIsOpen] = useState(level === 0 || selectedNodeId === node.id || defaultExpanded);
-    const hasChildren = node.children && node.children.length > 0;
-    const isSelected = selectedNodeId === node.id;
+    const isSelected = useStore(state => state.selectedNodeId === node.id);
+    const setSelectedNodeId = useStore(state => state.setSelectedNodeId);
 
-    // React to search query changes to auto-expand
+    const [isOpen, setIsOpen] = useState(isSelected || defaultExpanded);
+    const hasChildren = node.children && node.children.length > 0;
+
     useEffect(() => {
         if (defaultExpanded) {
             // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -112,7 +108,7 @@ function TreeNode({
 
     const handleSelect = (e: React.MouseEvent) => {
         e.stopPropagation();
-        onSelect(node.id);
+        setSelectedNodeId(node.id);
     };
 
     return (
@@ -168,8 +164,6 @@ function TreeNode({
                             key={child.id}
                             node={child}
                             level={level + 1}
-                            selectedNodeId={selectedNodeId}
-                            onSelect={onSelect}
                             defaultExpanded={defaultExpanded}
                         />
                     ))}
@@ -177,4 +171,4 @@ function TreeNode({
             )}
         </div>
     );
-}
+});

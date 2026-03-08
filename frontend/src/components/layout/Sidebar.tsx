@@ -36,7 +36,6 @@ export function Sidebar() {
                     {!isCollapsed && (
                         <div className="flex flex-col">
                             <span className="text-sm font-semibold tracking-tight text-foreground truncate">OBO Explorer</span>
-                            <span className="text-[10px] text-muted-foreground">v0.1</span>
                         </div>
                     )}
                 </div>

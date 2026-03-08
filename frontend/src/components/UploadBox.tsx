@@ -28,7 +28,7 @@ export function UploadBox({
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
-        startFileImport(file.name);
+        startFileImport(file);
         navigate({ to: '/manager' });
     };
 
@@ -47,7 +47,6 @@ export function UploadBox({
                     className="hidden"
                     onChange={handleFileChange}
                 />
-                
                 <Button className="bg-blue-600 hover:bg-blue-700 text-white shadow-sm px-8" onClick={handleUpload}>
                     Select File
                 </Button>
