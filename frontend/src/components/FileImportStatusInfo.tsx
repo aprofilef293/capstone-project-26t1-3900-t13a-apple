@@ -40,6 +40,9 @@ export function FileImportStatusInfo() {
                 {importStatus === 'idle' && (
                     <span className="text-xs text-sidebar-foreground/50">—</span>
                 )}
+                {importStatus === 'waiting' && (
+                    <span className="text-xs text-sidebar-foreground/50">Waiting...</span>
+                )}
             </div>
 
             {/* Date Imported */}
