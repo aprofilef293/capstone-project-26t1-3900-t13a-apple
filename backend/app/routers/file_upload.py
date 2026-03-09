@@ -107,14 +107,7 @@ async def upload_obo(file: UploadFile):
         UNWIND $relations as r
         MATCH (s:OntologyTerm {id: r.subject_id})
         MATCH (t:OntologyTerm {id: r.target_id})
-        MERGE (s)-(relationship:r.relation_type]->(t)
-        ON CREATE SET 
-            n.name = t.name,
-            n.namespace = t.namespace,
-            n.definition = t.definition,
-            n.synonyms = t.synonyms,
-            n.xrefs = t.xrefs,
-            n.is_obselete = t.is_obselete 
+        MERGE (s)-(relationship:r.relation_type]->(t) 
         """,
         {
             "relations": [r.model_dump() for r in relations]
