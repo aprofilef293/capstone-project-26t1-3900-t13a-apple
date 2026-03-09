@@ -14,7 +14,7 @@ class OntologyTerm(BaseModel):
 class OntologyRelation(BaseModel):
     subject_id: str
     relation_type: str
-    object_id: str
+    target_id: str
 
 
 class OntologyUploadResponse(BaseModel):

@@ -30,27 +30,43 @@ async def upload_obo(file: UploadFile):
     
     for term in ontology_data.terms():
         
+        #Checking if definiton is not none
+        definition = None
+        if term.definition:
+            definition = str(term.definition)
         
+            
         term_insert = OntologyTerm(
             id = term.id,
             name = term.name,
             namespace=term.namespace,
-            definition= term.definition,
+            definition= definition,
             synonyms= [syn.description for syn in term.synonyms],
             xrefs= [xr.id for xr in term.xrefs],
             is_obsolete=term.obsolete  
         )
         
-        #getting direct parent
-        for p in term.superclasses(distance=1, with_self=False):
-            print(p)
+        #Getting is_a relationships
+        for parent in term.superclasses(distance=1, with_self=False):
             relations_insert = OntologyRelation(
-                subject_id=term.id,
-                relation_type="is_a",
-                object_id=p.id
+                subject_id= term.id,
+                relation_type= "is_a",
+                target_id= parent.id
             )
         
+        #Getting all other relationships
+        for relation, targets in term.relationships.items():
+            for target in targets:
+                relations_other_insert = OntologyRelation(
+                    subject_id= relation.id,
+                    relation_type= relation.name,
+                    target_id= target.id
+                )
+            
+        
+        
         relations.append(relations_insert)
+        relations.append(relations_other_insert)
         terms.append(term_insert)
     
     
