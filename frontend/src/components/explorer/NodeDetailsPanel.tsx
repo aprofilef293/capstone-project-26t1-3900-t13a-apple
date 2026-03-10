@@ -5,12 +5,20 @@ import { ScrollArea } from "../ui/scroll-area";
 import { Separator } from "../ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "../ui/accordion";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuSeparator, DropdownMenuTrigger } from "../ui/dropdown-menu";
+import { Button } from "../ui/button";
+import React, { useEffect } from "react";
 
 /* ── Reusable connection card list ── */
 interface ConnectionItem {
     id: string;
     title: string;
     type: string;
+    size: number;
+    colour: string;
+    // TODO: more complicated, could add later (for relevance/importance)
+    // rank: number;
+    // viewLevel: number;
 }
 
 const computedAttributeKeys = [
@@ -66,6 +74,42 @@ function ConnectionList({
     );
 }
 
+function alphabeticalSort(a: string, b: string): number {
+    if (a < b)
+        return -1;
+    if (a > b)
+        return 1;
+    return 0;
+}
+
+function sortList(list: ConnectionItem[], sortType: string) {
+    let newList = list;
+    switch (sortType) {
+        case "name-az":
+            newList = list.sort((a, b) => alphabeticalSort(a.title, b.title));
+            break;
+        case "name-za":
+            newList = list.sort((a, b) => alphabeticalSort(b.title, a.title));
+            break;
+        case "size-asc":
+            newList = list.sort((a, b) => a.size - b.size);
+            break;
+        case "size-desc":
+            newList = list.sort((a, b) => b.size - a.size);
+            break;
+        case "type":
+            newList = list.sort((a, b) => alphabeticalSort(a.type, b.type));
+            break;
+        case "colour":
+            newList = list.sort((a, b) => alphabeticalSort(a.colour, b.colour));
+            break;
+        default:
+            // name-az
+            newList = list.sort((a, b) => alphabeticalSort(a.title, b.title));
+    }
+    return newList;
+}
+
 function ConnectionsContent({
     inputs,
     outputs,
@@ -75,24 +119,59 @@ function ConnectionsContent({
     outputs: ConnectionItem[];
     onSelect: (id: string) => void;
 }) {
+    const [sortChoice, setSortChoice] = React.useState("name-az");
+    const [inputsList, setInputsList] = React.useState(inputs);
+    const [outputsList, setOutputsList] = React.useState(outputs);
+
+    useEffect(() => {
+        setInputsList(sortList(inputs, sortChoice));
+        setOutputsList(sortList(outputs, sortChoice));
+    }, [inputs, outputs]);
+
     return (
         <Tabs defaultValue="tab1">
-            <TabsList className="flex items-center gap-2" aria-label="View node connections">
-                <TabsTrigger value="tab1">
-                    Incoming ({inputs.length})
-                </TabsTrigger>
-                <TabsTrigger value="tab2">
-                    Outgoing ({outputs.length})
-                </TabsTrigger>
-            </TabsList>
+            <div className="flex justify-between">
+                <TabsList className="flex items-center gap-2" aria-label="View node connections">
+                    <TabsTrigger value="tab1">
+                        Incoming ({inputs.length})
+                    </TabsTrigger>
+                    <TabsTrigger value="tab2">
+                        Outgoing ({outputs.length})
+                    </TabsTrigger>
+                </TabsList>
+                <DropdownMenu>
+                    <DropdownMenuTrigger asChild className="cursor-pointer">
+                        <Button variant="secondary">Sort</Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent className="cursor-pointer">
+                        <DropdownMenuRadioGroup value={sortChoice} onValueChange={((val) => {
+                            setSortChoice(val);
+                            setInputsList(sortList(inputs, val));
+                            setOutputsList(sortList(outputs, val));
+                        })}>
+                            <DropdownMenuRadioItem value="name-az">Name (A-Z)</DropdownMenuRadioItem>
+                            <DropdownMenuRadioItem value="name-za">Name (Z-A)</DropdownMenuRadioItem>
+                            <DropdownMenuSeparator />
+                            {/* <DropdownMenuRadioItem value="relevance">Relevance</DropdownMenuRadioItem> */}
+                            {/* <DropdownMenuRadioItem value="importance">Importance</DropdownMenuRadioItem> */}
+                            {/* <DropdownMenuSeparator /> */}
+                            <DropdownMenuRadioItem value="size-asc">Size (Low to High)</DropdownMenuRadioItem>
+                            <DropdownMenuRadioItem value="size-desc">Size (High to Low)</DropdownMenuRadioItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuRadioItem value="type">Type</DropdownMenuRadioItem>
+                            <DropdownMenuRadioItem value="colour">Colour</DropdownMenuRadioItem>
+                        </DropdownMenuRadioGroup>
+                    </DropdownMenuContent>
+                </DropdownMenu>
+            </div>
             <TabsContent value="tab1">
-                <ConnectionList items={inputs} icon={CornerDownRight} colour="emerald" onSelect={onSelect} />
+                <ConnectionList items={inputsList} icon={CornerDownRight} colour="emerald" onSelect={onSelect} />
                 {inputs.length === 0 && (
                     <div className="text-s text-sidebar-foreground/40 italic     px-1">No incoming connections.</div>
                 )}
             </TabsContent>
             <TabsContent value="tab2">
-                <ConnectionList items={outputs} icon={ArrowRight} colour="purple" onSelect={onSelect} />
+                <ConnectionList items={outputsList} icon={ArrowRight} colour="purple" onSelect={onSelect} />
                 {outputs.length === 0 && (
                     <div className="text-s text-sidebar-foreground/40 italic px-1">No outgoing connections.</div>
                 )}
@@ -151,22 +230,23 @@ export function NodeDetailsPanel() {
     }
 
     // Derive connections from edges
-    const inputs = edges
+    const inputs: ConnectionItem[] = edges
         .filter(e => e.target === node.id)
         .map(e => {
             const src = nodes.find(n => n.id === e.source);
-            return { id: src?.id ?? e.source, title: src?.label ?? e.source, type: src?.type ?? "Unknown" };
+            return { id: src?.id ?? e.source, title: src?.label ?? e.source, type: src?.type ?? "Unknown", size: src?.size ?? -1, colour: src?.color ?? "#000000" };
         });
+    inputs.sort((a, b) => alphabeticalSort(a.title, b.title));
 
-    const outputs = edges
+    const outputs: ConnectionItem[] = edges
         .filter(e => e.source === node.id)
         .map(e => {
             const tgt = nodes.find(n => n.id === e.target);
-            return { id: tgt?.id ?? e.target, title: tgt?.label ?? e.target, type: tgt?.type ?? "Unknown" };
+            return { id: tgt?.id ?? e.target, title: tgt?.label ?? e.target, type: tgt?.type ?? "Unknown", size: tgt?.size ?? -1, colour: tgt?.color ?? "#000000" };
         });
+    inputs.sort((a, b) => alphabeticalSort(a.title, b.title));
 
     const hasAttributes = Object.keys(node.attributes ?? {}).length > 0;
-    console.log(node.attributes);
 
     return (
         <div className="w-[400px] border-l border-sidebar-border bg-sidebar flex flex-col h-full shadow-xl z-20 transition-colors">
@@ -190,8 +270,8 @@ export function NodeDetailsPanel() {
 
             <ScrollArea className="flex-1 min-h-0 pb-6 px-6 pt-4">
                 <Accordion type="multiple" className="max-w-lg" defaultValue={["node-data"]}>
+                    {/* Main Data */}
                     <AccordionItem value="node-data">
-                        {/* Main Data */}
                         <AccordionTrigger className="cursor-pointer">
                             <h3 className="text-xs font-bold text-sidebar-foreground mb-4 uppercase tracking-wider flex items-center gap-2">
                                 <Box className="w-3.5 h-3.5" /> Node Data
@@ -199,8 +279,8 @@ export function NodeDetailsPanel() {
                         </AccordionTrigger>
                         <AttributesSectionContent node={node} hasAttributes={hasAttributes} includeComputed={false} />
                     </AccordionItem>
+                    {/* Connections */}
                     <AccordionItem value="connections" className="pt-2">
-                        {/* Connections */}
                         <AccordionTrigger className="cursor-pointer">
                             <h3 className="text-xs font-bold text-sidebar-foreground mb-3 flex items-center gap-2 uppercase tracking-wider">
                                 <Waypoints className="w-3.5 h-3.5" /> Connections
@@ -212,8 +292,8 @@ export function NodeDetailsPanel() {
                             </div>
                         </AccordionContent>
                     </AccordionItem>
+                    {/* Computed Attributes */}
                     <AccordionItem value="computed-attributes" className="pt-2">
-                        {/* Computed Attributes */}
                         <AccordionTrigger className="cursor-pointer">
                             <h3 className="text-xs font-bold text-sidebar-foreground mb-4 uppercase tracking-wider flex items-center gap-2">
                                 <FlaskConical className="w-3.5 h-3.5" /> Computed Attributes
