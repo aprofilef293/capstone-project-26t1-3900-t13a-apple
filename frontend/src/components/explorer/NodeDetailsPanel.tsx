@@ -142,13 +142,13 @@ export function NodeDetailsPanel() {
                     <Badge variant="secondary" className="bg-blue-500/10 text-blue-600 dark:text-blue-400 hover:bg-blue-500/20 border-blue-500/20 rounded font-mono font-medium text-[10px] px-2 py-0.5">
                         {node.type} Node
                     </Badge>
-                    <span className="text-[10px] text-sidebar-foreground/70 font-mono tracking-wider ml-auto">ID: {node.id.toUpperCase()}</span>
+                    <span className="text-[10px] text-sidebar-foreground/70 font-mono tracking-wider mr-auto">ID: {node.id.toUpperCase()}</span>
                     <button
                         onClick={() => setSelectedNodeId(null)}
                         className="p-1 hover:bg-sidebar-accent border border-transparent hover:border-sidebar-border/50 rounded-md transition-all text-sidebar-foreground/50 hover:text-sidebar-foreground flex items-center justify-center cursor-pointer"
                         title="Close details"
                     >
-                        <X className="w-3.5 h-3.5" />
+                        <X className="w-5 h-5" />
                     </button>
                 </div>
                 <h2 className="text-xl font-bold text-sidebar-foreground pt-2 mb-1 leading-tight">{node.label}</h2>
