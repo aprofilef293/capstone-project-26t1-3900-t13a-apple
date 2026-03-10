@@ -37,6 +37,7 @@ interface NodeAttributes {
     type?: string;
     borderColor?: string;
     borderSize?: number;
+    zIndex?: number;
     [key: string]: unknown;
 }
 
@@ -287,11 +288,12 @@ const GraphManager = forwardRef<GraphViewRef, unknown>((_, ref) => {
                 ...data,
                 size: finalSize,
                 highlighted: isSelected,
+                zIndex: finalSize,
             };
 
             if (largestNodesIds.has(node)) {
                 newData.type = "border";
-                newData.borderColor = isDark ? "#ffffff" : "#000000";
+                newData.borderColor = data.color ? adjustColorBrightness(data.color, -20) : (isDark ? "#ffffff" : "#000000");
                 newData.borderSize = 0.15;
                 if (data.color) {
                     newData.color = adjustColorBrightness(data.color, isDark ? 25 : -20);
@@ -434,6 +436,7 @@ export const GraphView = forwardRef<GraphViewRef, unknown>((_, ref) => {
     const sigmaSettings = useMemo(
         () => ({
             allowInvalidContainer: true,
+            zIndex: true,
             renderLabels: true,
             renderEdgeLabels: false, // Don't render text on edges
             labelDensity: 0.5, // Only show labels for prominent nodes when zoomed out
