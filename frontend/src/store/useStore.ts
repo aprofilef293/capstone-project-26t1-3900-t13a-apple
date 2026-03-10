@@ -55,7 +55,7 @@ const mapTestData = () => {
         return {
             id: n.key,
             label: label,
-            type: n.attributes?.nodeType || 'Default',
+            type: n.attributes?.nodeType || 'Data',
             x: typeof n.attributes?.x === 'number' ? n.attributes.x : (Math.random() - 0.5) * 10,
             y: typeof n.attributes?.y === 'number' ? n.attributes.y : (Math.random() - 0.5) * 10,
             size: n.attributes?.size || 10, // Backend provides size, defaulting to 10

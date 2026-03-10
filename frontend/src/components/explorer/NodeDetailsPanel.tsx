@@ -3,6 +3,7 @@ import { useStore } from "../../store/useStore";
 import { Badge } from "../ui/badge";
 import { ScrollArea } from "../ui/scroll-area";
 import { Separator } from "../ui/separator";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
 
 /* ── Reusable connection card list ── */
 interface ConnectionItem {
@@ -12,13 +13,11 @@ interface ConnectionItem {
 }
 
 function ConnectionList({
-    label,
     items,
     icon: Icon,
     colour,
     onSelect,
 }: {
-    label: string;
     items: ConnectionItem[];
     icon: LucideIcon;
     colour: "emerald" | "purple";
@@ -32,9 +31,6 @@ function ConnectionList({
 
     return (
         <div>
-            <div className="text-[10px] font-semibold text-sidebar-foreground/60 mb-2 uppercase tracking-wider px-1">
-                {label} ({items.length})
-            </div>
             <div className="space-y-1.5">
                 {items.map((item) => (
                     <div
@@ -57,6 +53,41 @@ function ConnectionList({
             </div>
         </div >
     );
+}
+
+function ConnectionsContent({
+    inputs,
+    outputs,
+    onSelect,
+}: {
+    inputs: ConnectionItem[];
+    outputs: ConnectionItem[];
+    onSelect: (id: string) => void;
+}) {
+    return (
+        <Tabs defaultValue="tab1">
+            <TabsList className="flex items-center gap-2" aria-label="View node connections">
+                <TabsTrigger value="tab1">
+                    Incoming ({inputs.length})
+                </TabsTrigger>
+                <TabsTrigger value="tab2">
+                    Outgoing ({outputs.length})
+                </TabsTrigger>
+            </TabsList>
+            <TabsContent value="tab1">
+                <ConnectionList items={inputs} icon={CornerDownRight} colour="emerald" onSelect={onSelect} />
+                {inputs.length === 0 && (
+                    <div className="text-s text-sidebar-foreground/40 italic     px-1">No incoming connections.</div>
+                )}
+            </TabsContent>
+            <TabsContent value="tab2">
+                <ConnectionList items={outputs} icon={ArrowRight} colour="purple" onSelect={onSelect} />
+                {outputs.length === 0 && (
+                    <div className="text-s text-sidebar-foreground/40 italic px-1">No outgoing connections.</div>
+                )}
+            </TabsContent>
+        </Tabs>
+    )
 }
 
 /* ── Main panel ── */
@@ -118,11 +149,7 @@ export function NodeDetailsPanel() {
                         <ArrowRight className="w-3.5 h-3.5" /> Connections
                     </h3>
                     <div className="space-y-4">
-                        <ConnectionList label="Incoming" items={inputs} icon={CornerDownRight} colour="emerald" onSelect={setSelectedNodeId} />
-                        <ConnectionList label="Outgoing" items={outputs} icon={ArrowRight} colour="purple" onSelect={setSelectedNodeId} />
-                        {inputs.length === 0 && outputs.length === 0 && (
-                            <div className="text-xs text-sidebar-foreground/40 italic px-1">No connections.</div>
-                        )}
+                        <ConnectionsContent inputs={inputs} outputs={outputs} onSelect={setSelectedNodeId} />
                     </div>
                 </div>
 
