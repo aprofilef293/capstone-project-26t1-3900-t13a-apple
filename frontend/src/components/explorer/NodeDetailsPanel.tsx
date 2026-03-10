@@ -1,51 +1,92 @@
-import { ChevronRight, ArrowRight, CornerDownRight, Box, X, type LucideIcon } from "lucide-react";
-import { useStore } from "../../store/useStore";
+import { ChevronRight, ArrowRight, CornerDownRight, Box, X, type LucideIcon, Waypoints, FlaskConical } from "lucide-react";
+import { useStore, type GraphNode } from "../../store/useStore";
 import { Badge } from "../ui/badge";
 import { ScrollArea } from "../ui/scroll-area";
 import { Separator } from "../ui/separator";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "../ui/accordion";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuSeparator, DropdownMenuTrigger } from "../ui/dropdown-menu";
+import { Button } from "../ui/button";
+import React, { useEffect } from "react";
 
 /* ── Reusable connection card list ── */
 interface ConnectionItem {
     id: string;
     title: string;
     type: string;
+    size: number;
+    colour: string;
+}
+
+const computedAttributeKeys = [
+    "size",
+    "percentile_rank",
+    "pagerank_score",
+    "color",
+    "viewLevel",
+    "x",
+    "y"
+]
+
+function alphabeticalSort(a: string, b: string): number {
+    if (a < b)
+        return -1;
+    if (a > b)
+        return 1;
+    return 0;
+}
+
+function sortList(list: ConnectionItem[], sortType: string) {
+    let newList = list;
+    switch (sortType) {
+        case "name-az":
+            newList = list.sort((a, b) => alphabeticalSort(a.title, b.title));
+            break;
+        case "name-za":
+            newList = list.sort((a, b) => alphabeticalSort(b.title, a.title));
+            break;
+        case "size-asc":
+            newList = list.sort((a, b) => a.size - b.size);
+            break;
+        case "size-desc":
+            newList = list.sort((a, b) => b.size - a.size);
+            break;
+        case "type":
+            newList = list.sort((a, b) => alphabeticalSort(a.type, b.type));
+            break;
+        case "colour":
+            newList = list.sort((a, b) => alphabeticalSort(a.colour, b.colour));
+            break;
+        default:
+            // name-az
+            newList = list.sort((a, b) => alphabeticalSort(a.title, b.title));
+    }
+    return newList;
 }
 
 function ConnectionList({
-    label,
     items,
     icon: Icon,
-    colour,
     onSelect,
 }: {
-    label: string;
     items: ConnectionItem[];
     icon: LucideIcon;
-    colour: "emerald" | "purple";
     onSelect: (id: string) => void;
 }) {
     if (items.length === 0) return null;
 
-    const displayedItems = items;
-    const colourClasses = colour === "emerald"
-        ? "bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 group-hover:bg-emerald-500/20 group-hover:border-emerald-500/30"
-        : "bg-purple-500/10 text-purple-500 border border-purple-500/20 group-hover:bg-purple-500/20 group-hover:border-purple-500/30";
-
     return (
         <div>
-            <div className="text-[10px] font-semibold text-sidebar-foreground/60 mb-2 uppercase tracking-wider px-1">
-                {label} ({items.length})
-            </div>
             <div className="space-y-1.5">
-                {displayedItems.map((item) => (
+                {items.map((item) => (
                     <div
                         key={item.id}
                         onClick={() => onSelect(item.id)}
                         className="flex items-center justify-between p-2.5 rounded-lg border border-sidebar-border/50 bg-sidebar-accent/30 hover:bg-sidebar-accent/80 hover:border-sidebar-border cursor-pointer group transition-all"
                     >
                         <div className="flex items-center gap-3">
-                            <div className={`p-1.5 rounded-md ${colourClasses}`}>
-                                <Icon className="w-3.5 h-3.5" />
+                            <div className="p-1.5 rounded-md text-black" style={{ backgroundColor: item.colour }}>
+                                <Icon className="w-3.5 h-3.5"/>
                             </div>
                             <div>
                                 <div className="text-xs font-medium text-sidebar-foreground group-hover:text-blue-500 transition-colors truncate max-w-[200px]">{item.title}</div>
@@ -58,6 +99,118 @@ function ConnectionList({
             </div>
         </div >
     );
+}
+
+function ConnectionsContent({
+    inputs,
+    outputs,
+    onSelect,
+}: {
+    inputs: ConnectionItem[];
+    outputs: ConnectionItem[];
+    onSelect: (id: string) => void;
+}) {
+    const [sortChoice, setSortChoice] = React.useState("name-az");
+    const [inputsList, setInputsList] = React.useState(inputs);
+    const [outputsList, setOutputsList] = React.useState(outputs);
+
+    useEffect(() => {
+        setInputsList(sortList(inputs, sortChoice));
+        setOutputsList(sortList(outputs, sortChoice));
+    }, [inputs, outputs]);
+
+    return (
+        <Tabs defaultValue="tab1">
+            <div className="flex justify-between">
+                <TabsList className="flex items-center gap-2" aria-label="View node connections">
+                    <TabsTrigger value="tab1">
+                        Incoming ({inputs.length})
+                    </TabsTrigger>
+                    <TabsTrigger value="tab2">
+                        Outgoing ({outputs.length})
+                    </TabsTrigger>
+                </TabsList>
+                <DropdownMenu>
+                    <DropdownMenuTrigger asChild className="cursor-pointer">
+                        <Button variant="secondary">Sort</Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent className="cursor-pointer">
+                        <DropdownMenuRadioGroup value={sortChoice} onValueChange={((val) => {
+                            setSortChoice(val);
+                            setInputsList(sortList(inputs, val));
+                            setOutputsList(sortList(outputs, val));
+                        })}>
+                            <DropdownMenuRadioItem value="name-az">Name (A-Z)</DropdownMenuRadioItem>
+                            <DropdownMenuRadioItem value="name-za">Name (Z-A)</DropdownMenuRadioItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuRadioItem value="size-asc">Size (Low to High)</DropdownMenuRadioItem>
+                            <DropdownMenuRadioItem value="size-desc">Size (High to Low)</DropdownMenuRadioItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuRadioItem value="type">Type</DropdownMenuRadioItem>
+                            <DropdownMenuRadioItem value="colour">Colour</DropdownMenuRadioItem>
+                        </DropdownMenuRadioGroup>
+                    </DropdownMenuContent>
+                </DropdownMenu>
+            </div>
+            <TabsContent value="tab1">
+                <ConnectionList items={inputsList} icon={CornerDownRight} onSelect={onSelect} />
+                {inputs.length === 0 && (
+                    <div className="text-s text-sidebar-foreground/40 italic     px-1">No incoming connections.</div>
+                )}
+            </TabsContent>
+            <TabsContent value="tab2">
+                <ConnectionList items={outputsList} icon={ArrowRight} onSelect={onSelect} />
+                {outputs.length === 0 && (
+                    <div className="text-s text-sidebar-foreground/40 italic px-1">No outgoing connections.</div>
+                )}
+            </TabsContent>
+        </Tabs>
+    )
+}
+
+function AttributesSection({
+    node,
+    sectionTitle,
+    icon: Icon,
+    hasAttributes,
+    includeComputed,
+}: {
+    node: GraphNode;
+    sectionTitle: string;
+    icon: LucideIcon
+    hasAttributes: boolean;
+    includeComputed: boolean;
+}) {
+    return (
+        <>
+            <AccordionTrigger className="cursor-pointer">
+                <h3 className="text-xs font-bold text-sidebar-foreground mb-4 uppercase tracking-wider flex items-center gap-2">
+                    <Icon className="w-3.5 h-3.5" /> {sectionTitle}
+                </h3>
+            </AccordionTrigger>
+            <AccordionContent>
+                {hasAttributes ? (
+                    <div className="space-y-3">
+                        {Object.entries(node.attributes)
+                            .filter(([key]) => (computedAttributeKeys.includes(key) == includeComputed))
+                            .map(([key, value], index, array) => (
+                                <div key={key} className="group">
+                                    <div className="flex justify-between text-xs items-start gap-4">
+                                        <span className="text-sidebar-foreground/70 font-medium shrink-0 pt-0.5">{key}</span>
+                                        <span className="font-mono text-sidebar-foreground text-right break-words select-all">{String(value)}</span>
+                                    </div>
+                                    {index < array.length - 1 && <Separator className="bg-sidebar-border/30 mt-3" />}
+                                </div>
+                            ))}
+                    </div>
+                ) : (
+                    <div className="text-xs text-sidebar-foreground/40 italic p-4 bg-sidebar-accent/20 rounded-lg border border-sidebar-border/30 text-center">
+                        No metadata available for this node.
+                    </div>
+                )}
+            </AccordionContent>
+        </>
+    )
 }
 
 /* ── Main panel ── */
@@ -80,27 +233,36 @@ export function NodeDetailsPanel() {
         const outs: ConnectionItem[] = [];
 
         if (graph.hasNode(selectedNodeId)) {
-            graph.forEachInEdge(selectedNodeId, (edge, attr, source) => {
-                const src = graph.getNodeAttributes(source);
+            // Unique incoming neighbors
+            graph.forEachInNeighbor(selectedNodeId, (source, src) => {
+                if (source === selectedNodeId) return;
                 ins.push({
                     id: source,
                     title: (src.label as string) || source,
-                    type: (src.type as string) || "Unknown"
+                    type: (src.type as string) || "Unknown",
+                    size: (src.size as number) || -1,
+                    colour: (src.color as string) || "#000000",
                 });
             });
 
-            graph.forEachOutEdge(selectedNodeId, (edge, attr, target) => {
-                const tgt = graph.getNodeAttributes(target);
+            // Unique outgoing neighbors
+            graph.forEachOutNeighbor(selectedNodeId, (target, tgt) => {
+                if (target === selectedNodeId) return;
                 outs.push({
                     id: target,
                     title: (tgt.label as string) || target,
-                    type: (tgt.type as string) || "Unknown"
+                    type: (tgt.type as string) || "Unknown",
+                    size: (tgt.size as number) || -1,
+                    colour: (tgt.color as string) || "#000000",
                 });
             });
         }
 
         return { inputs: ins, outputs: outs };
     })();
+
+    inputs.sort((a, b) => alphabeticalSort(a.title, b.title));
+    outputs.sort((a, b) => alphabeticalSort(a.title, b.title));
 
     const hasAttributes = Object.keys(node.attributes ?? {}).length > 0;
 
@@ -112,59 +274,42 @@ export function NodeDetailsPanel() {
                     <Badge variant="secondary" className="bg-blue-500/10 text-blue-600 dark:text-blue-400 hover:bg-blue-500/20 border-blue-500/20 rounded font-mono font-medium text-[10px] px-2 py-0.5">
                         {node.type} Node
                     </Badge>
-                    <span className="text-[10px] text-sidebar-foreground/70 font-mono tracking-wider ml-auto">ID: {node.id.toUpperCase()}</span>
+                    <span className="text-[10px] text-sidebar-foreground/70 font-mono tracking-wider mr-auto">ID: {node.id.toUpperCase()}</span>
                     <button
                         onClick={() => setSelectedNodeId(null)}
                         className="p-1 hover:bg-sidebar-accent border border-transparent hover:border-sidebar-border/50 rounded-md transition-all text-sidebar-foreground/50 hover:text-sidebar-foreground flex items-center justify-center cursor-pointer"
                         title="Close details"
                     >
-                        <X className="w-3.5 h-3.5" />
+                        <X className="w-5 h-5" />
                     </button>
                 </div>
-                <h2 className="text-xl font-bold text-sidebar-foreground mb-1 leading-tight">{node.label}</h2>
+                <h2 className="text-xl font-bold text-sidebar-foreground pt-2 mb-1 leading-tight">{node.label}</h2>
             </div>
 
-            <ScrollArea className="flex-1 min-h-0 pb-6 px-6 pt-6">
-                {/* Connections */}
-                <div className="mb-8">
-                    <h3 className="text-xs font-bold text-sidebar-foreground mb-3 flex items-center gap-2 uppercase tracking-wider">
-                        <ArrowRight className="w-3.5 h-3.5" /> Connections
-                    </h3>
-                    <div className="space-y-4">
-                        <ConnectionList label="Incoming" items={inputs} icon={CornerDownRight} colour="emerald" onSelect={setSelectedNodeId} />
-                        <ConnectionList label="Outgoing" items={outputs} icon={ArrowRight} colour="purple" onSelect={setSelectedNodeId} />
-                        {inputs.length === 0 && outputs.length === 0 && (
-                            <div className="text-xs text-sidebar-foreground/40 italic px-1">No connections.</div>
-                        )}
-                    </div>
-                </div>
-
-                <Separator className="bg-sidebar-border/50 mb-8" />
-
-                {/* Metadata */}
-                <div className="mb-6">
-                    <h3 className="text-xs font-bold text-sidebar-foreground mb-4 uppercase tracking-wider flex items-center gap-2">
-                        <Box className="w-3.5 h-3.5" /> Node Data
-                    </h3>
-
-                    {hasAttributes ? (
-                        <div className="space-y-3">
-                            {Object.entries(node.attributes).map(([key, value], index, array) => (
-                                <div key={key} className="group">
-                                    <div className="flex justify-between text-xs items-start gap-4">
-                                        <span className="text-sidebar-foreground/70 font-medium shrink-0 pt-0.5">{key}</span>
-                                        <span className="font-mono text-sidebar-foreground text-right break-words select-all hover:text-blue-500 transition-colors">{String(value)}</span>
-                                    </div>
-                                    {index < array.length - 1 && <Separator className="bg-sidebar-border/30 mt-3" />}
-                                </div>
-                            ))}
-                        </div>
-                    ) : (
-                        <div className="text-xs text-sidebar-foreground/40 italic p-4 bg-sidebar-accent/20 rounded-lg border border-sidebar-border/30 text-center">
-                            No metadata available for this node.
-                        </div>
-                    )}
-                </div>
+            <ScrollArea className="flex-1 min-h-0 pb-6 px-6 pt-4">
+                <Accordion type="multiple" className="max-w-lg" defaultValue={["node-data"]}>
+                    {/* Main Data */}
+                    <AccordionItem value="node-data">
+                        <AttributesSection node={node} sectionTitle="Node Data" icon={Box} hasAttributes={hasAttributes} includeComputed={false} />
+                    </AccordionItem>
+                    {/* Connections */}
+                    <AccordionItem value="connections" className="pt-2">
+                        <AccordionTrigger className="cursor-pointer">
+                            <h3 className="text-xs font-bold text-sidebar-foreground mb-3 flex items-center gap-2 uppercase tracking-wider">
+                                <Waypoints className="w-3.5 h-3.5" /> Connections
+                            </h3>
+                        </AccordionTrigger>
+                        <AccordionContent>
+                            <div className="space-y-4">
+                                <ConnectionsContent inputs={inputs} outputs={outputs} onSelect={setSelectedNodeId} />
+                            </div>
+                        </AccordionContent>
+                    </AccordionItem>
+                    {/* Computed Attributes */}
+                    <AccordionItem value="computed-attributes" className="pt-2">
+                        <AttributesSection node={node} sectionTitle="Computed Attributes" icon={FlaskConical} hasAttributes={hasAttributes} includeComputed={true} />
+                    </AccordionItem>
+                </Accordion>
             </ScrollArea>
         </div>
     );

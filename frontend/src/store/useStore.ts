@@ -61,7 +61,7 @@ const mapTestData = () => {
         return {
             id: n.key,
             label: label,
-            type: n.attributes?.nodeType || 'Default',
+            type: n.attributes?.nodeType || 'Data',
             x: typeof n.attributes?.x === 'number' ? n.attributes.x : (Math.random() - 0.5) * 10,
             y: typeof n.attributes?.y === 'number' ? n.attributes.y : (Math.random() - 0.5) * 10,
             size: n.attributes?.size || 10, // Backend provides size, defaulting to 10
@@ -100,10 +100,10 @@ export const useStore = create<ExplorerState>((set) => ({
     viewLevel: 1,
     isGraphLoading: false,
     setSelectedNodeId: (id) => set({ selectedNodeId: id }),
-    setGraphData: (nodes, edges) => set({ 
-        nodes, 
-        edges, 
-        graph: createGraph(nodes, edges) 
+    setGraphData: (nodes, edges) => set({
+        nodes,
+        edges,
+        graph: createGraph(nodes, edges)
     }),
     setSearchQuery: (query) => set({ searchQuery: query }),
     setViewLevel: (level) => set({ viewLevel: level }),
@@ -113,18 +113,18 @@ export const useStore = create<ExplorerState>((set) => ({
             const data = await api.fetchGraphData("/graph");
             const nodes = data.nodes || [];
             const edges = data.edges || [];
-            set({ 
-                nodes, 
-                edges, 
-                graph: createGraph(nodes, edges) 
+            set({
+                nodes,
+                edges,
+                graph: createGraph(nodes, edges)
             });
         } catch (error) {
             console.error("Error fetching graph data, falling back to test_data.json:", error);
             const { nodes, edges } = mapTestData();
-            set({ 
-                nodes, 
-                edges, 
-                graph: createGraph(nodes, edges) 
+            set({
+                nodes,
+                edges,
+                graph: createGraph(nodes, edges)
             });
         } finally {
             set({ isGraphLoading: false });
