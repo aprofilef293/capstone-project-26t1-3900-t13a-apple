@@ -195,16 +195,16 @@ function AttributesSectionContent({
             {hasAttributes ? (
                 <div className="space-y-3">
                     {Object.entries(node.attributes)
-                    .filter(([key]) => (computedAttributeKeys.includes(key) == includeComputed))
-                    .map(([key, value], index, array) => (
-                        <div key={key} className="group">
-                            <div className="flex justify-between text-xs items-start gap-4">
-                                <span className="text-sidebar-foreground/70 font-medium shrink-0 pt-0.5">{key}</span>
-                                <span className="font-mono text-sidebar-foreground text-right break-words select-all">{String(value)}</span>
+                        .filter(([key]) => (computedAttributeKeys.includes(key) == includeComputed))
+                        .map(([key, value], index, array) => (
+                            <div key={key} className="group">
+                                <div className="flex justify-between text-xs items-start gap-4">
+                                    <span className="text-sidebar-foreground/70 font-medium shrink-0 pt-0.5">{key}</span>
+                                    <span className="font-mono text-sidebar-foreground text-right break-words select-all">{String(value)}</span>
+                                </div>
+                                {index < array.length - 1 && <Separator className="bg-sidebar-border/30 mt-3" />}
                             </div>
-                            {index < array.length - 1 && <Separator className="bg-sidebar-border/30 mt-3" />}
-                        </div>
-                    ))}
+                        ))}
                 </div>
             ) : (
                 <div className="text-xs text-sidebar-foreground/40 italic p-4 bg-sidebar-accent/20 rounded-lg border border-sidebar-border/30 text-center">
@@ -235,8 +235,9 @@ export function NodeDetailsPanel() {
         const outs: ConnectionItem[] = [];
 
         if (graph.hasNode(selectedNodeId)) {
-            graph.forEachInEdge(selectedNodeId, (edge, attr, source) => {
-                const src = graph.getNodeAttributes(source);
+            // Unique incoming neighbors
+            graph.forEachInNeighbor(selectedNodeId, (source, src) => {
+                if (source === selectedNodeId) return;
                 ins.push({
                     id: source,
                     title: (src.label as string) || source,
@@ -246,8 +247,9 @@ export function NodeDetailsPanel() {
                 });
             });
 
-            graph.forEachOutEdge(selectedNodeId, (edge, attr, target) => {
-                const tgt = graph.getNodeAttributes(target);
+            // Unique outgoing neighbors
+            graph.forEachOutNeighbor(selectedNodeId, (target, tgt) => {
+                if (target === selectedNodeId) return;
                 outs.push({
                     id: target,
                     title: (tgt.label as string) || target,
