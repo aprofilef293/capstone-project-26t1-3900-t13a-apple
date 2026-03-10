@@ -280,7 +280,6 @@ const GraphManager = forwardRef<GraphViewRef, unknown>((_, ref) => {
 
         sigma.setSetting("nodeReducer", (node: string, data: NodeAttributes) => {
             const isSelected = node === selectedNodeId;
-            const isDimmed = data.dimmed as boolean;
             const size = data.size ?? GRAPH_CONFIG.DEFAULT_NODE_SIZE;
             const finalSize = isSelected ? size * GRAPH_CONFIG.SELECTED_SCALE : size;
 
@@ -290,19 +289,11 @@ const GraphManager = forwardRef<GraphViewRef, unknown>((_, ref) => {
                 highlighted: isSelected,
             };
 
-            // Apply semi-transparent color to dimmed nodes
-            if (isDimmed) {
-                newData.color = isDark 
-                    ? "rgba(26, 26, 26, 0.6)"  // transparent dark grey 
-                    : "rgba(224, 224, 224, 0.6)"; // transparent light grey
-                newData.size = finalSize * 0.7; // smaller node
-            }
-
             if (largestNodesIds.has(node)) {
                 newData.type = "border";
                 newData.borderColor = isDark ? "#ffffff" : "#000000";
                 newData.borderSize = 0.15;
-                if (data.color && !isDimmed) {
+                if (data.color) {
                     newData.color = adjustColorBrightness(data.color, isDark ? 25 : -20);
                 }
             }
@@ -329,7 +320,7 @@ const GraphManager = forwardRef<GraphViewRef, unknown>((_, ref) => {
                         res.color = (graph.getNodeAttribute(selectedNodeId, "color") as string) || (isDark ? "#ffffff" : "#000000");
                         res.size = 2;
                     } else {
-                        res.color = isDark ? "#ffffff" : "#fbbf24";
+                        res.color = "#fbbf24";
                         res.size = 3;
                     }
                 } else if (isolationData) {
@@ -362,22 +353,16 @@ const GraphManager = forwardRef<GraphViewRef, unknown>((_, ref) => {
             const matchesSearch = !!selectedNodeId || !query || String(attrs.label ?? "").toLowerCase().includes(query);
             const level = ((attrs.attributes as Record<string, unknown>)?.viewLevel as number) ?? 1;
             let isVisible = matchesSearch && level >= viewLevel;
-            let isDimmed = false;
 
             // Apply node community Isolation if a node is selected
             if (selectedNodeId && isolationData) {
                 const isRelated = id === selectedNodeId ||
                     isolationData.communityNodes.has(id) ||
                     isolationData.neighborNodes.has(id);
-                
-                if (!isRelated) {
-                    isDimmed = true;  // Mark as dimmed instead of hiding
-                }
-                isVisible = isVisible;
+                isVisible = isVisible && isRelated;
             }
 
             graph.setNodeAttribute(id, "hidden", !isVisible);
-            graph.setNodeAttribute(id, "dimmed", isDimmed);
             if (isVisible) visibleNodes.add(id);
         });
 
