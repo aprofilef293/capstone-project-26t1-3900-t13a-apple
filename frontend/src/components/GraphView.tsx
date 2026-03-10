@@ -26,11 +26,11 @@ const GRAPH_CONFIG = {
 
 /** Attributes stored on Sigma nodes. */
 interface NodeAttributes {
-    label: string | null;
-    size: number;
-    x: number;
-    y: number;
-    color: string;
+    label?: string | null;
+    size?: number;
+    x?: number;
+    y?: number;
+    color?: string;
     highlighted?: boolean;
     hidden?: boolean;
     nodeType?: string;
@@ -157,59 +157,66 @@ const GraphManager = forwardRef<GraphViewRef, unknown>((_, ref) => {
             selectedLouvain
         };
     }, [selectedNodeId, sigma]);
-    useImperativeHandle(ref, () => ({
-        zoomIn: camera.zoomIn,
-        zoomOut: camera.zoomOut,
-        resetCamera: () => {
-            if (isolationData) {
+    const fitToView = useCallback(() => {
+        if (isolationData && selectedNodeId) {
+            const nodesToFit = Array.from(new Set([
+                selectedNodeId,
+                ...isolationData.communityNodes,
+                ...isolationData.neighborNodes
+            ]));
 
-                const nodesToFit = Array.from(new Set([
-                    selectedNodeId!,
-                    ...isolationData.communityNodes,
-                    ...isolationData.neighborNodes
-                ]));
+            let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+            let validNodesCount = 0;
 
-                let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
-                let validNodesCount = 0;
-
-                for (const id of nodesToFit) {
-                    const displayData = sigma.getNodeDisplayData(id) as { x: number, y: number } | undefined;
-                    if (displayData && typeof displayData.x === "number" && !isNaN(displayData.x) &&
-                        typeof displayData.y === "number" && !isNaN(displayData.y)) {
-                        minX = Math.min(minX, displayData.x);
-                        maxX = Math.max(maxX, displayData.x);
-                        minY = Math.min(minY, displayData.y);
-                        maxY = Math.max(maxY, displayData.y);
-                        validNodesCount++;
-                    }
-                }
-
-                if (validNodesCount > 0 && minX !== Infinity) {
-                    let dx = maxX - minX;
-                    let dy = maxY - minY;
-
-                    dx = Math.max(dx, 0.05);
-                    dy = Math.max(dy, 0.05);
-
-                    const centerX = (minX + maxX) / 2;
-                    const centerY = (minY + maxY) / 2;
-                    // 10% padding
-                    let ratio = Math.max(dx, dy) * GRAPH_CONFIG.PADDING;
-
-                    ratio = Math.max(0.01, Math.min(ratio, 1.5));
-
-                    sigma.getCamera().animate(
-                        { x: centerX, y: centerY, ratio },
-                        { duration: GRAPH_CONFIG.ANIMATION_DURATION }
-                    );
-                    return;
+            for (const id of nodesToFit) {
+                const displayData = sigma.getNodeDisplayData(id) as { x: number, y: number } | undefined;
+                if (displayData && typeof displayData.x === "number" && !isNaN(displayData.x) &&
+                    typeof displayData.y === "number" && !isNaN(displayData.y)) {
+                    minX = Math.min(minX, displayData.x);
+                    maxX = Math.max(maxX, displayData.x);
+                    minY = Math.min(minY, displayData.y);
+                    maxY = Math.max(maxY, displayData.y);
+                    validNodesCount++;
                 }
             }
 
-            // Fallback or default reset
-            camera.reset({ duration: GRAPH_CONFIG.ANIMATION_DURATION });
-        },
-    }), [camera, isolationData, selectedNodeId, sigma]);
+            if (validNodesCount > 0 && minX !== Infinity) {
+                let dx = maxX - minX;
+                let dy = maxY - minY;
+
+                dx = Math.max(dx, 0.05);
+                dy = Math.max(dy, 0.05);
+
+                const centerX = (minX + maxX) / 2;
+                const centerY = (minY + maxY) / 2;
+                let ratio = Math.max(dx, dy) * GRAPH_CONFIG.PADDING;
+
+                ratio = Math.max(0.01, Math.min(ratio, 1.5));
+
+                sigma.getCamera().animate(
+                    { x: centerX, y: centerY, ratio },
+                    { duration: GRAPH_CONFIG.ANIMATION_DURATION }
+                );
+                return;
+            }
+        }
+
+        // Fallback or default reset
+        camera.reset({ duration: GRAPH_CONFIG.ANIMATION_DURATION });
+    }, [sigma, isolationData, selectedNodeId, camera]);
+
+    useImperativeHandle(ref, () => ({
+        zoomIn: camera.zoomIn,
+        zoomOut: camera.zoomOut,
+        resetCamera: fitToView,
+    }), [camera, fitToView]);
+
+    // Automatically fit to view when a node is selected
+    useEffect(() => {
+        if (selectedNodeId) {
+            fitToView();
+        }
+    }, [selectedNodeId, fitToView]);
 
     useEffect(() => {
         const graph = sigma.getGraph();
@@ -279,13 +286,14 @@ const GraphManager = forwardRef<GraphViewRef, unknown>((_, ref) => {
     useEffect(() => {
         const graph = sigma.getGraph();
 
-        sigma.setSetting("nodeReducer", (node: string, data: NodeAttributes) => {
+        sigma.setSetting("nodeReducer", (node: string, data: any) => {
+            const attrs = data as NodeAttributes;
             const isSelected = node === selectedNodeId;
-            const size = data.size ?? GRAPH_CONFIG.DEFAULT_NODE_SIZE;
+            const size = attrs.size ?? GRAPH_CONFIG.DEFAULT_NODE_SIZE;
             const finalSize = isSelected ? size * GRAPH_CONFIG.SELECTED_SCALE : size;
 
             const newData: NodeAttributes = {
-                ...data,
+                ...attrs,
                 size: finalSize,
                 highlighted: isSelected,
                 zIndex: finalSize,
@@ -293,10 +301,10 @@ const GraphManager = forwardRef<GraphViewRef, unknown>((_, ref) => {
 
             if (largestNodesIds.has(node)) {
                 newData.type = "border";
-                newData.borderColor = data.color ? adjustColorBrightness(data.color, -20) : (isDark ? "#ffffff" : "#000000");
+                newData.borderColor = attrs.color ? adjustColorBrightness(attrs.color, -20) : (isDark ? "#ffffff" : "#000000");
                 newData.borderSize = 0.15;
-                if (data.color) {
-                    newData.color = adjustColorBrightness(data.color, isDark ? 25 : -20);
+                if (attrs.color) {
+                    newData.color = adjustColorBrightness(attrs.color, isDark ? 25 : -20);
                 }
             }
 
@@ -393,26 +401,26 @@ export const GraphView = forwardRef<GraphViewRef, unknown>((_, ref) => {
         [isDark],
     );
 
-    /** Draws a highlight ring + label pill for hovered / selected nodes. */
     const drawOverlay = useCallback(
         (ctx: CanvasRenderingContext2D, data: NodeAttributes, settings: SigmaDrawingSettings) => {
-            if (!data.label) return;
+            const { label, x, y, size } = data;
+            if (!label || x === undefined || y === undefined || size === undefined) return;
 
             const { labelSize, labelFont, labelWeight } = settings;
             const pad = 4;
 
             ctx.font = `${labelWeight} ${labelSize}px ${labelFont}`;
-            const textW = ctx.measureText(data.label).width;
+            const textW = ctx.measureText(label).width;
 
             // Highlight ring
             ctx.beginPath();
             ctx.fillStyle = colours.highlight;
-            ctx.arc(data.x, data.y, data.size + pad, 0, Math.PI * 2);
+            ctx.arc(x, y, size + pad, 0, Math.PI * 2);
             ctx.fill();
 
             // Label pill
-            const rx = data.x + data.size + pad;
-            const ry = data.y - labelSize / 2 - pad;
+            const rx = x + size + pad;
+            const ry = y - labelSize / 2 - pad;
 
             ctx.beginPath();
             ctx.fillStyle = colours.highlight;
@@ -428,7 +436,7 @@ export const GraphView = forwardRef<GraphViewRef, unknown>((_, ref) => {
 
             // Label text
             ctx.fillStyle = colours.highlightLabel;
-            ctx.fillText(data.label, rx + pad, data.y + labelSize / 3);
+            ctx.fillText(label, rx + pad, y + labelSize / 3);
         },
         [colours],
     );
@@ -454,12 +462,13 @@ export const GraphView = forwardRef<GraphViewRef, unknown>((_, ref) => {
                 data: NodeAttributes,
                 settings: SigmaDrawingSettings,
             ) => {
-                if (!data.label) return;
-                if (data.highlighted) return drawOverlay(ctx, data, settings);
+                const { label, x, y, size, highlighted } = data;
+                if (!label || x === undefined || y === undefined || size === undefined) return;
+                if (highlighted) return drawOverlay(ctx, data, settings);
 
                 ctx.font = `${settings.labelWeight} ${settings.labelSize}px ${settings.labelFont}`;
                 ctx.fillStyle = colours.label;
-                ctx.fillText(data.label, data.x + data.size + 4, data.y + settings.labelSize / 3);
+                ctx.fillText(label, x + size + 4, y + settings.labelSize / 3);
             },
             nodeProgramClasses: {
                 border: NodeBorderProgram,
