@@ -36,7 +36,7 @@ interface ExplorerState {
     isGraphLoading: boolean;
     // File import
     fileName: string | null;
-    importStatus: 'idle' | 'loading' | 'complete' | 'error';
+    importStatus: 'idle' | 'waiting' | 'loading' | 'complete' | 'error';
     importError: string | null;
     importProgress: number;
     importDate: Date | null;
@@ -134,13 +134,14 @@ export const useStore = create<ExplorerState>((set) => ({
     importDate: null,
     importError: null,
     startFileImport: async (file) => {
+        set({ fileName: file.name, importStatus: 'waiting', importDate: new Date() })
         const uploadData = new FormData();
         uploadData.append(
             file.name,
             file
         )
         try {
-            const response = await fetch("/obo-file-upload", {
+            const response = await fetch("/api/ontology/upload", {
                 method: 'POST',
                 body: uploadData,
             })
