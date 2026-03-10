@@ -26,6 +26,8 @@ function ConnectionList({
 }) {
     if (items.length === 0) return null;
 
+    const displayedItems = items.slice(0, 50); //Display top 50 not ideal strat but works for proof of concept that connections caused the lag
+
     const colourClasses = colour === "emerald"
         ? "bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 group-hover:bg-emerald-500/20 group-hover:border-emerald-500/30"
         : "bg-purple-500/10 text-purple-500 border border-purple-500/20 group-hover:bg-purple-500/20 group-hover:border-purple-500/30";
@@ -36,7 +38,7 @@ function ConnectionList({
                 {label} ({items.length})
             </div>
             <div className="space-y-1.5">
-                {items.map((item) => (
+                {displayedItems.map((item) => (
                     <div
                         key={item.id}
                         onClick={() => onSelect(item.id)}
@@ -47,7 +49,7 @@ function ConnectionList({
                                 <Icon className="w-3.5 h-3.5" />
                             </div>
                             <div>
-                                <div className="text-xs font-medium text-sidebar-foreground group-hover:text-blue-500 transition-colors">{item.title}</div>
+                                <div className="text-xs font-medium text-sidebar-foreground group-hover:text-blue-500 transition-colors truncate max-w-[200px]">{item.title}</div>
                                 <div className="text-[10px] text-sidebar-foreground/50">{item.type}</div>
                             </div>
                         </div>
@@ -61,11 +63,10 @@ function ConnectionList({
 
 /* ── Main panel ── */
 export function NodeDetailsPanel() {
-    const { selectedNodeId, nodes, edges, setSelectedNodeId } = useStore();
-
+    const { selectedNodeId, nodes, graph, setSelectedNodeId } = useStore();
     const node = nodes.find((n) => n.id === selectedNodeId);
 
-    if (!node) {
+    if (!node || !selectedNodeId) {
         return (
             <div className="w-96 border-l border-sidebar-border bg-sidebar flex flex-col items-center justify-center p-6 text-center text-sidebar-foreground/70 transition-colors">
                 <Box className="w-12 h-12 mb-4 opacity-20" />
@@ -74,20 +75,33 @@ export function NodeDetailsPanel() {
         );
     }
 
-    // Derive connections from edges
-    const inputs = edges
-        .filter(e => e.target === node.id)
-        .map(e => {
-            const src = nodes.find(n => n.id === e.source);
-            return { id: src?.id ?? e.source, title: src?.label ?? e.source, type: src?.type ?? "Unknown" };
-        });
+    // Use graphology now to determine node connections - more efficient, should fix lag issue
+    const { inputs, outputs } = (() => {
+        const ins: ConnectionItem[] = [];
+        const outs: ConnectionItem[] = [];
 
-    const outputs = edges
-        .filter(e => e.source === node.id)
-        .map(e => {
-            const tgt = nodes.find(n => n.id === e.target);
-            return { id: tgt?.id ?? e.target, title: tgt?.label ?? e.target, type: tgt?.type ?? "Unknown" };
-        });
+        if (graph.hasNode(selectedNodeId)) {
+            graph.forEachInEdge(selectedNodeId, (edge, attr, source) => {
+                const src = graph.getNodeAttributes(source);
+                ins.push({
+                    id: source,
+                    title: (src.label as string) || source,
+                    type: (src.type as string) || "Unknown"
+                });
+            });
+
+            graph.forEachOutEdge(selectedNodeId, (edge, attr, target) => {
+                const tgt = graph.getNodeAttributes(target);
+                outs.push({
+                    id: target,
+                    title: (tgt.label as string) || target,
+                    type: (tgt.type as string) || "Unknown"
+                });
+            });
+        }
+
+        return { inputs: ins, outputs: outs };
+    })();
 
     const hasAttributes = Object.keys(node.attributes ?? {}).length > 0;
 
