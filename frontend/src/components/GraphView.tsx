@@ -320,7 +320,7 @@ const GraphManager = forwardRef<GraphViewRef, unknown>((_, ref) => {
                         res.color = (graph.getNodeAttribute(selectedNodeId, "color") as string) || (isDark ? "#ffffff" : "#000000");
                         res.size = 2;
                     } else {
-                        res.color = isDark ? "#ffffff" : "#fbbf24";
+                        res.color = "#fbbf24";
                         res.size = 3;
                     }
                 } else if (isolationData) {
