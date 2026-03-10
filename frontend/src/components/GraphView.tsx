@@ -43,7 +43,7 @@ interface NodeAttributes {
 
 /** Attributes stored on Sigma edges. */
 interface EdgeAttributes {
-    color: string;
+    color?: string;
     hidden?: boolean;
     size?: number;
     [key: string]: unknown;
