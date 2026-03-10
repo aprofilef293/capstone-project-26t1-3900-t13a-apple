@@ -15,7 +15,6 @@ export function GraphExplorer() {
     const [viewMode, setViewMode] = useState<'graph' | 'hierarchy'>('graph');
     const graphViewRef = useRef<GraphViewRef>(null);
     const isNodeSelecting = useStore((state) => state.isNodeSelecting);
-    // const isNodeSelecting = true;
     
     useEffect(() => {
         fetchGraphData();
