@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import testData from '../data/test_data.json';
 import * as api from '../lib/api';
+import { MultiDirectedGraph } from 'graphology';
 
 export interface GraphNode {
     id: string;
@@ -23,6 +24,7 @@ export interface GraphEdge {
 interface ExplorerState {
     nodes: GraphNode[];
     edges: GraphEdge[];
+    graph: MultiDirectedGraph;
     selectedNodeId: string | null;
     searchQuery: string;
     viewLevel: number;
@@ -31,6 +33,7 @@ interface ExplorerState {
     setSearchQuery: (query: string) => void;
     setViewLevel: (level: number) => void;
     fetchGraphData: () => Promise<void>;
+    isGraphLoading: boolean;
     // File import
     fileName: string | null;
     importStatus: 'idle' | 'waiting' | 'loading' | 'complete' | 'error';
@@ -74,24 +77,54 @@ const mapTestData = () => {
     return { nodes, edges };
 };
 
+const createGraph = (nodes: GraphNode[], edges: GraphEdge[]) => {
+    const graph = new MultiDirectedGraph();
+    nodes.forEach(node => {
+        graph.addNode(node.id, { ...node });
+    });
+    edges.forEach(edge => {
+        graph.addEdge(edge.source, edge.target, { ...edge });
+    });
+    return graph;
+};
+
 export const useStore = create<ExplorerState>((set) => ({
     nodes: [],
     edges: [],
+    graph: new MultiDirectedGraph(),
     selectedNodeId: null, // Removed default selection to avoid missing node errors
     searchQuery: "",
     viewLevel: 1,
+    isGraphLoading: false,
     setSelectedNodeId: (id) => set({ selectedNodeId: id }),
-    setGraphData: (nodes, edges) => set({ nodes, edges }),
+    setGraphData: (nodes, edges) => set({ 
+        nodes, 
+        edges, 
+        graph: createGraph(nodes, edges) 
+    }),
     setSearchQuery: (query) => set({ searchQuery: query }),
     setViewLevel: (level) => set({ viewLevel: level }),
     fetchGraphData: async () => {
+        set({ isGraphLoading: true });
         try {
             const data = await api.fetchGraphData("/graph");
-            set({ nodes: data.nodes || [], edges: data.edges || [] });
+            const nodes = data.nodes || [];
+            const edges = data.edges || [];
+            set({ 
+                nodes, 
+                edges, 
+                graph: createGraph(nodes, edges) 
+            });
         } catch (error) {
             console.error("Error fetching graph data, falling back to test_data.json:", error);
             const { nodes, edges } = mapTestData();
-            set({ nodes, edges });
+            set({ 
+                nodes, 
+                edges, 
+                graph: createGraph(nodes, edges) 
+            });
+        } finally {
+            set({ isGraphLoading: false });
         }
     },
     // File import
