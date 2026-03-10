@@ -1,4 +1,4 @@
-import { ChevronRight, ArrowRight, CornerDownRight, Box, X, type LucideIcon } from "lucide-react";
+import { ChevronRight, ArrowRight, CornerDownRight, Box, X, type LucideIcon, Waypoints, FlaskConical } from "lucide-react";
 import { useStore } from "../../store/useStore";
 import { Badge } from "../ui/badge";
 import { ScrollArea } from "../ui/scroll-area";
@@ -12,6 +12,16 @@ interface ConnectionItem {
     title: string;
     type: string;
 }
+
+const computedAttributeKeys = [
+    "size",
+    "percentile_rank",
+    "pagerank_score",
+    "color",
+    "viewLevel",
+    "x",
+    "y"
+]
 
 function ConnectionList({
     items,
@@ -122,6 +132,7 @@ export function NodeDetailsPanel() {
         });
 
     const hasAttributes = Object.keys(node.attributes ?? {}).length > 0;
+    console.log(node.attributes);
 
     return (
         <div className="w-[400px] border-l border-sidebar-border bg-sidebar flex flex-col h-full shadow-xl z-20 transition-colors">
@@ -155,7 +166,9 @@ export function NodeDetailsPanel() {
                         <AccordionContent>
                             {hasAttributes ? (
                                 <div className="space-y-3">
-                                    {Object.entries(node.attributes).map(([key, value], index, array) => (
+                                    {Object.entries(node.attributes)
+                                    .filter(([key]) => (!computedAttributeKeys.includes(key)))
+                                    .map(([key, value], index, array) => (
                                         <div key={key} className="group">
                                             <div className="flex justify-between text-xs items-start gap-4">
                                                 <span className="text-sidebar-foreground/70 font-medium shrink-0 pt-0.5">{key}</span>
@@ -172,17 +185,46 @@ export function NodeDetailsPanel() {
                             )}
                         </AccordionContent>
                     </AccordionItem>
-                    <AccordionItem value="connections">
+                    <AccordionItem value="connections" className="pt-2">
                         {/* Connections */}
                         <AccordionTrigger>
-                            <h3 className="text-xs font-bold text-sidebar-foreground pt-2 mb-3 flex items-center gap-2 uppercase tracking-wider">
-                                <ArrowRight className="w-3.5 h-3.5" /> Connections
+                            <h3 className="text-xs font-bold text-sidebar-foreground mb-3 flex items-center gap-2 uppercase tracking-wider">
+                                <Waypoints className="w-3.5 h-3.5" /> Connections
                             </h3>
                         </AccordionTrigger>
                         <AccordionContent>
                             <div className="space-y-4">
                                 <ConnectionsContent inputs={inputs} outputs={outputs} onSelect={setSelectedNodeId} />
                             </div>
+                        </AccordionContent>
+                    </AccordionItem>
+                    <AccordionItem value="computed-attributes" className="pt-2">
+                        {/* Metadata */}
+                        <AccordionTrigger>
+                            <h3 className="text-xs font-bold text-sidebar-foreground mb-4 uppercase tracking-wider flex items-center gap-2">
+                                <FlaskConical className="w-3.5 h-3.5" /> Computed Attributes
+                            </h3>
+                        </AccordionTrigger>
+                        <AccordionContent>
+                            {hasAttributes ? (
+                                <div className="space-y-3">
+                                    {Object.entries(node.attributes)
+                                    .filter(([key]) => (computedAttributeKeys.includes(key)))
+                                    .map(([key, value], index, array) => (
+                                        <div key={key} className="group">
+                                            <div className="flex justify-between text-xs items-start gap-4">
+                                                <span className="text-sidebar-foreground/70 font-medium shrink-0 pt-0.5">{key}</span>
+                                                <span className="font-mono text-sidebar-foreground text-right break-words select-all hover:text-blue-500 transition-colors">{String(value)}</span>
+                                            </div>
+                                            {index < array.length - 1 && <Separator className="bg-sidebar-border/30 mt-3" />}
+                                        </div>
+                                    ))}
+                                </div>
+                            ) : (
+                                <div className="text-xs text-sidebar-foreground/40 italic p-4 bg-sidebar-accent/20 rounded-lg border border-sidebar-border/30 text-center">
+                                    No metadata available for this node.
+                                </div>
+                            )}
                         </AccordionContent>
                     </AccordionItem>
                 </Accordion>
