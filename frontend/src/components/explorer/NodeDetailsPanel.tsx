@@ -16,9 +16,6 @@ interface ConnectionItem {
     type: string;
     size: number;
     colour: string;
-    // TODO: more complicated, could add later (for relevance/importance)
-    // rank: number;
-    // viewLevel: number;
 }
 
 const computedAttributeKeys = [
@@ -30,50 +27,6 @@ const computedAttributeKeys = [
     "x",
     "y"
 ]
-
-function ConnectionList({
-    items,
-    icon: Icon,
-    colour,
-    onSelect,
-}: {
-    items: ConnectionItem[];
-    icon: LucideIcon;
-    colour: "emerald" | "purple";
-    onSelect: (id: string) => void;
-}) {
-    if (items.length === 0) return null;
-
-    const displayedItems = items;
-    const colourClasses = colour === "emerald"
-        ? "bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 group-hover:bg-emerald-500/20 group-hover:border-emerald-500/30"
-        : "bg-purple-500/10 text-purple-500 border border-purple-500/20 group-hover:bg-purple-500/20 group-hover:border-purple-500/30";
-
-    return (
-        <div>
-            <div className="space-y-1.5">
-                {displayedItems.map((item) => (
-                    <div
-                        key={item.id}
-                        onClick={() => onSelect(item.id)}
-                        className="flex items-center justify-between p-2.5 rounded-lg border border-sidebar-border/50 bg-sidebar-accent/30 hover:bg-sidebar-accent/80 hover:border-sidebar-border cursor-pointer group transition-all"
-                    >
-                        <div className="flex items-center gap-3">
-                            <div className={`p-1.5 rounded-md ${colourClasses}`}>
-                                <Icon className="w-3.5 h-3.5" />
-                            </div>
-                            <div>
-                                <div className="text-xs font-medium text-sidebar-foreground group-hover:text-blue-500 transition-colors truncate max-w-[200px]">{item.title}</div>
-                                <div className="text-[10px] text-sidebar-foreground/50">{item.type}</div>
-                            </div>
-                        </div>
-                        <ChevronRight className="w-3.5 h-3.5 text-sidebar-foreground/30 group-hover:text-sidebar-foreground/80" />
-                    </div>
-                ))}
-            </div>
-        </div >
-    );
-}
 
 function alphabeticalSort(a: string, b: string): number {
     if (a < b)
@@ -109,6 +62,43 @@ function sortList(list: ConnectionItem[], sortType: string) {
             newList = list.sort((a, b) => alphabeticalSort(a.title, b.title));
     }
     return newList;
+}
+
+function ConnectionList({
+    items,
+    icon: Icon,
+    onSelect,
+}: {
+    items: ConnectionItem[];
+    icon: LucideIcon;
+    onSelect: (id: string) => void;
+}) {
+    if (items.length === 0) return null;
+
+    return (
+        <div>
+            <div className="space-y-1.5">
+                {items.map((item) => (
+                    <div
+                        key={item.id}
+                        onClick={() => onSelect(item.id)}
+                        className="flex items-center justify-between p-2.5 rounded-lg border border-sidebar-border/50 bg-sidebar-accent/30 hover:bg-sidebar-accent/80 hover:border-sidebar-border cursor-pointer group transition-all"
+                    >
+                        <div className="flex items-center gap-3">
+                            <div className="p-1.5 rounded-md text-black" style={{ backgroundColor: item.colour }}>
+                                <Icon className="w-3.5 h-3.5"/>
+                            </div>
+                            <div>
+                                <div className="text-xs font-medium text-sidebar-foreground group-hover:text-blue-500 transition-colors truncate max-w-[200px]">{item.title}</div>
+                                <div className="text-[10px] text-sidebar-foreground/50">{item.type}</div>
+                            </div>
+                        </div>
+                        <ChevronRight className="w-3.5 h-3.5 text-sidebar-foreground/30 group-hover:text-sidebar-foreground/80" />
+                    </div>
+                ))}
+            </div>
+        </div >
+    );
 }
 
 function ConnectionsContent({
@@ -153,9 +143,6 @@ function ConnectionsContent({
                             <DropdownMenuRadioItem value="name-az">Name (A-Z)</DropdownMenuRadioItem>
                             <DropdownMenuRadioItem value="name-za">Name (Z-A)</DropdownMenuRadioItem>
                             <DropdownMenuSeparator />
-                            {/* <DropdownMenuRadioItem value="relevance">Relevance</DropdownMenuRadioItem> */}
-                            {/* <DropdownMenuRadioItem value="importance">Importance</DropdownMenuRadioItem> */}
-                            {/* <DropdownMenuSeparator /> */}
                             <DropdownMenuRadioItem value="size-asc">Size (Low to High)</DropdownMenuRadioItem>
                             <DropdownMenuRadioItem value="size-desc">Size (High to Low)</DropdownMenuRadioItem>
                             <DropdownMenuSeparator />
@@ -166,13 +153,13 @@ function ConnectionsContent({
                 </DropdownMenu>
             </div>
             <TabsContent value="tab1">
-                <ConnectionList items={inputsList} icon={CornerDownRight} colour="emerald" onSelect={onSelect} />
+                <ConnectionList items={inputsList} icon={CornerDownRight} onSelect={onSelect} />
                 {inputs.length === 0 && (
                     <div className="text-s text-sidebar-foreground/40 italic     px-1">No incoming connections.</div>
                 )}
             </TabsContent>
             <TabsContent value="tab2">
-                <ConnectionList items={outputsList} icon={ArrowRight} colour="purple" onSelect={onSelect} />
+                <ConnectionList items={outputsList} icon={ArrowRight} onSelect={onSelect} />
                 {outputs.length === 0 && (
                     <div className="text-s text-sidebar-foreground/40 italic px-1">No outgoing connections.</div>
                 )}
@@ -181,37 +168,48 @@ function ConnectionsContent({
     )
 }
 
-function AttributesSectionContent({
+function AttributesSection({
     node,
+    sectionTitle,
+    icon: Icon,
     hasAttributes,
     includeComputed,
 }: {
     node: GraphNode;
+    sectionTitle: string;
+    icon: LucideIcon
     hasAttributes: boolean;
     includeComputed: boolean;
 }) {
     return (
-        <AccordionContent>
-            {hasAttributes ? (
-                <div className="space-y-3">
-                    {Object.entries(node.attributes)
-                        .filter(([key]) => (computedAttributeKeys.includes(key) == includeComputed))
-                        .map(([key, value], index, array) => (
-                            <div key={key} className="group">
-                                <div className="flex justify-between text-xs items-start gap-4">
-                                    <span className="text-sidebar-foreground/70 font-medium shrink-0 pt-0.5">{key}</span>
-                                    <span className="font-mono text-sidebar-foreground text-right break-words select-all">{String(value)}</span>
+        <>
+            <AccordionTrigger className="cursor-pointer">
+                <h3 className="text-xs font-bold text-sidebar-foreground mb-4 uppercase tracking-wider flex items-center gap-2">
+                    <Icon className="w-3.5 h-3.5" /> {sectionTitle}
+                </h3>
+            </AccordionTrigger>
+            <AccordionContent>
+                {hasAttributes ? (
+                    <div className="space-y-3">
+                        {Object.entries(node.attributes)
+                            .filter(([key]) => (computedAttributeKeys.includes(key) == includeComputed))
+                            .map(([key, value], index, array) => (
+                                <div key={key} className="group">
+                                    <div className="flex justify-between text-xs items-start gap-4">
+                                        <span className="text-sidebar-foreground/70 font-medium shrink-0 pt-0.5">{key}</span>
+                                        <span className="font-mono text-sidebar-foreground text-right break-words select-all">{String(value)}</span>
+                                    </div>
+                                    {index < array.length - 1 && <Separator className="bg-sidebar-border/30 mt-3" />}
                                 </div>
-                                {index < array.length - 1 && <Separator className="bg-sidebar-border/30 mt-3" />}
-                            </div>
-                        ))}
-                </div>
-            ) : (
-                <div className="text-xs text-sidebar-foreground/40 italic p-4 bg-sidebar-accent/20 rounded-lg border border-sidebar-border/30 text-center">
-                    No metadata available for this node.
-                </div>
-            )}
-        </AccordionContent>
+                            ))}
+                    </div>
+                ) : (
+                    <div className="text-xs text-sidebar-foreground/40 italic p-4 bg-sidebar-accent/20 rounded-lg border border-sidebar-border/30 text-center">
+                        No metadata available for this node.
+                    </div>
+                )}
+            </AccordionContent>
+        </>
     )
 }
 
@@ -257,7 +255,6 @@ export function NodeDetailsPanel() {
                     size: (tgt.size as number) || -1,
                     colour: (tgt.color as string) || "#000000",
                 });
-                console.log(outs);
             });
         }
 
@@ -293,12 +290,7 @@ export function NodeDetailsPanel() {
                 <Accordion type="multiple" className="max-w-lg" defaultValue={["node-data"]}>
                     {/* Main Data */}
                     <AccordionItem value="node-data">
-                        <AccordionTrigger className="cursor-pointer">
-                            <h3 className="text-xs font-bold text-sidebar-foreground mb-4 uppercase tracking-wider flex items-center gap-2">
-                                <Box className="w-3.5 h-3.5" /> Node Data
-                            </h3>
-                        </AccordionTrigger>
-                        <AttributesSectionContent node={node} hasAttributes={hasAttributes} includeComputed={false} />
+                        <AttributesSection node={node} sectionTitle="Node Data" icon={Box} hasAttributes={hasAttributes} includeComputed={false} />
                     </AccordionItem>
                     {/* Connections */}
                     <AccordionItem value="connections" className="pt-2">
@@ -315,12 +307,7 @@ export function NodeDetailsPanel() {
                     </AccordionItem>
                     {/* Computed Attributes */}
                     <AccordionItem value="computed-attributes" className="pt-2">
-                        <AccordionTrigger className="cursor-pointer">
-                            <h3 className="text-xs font-bold text-sidebar-foreground mb-4 uppercase tracking-wider flex items-center gap-2">
-                                <FlaskConical className="w-3.5 h-3.5" /> Computed Attributes
-                            </h3>
-                        </AccordionTrigger>
-                        <AttributesSectionContent node={node} hasAttributes={hasAttributes} includeComputed={true} />
+                        <AttributesSection node={node} sectionTitle="Computed Attributes" icon={FlaskConical} hasAttributes={hasAttributes} includeComputed={true} />
                     </AccordionItem>
                 </Accordion>
             </ScrollArea>
