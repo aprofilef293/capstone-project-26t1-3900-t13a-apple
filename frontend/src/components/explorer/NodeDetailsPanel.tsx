@@ -26,8 +26,7 @@ function ConnectionList({
 }) {
     if (items.length === 0) return null;
 
-    const displayedItems = items.slice(0, 50); //Display top 50 not ideal strat but works for proof of concept that connections caused the lag
-
+    const displayedItems = items;
     const colourClasses = colour === "emerald"
         ? "bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 group-hover:bg-emerald-500/20 group-hover:border-emerald-500/30"
         : "bg-purple-500/10 text-purple-500 border border-purple-500/20 group-hover:bg-purple-500/20 group-hover:border-purple-500/30";
