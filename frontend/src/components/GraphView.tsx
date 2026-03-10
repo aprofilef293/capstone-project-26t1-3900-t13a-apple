@@ -385,8 +385,8 @@ export const GraphView = forwardRef<GraphViewRef, unknown>((_, ref) => {
     const colours = useMemo(
         () => ({
             label: isDark ? "#f8fafc" : "#0f172a",
-            highlight: isDark ? "#ffffff" : "#000000",
-            highlightLabel: isDark ? "#000000" : "#ffffff",
+            highlight: "#fbbf24",
+            highlightLabel: "#000000",
         }),
         [isDark],
     );
