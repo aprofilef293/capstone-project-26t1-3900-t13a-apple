@@ -14,7 +14,9 @@ export function GraphExplorer() {
     const fetchGraphData = useStore((state) => state.fetchGraphData);
     const [viewMode, setViewMode] = useState<'graph' | 'hierarchy'>('graph');
     const graphViewRef = useRef<GraphViewRef>(null);
-
+    // const isNodeSelecting = useStore((state) => state.isNodeSelecting);
+    const isNodeSelecting = true;
+    
     useEffect(() => {
         fetchGraphData();
     }, [fetchGraphData]);
@@ -51,6 +53,15 @@ export function GraphExplorer() {
                         <div className="absolute inset-0 z-0">
                             {viewMode === 'graph' ? <GraphView ref={graphViewRef} /> : <HierarchyView />}
                         </div>
+
+                        {/* clicking node loading spinner */}
+                        {isNodeSelecting && viewMode === 'graph' && (
+                            <div className="absolute inset-0 z-10 flex items-end justify-start pb-8 pl-8 pointer-events-none">
+                                <div className="flex items-center gap-2 bg-sidebar/90 backdrop-blur-sm border border-sidebar-border rounded-full px-3 py-2 shadow-md animate-in fade-in duration-150 [animation-delay:230ms] [animation-fill-mode:backwards]">                                    <div className="w-4 h-4 border-2 border-sidebar-foreground/20 border-t-blue-500 rounded-full animate-spin" />
+                                    <span className="text-xs text-sidebar-foreground/70">Loading...</span>
+                                </div>
+                            </div>
+                        )}
                     </div>
                 </div>
 
