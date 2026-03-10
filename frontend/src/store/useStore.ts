@@ -108,7 +108,7 @@ export const useStore = create<ExplorerState>((set) => ({
             file
         )
         try {
-            const response = await fetch("/obo-file-upload", {
+            const response = await fetch("/api/ontology/upload", {
                 method: 'POST',
                 body: uploadData,
             })
