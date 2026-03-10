@@ -4,6 +4,7 @@ import { Badge } from "../ui/badge";
 import { ScrollArea } from "../ui/scroll-area";
 import { Separator } from "../ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "../ui/accordion";
 
 /* ── Reusable connection card list ── */
 interface ConnectionItem {
@@ -139,46 +140,52 @@ export function NodeDetailsPanel() {
                         <X className="w-3.5 h-3.5" />
                     </button>
                 </div>
-                <h2 className="text-xl font-bold text-sidebar-foreground mb-1 leading-tight">{node.label}</h2>
+                <h2 className="text-xl font-bold text-sidebar-foreground pt-2 mb-1 leading-tight">{node.label}</h2>
             </div>
 
-            <ScrollArea className="flex-1 min-h-0 pb-6 px-6 pt-6">
-                {/* Connections */}
-                <div className="mb-8">
-                    <h3 className="text-xs font-bold text-sidebar-foreground mb-3 flex items-center gap-2 uppercase tracking-wider">
-                        <ArrowRight className="w-3.5 h-3.5" /> Connections
-                    </h3>
-                    <div className="space-y-4">
-                        <ConnectionsContent inputs={inputs} outputs={outputs} onSelect={setSelectedNodeId} />
-                    </div>
-                </div>
-
-                <Separator className="bg-sidebar-border/50 mb-8" />
-
-                {/* Metadata */}
-                <div className="mb-6">
-                    <h3 className="text-xs font-bold text-sidebar-foreground mb-4 uppercase tracking-wider flex items-center gap-2">
-                        <Box className="w-3.5 h-3.5" /> Node Data
-                    </h3>
-
-                    {hasAttributes ? (
-                        <div className="space-y-3">
-                            {Object.entries(node.attributes).map(([key, value], index, array) => (
-                                <div key={key} className="group">
-                                    <div className="flex justify-between text-xs items-start gap-4">
-                                        <span className="text-sidebar-foreground/70 font-medium shrink-0 pt-0.5">{key}</span>
-                                        <span className="font-mono text-sidebar-foreground text-right break-words select-all hover:text-blue-500 transition-colors">{String(value)}</span>
-                                    </div>
-                                    {index < array.length - 1 && <Separator className="bg-sidebar-border/30 mt-3" />}
+            <ScrollArea className="flex-1 min-h-0 pb-6 px-6 pt-4">
+                <Accordion type="multiple" defaultValue={["node-data"]}>
+                    <AccordionItem value="node-data">
+                        {/* Metadata */}
+                        <AccordionTrigger>
+                            <h3 className="text-xs font-bold text-sidebar-foreground mb-4 uppercase tracking-wider flex items-center gap-2">
+                                <Box className="w-3.5 h-3.5" /> Node Data
+                            </h3>
+                        </AccordionTrigger>
+                        <AccordionContent>
+                            {hasAttributes ? (
+                                <div className="space-y-3">
+                                    {Object.entries(node.attributes).map(([key, value], index, array) => (
+                                        <div key={key} className="group">
+                                            <div className="flex justify-between text-xs items-start gap-4">
+                                                <span className="text-sidebar-foreground/70 font-medium shrink-0 pt-0.5">{key}</span>
+                                                <span className="font-mono text-sidebar-foreground text-right break-words select-all hover:text-blue-500 transition-colors">{String(value)}</span>
+                                            </div>
+                                            {index < array.length - 1 && <Separator className="bg-sidebar-border/30 mt-3" />}
+                                        </div>
+                                    ))}
                                 </div>
-                            ))}
-                        </div>
-                    ) : (
-                        <div className="text-xs text-sidebar-foreground/40 italic p-4 bg-sidebar-accent/20 rounded-lg border border-sidebar-border/30 text-center">
-                            No metadata available for this node.
-                        </div>
-                    )}
-                </div>
+                            ) : (
+                                <div className="text-xs text-sidebar-foreground/40 italic p-4 bg-sidebar-accent/20 rounded-lg border border-sidebar-border/30 text-center">
+                                    No metadata available for this node.
+                                </div>
+                            )}
+                        </AccordionContent>
+                    </AccordionItem>
+                    <AccordionItem value="connections">
+                        {/* Connections */}
+                        <AccordionTrigger>
+                            <h3 className="text-xs font-bold text-sidebar-foreground pt-2 mb-3 flex items-center gap-2 uppercase tracking-wider">
+                                <ArrowRight className="w-3.5 h-3.5" /> Connections
+                            </h3>
+                        </AccordionTrigger>
+                        <AccordionContent>
+                            <div className="space-y-4">
+                                <ConnectionsContent inputs={inputs} outputs={outputs} onSelect={setSelectedNodeId} />
+                            </div>
+                        </AccordionContent>
+                    </AccordionItem>
+                </Accordion>
             </ScrollArea>
         </div>
     );
