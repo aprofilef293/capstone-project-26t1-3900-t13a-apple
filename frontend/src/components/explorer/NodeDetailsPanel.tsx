@@ -240,7 +240,9 @@ export function NodeDetailsPanel() {
                 ins.push({
                     id: source,
                     title: (src.label as string) || source,
-                    type: (src.type as string) || "Unknown"
+                    type: (src.type as string) || "Unknown",
+                    size: (src.size as number) || -1,
+                    colour: (src.color as string) || "#000000",
                 });
             });
 
@@ -249,13 +251,19 @@ export function NodeDetailsPanel() {
                 outs.push({
                     id: target,
                     title: (tgt.label as string) || target,
-                    type: (tgt.type as string) || "Unknown"
+                    type: (tgt.type as string) || "Unknown",
+                    size: (tgt.size as number) || -1,
+                    colour: (tgt.color as string) || "#000000",
                 });
+                console.log(outs);
             });
         }
 
         return { inputs: ins, outputs: outs };
     })();
+
+    inputs.sort((a, b) => alphabeticalSort(a.title, b.title));
+    outputs.sort((a, b) => alphabeticalSort(a.title, b.title));
 
     const hasAttributes = Object.keys(node.attributes ?? {}).length > 0;
 
