@@ -16,6 +16,7 @@ interface ConnectionItem {
     type: string;
     size: number;
     colour: string;
+    percentile_rank: number;
 }
 
 const computedAttributeKeys = [
@@ -29,9 +30,9 @@ const computedAttributeKeys = [
 ]
 
 function alphabeticalSort(a: string, b: string): number {
-    if (a < b)
+    if (a.toLowerCase() < b.toLowerCase())
         return -1;
-    if (a > b)
+    if (a.toLowerCase() > b.toLowerCase())
         return 1;
     return 0;
 }
@@ -50,6 +51,9 @@ function sortList(list: ConnectionItem[], sortType: string) {
             break;
         case "size-desc":
             newList = list.sort((a, b) => b.size - a.size);
+            break;
+        case "importance":
+            newList = list.sort((a, b) => b.percentile_rank - a.percentile_rank);
             break;
         case "type":
             newList = list.sort((a, b) => alphabeticalSort(a.type, b.type));
@@ -146,6 +150,7 @@ function ConnectionsContent({
                             <DropdownMenuRadioItem value="size-asc">Size (Low to High)</DropdownMenuRadioItem>
                             <DropdownMenuRadioItem value="size-desc">Size (High to Low)</DropdownMenuRadioItem>
                             <DropdownMenuSeparator />
+                            <DropdownMenuRadioItem value="importance">Importance</DropdownMenuRadioItem>
                             <DropdownMenuRadioItem value="type">Type</DropdownMenuRadioItem>
                             <DropdownMenuRadioItem value="colour">Colour</DropdownMenuRadioItem>
                         </DropdownMenuRadioGroup>
@@ -242,6 +247,7 @@ export function NodeDetailsPanel() {
                     type: (src.type as string) || "Unknown",
                     size: (src.size as number) || -1,
                     colour: (src.color as string) || "#000000",
+                    percentile_rank: src.attributes["percentile_rank"],
                 });
             });
 
@@ -254,6 +260,7 @@ export function NodeDetailsPanel() {
                     type: (tgt.type as string) || "Unknown",
                     size: (tgt.size as number) || -1,
                     colour: (tgt.color as string) || "#000000",
+                    percentile_rank: tgt.attributes["percentile_rank"],
                 });
             });
         }
