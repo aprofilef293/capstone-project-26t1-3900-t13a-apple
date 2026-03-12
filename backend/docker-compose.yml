@@ -7,9 +7,6 @@ services:
       - "3000:3000"
     volumes:
       - memgraph-data:/var/lib/memgraph
-    environment:
-      - MEMGRAPH_USER=
-      - MEMGRAPH_PASSWORD=
 
   backend:
     build: .

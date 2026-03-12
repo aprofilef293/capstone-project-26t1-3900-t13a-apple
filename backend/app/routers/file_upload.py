@@ -1,4 +1,3 @@
-import math
 
 from fastapi import APIRouter, HTTPException, Query, Request, UploadFile
 from pronto import Ontology, Term
@@ -55,7 +54,6 @@ def memgraph_data(term: Term):
 @router.post('/obo-file-upload', summary = "Uploading a .obo file")
 async def upload_obo(file: UploadFile, request: Request):
     
-    
     mg = request.app.state.memgraph
     #Checking if file was sent    
     
@@ -79,14 +77,15 @@ async def upload_obo(file: UploadFile, request: Request):
     for term in ontology_data.terms():
         
         term_data,relation_data = memgraph_data(term)
-        print("\nHere")
         #Appending all nodes and their relationships
         terms.append(term_data)
         for r in relation_data:
             relations.append(r)
+    
+    
             
     #Inserting terms into Memgraph
-    
+    print("NOT FIXED")
     mg.execute_write(
         """
         UNWIND $terms as t
@@ -97,24 +96,29 @@ async def upload_obo(file: UploadFile, request: Request):
             n.definition = t.definition,
             n.synonyms = t.synonyms,
             n.xrefs = t.xrefs,
-            n.is_obselete = t.is_obselete 
+            n.is_obsolete = t.is_obsolete 
         """,
         {
             "terms": [t.model_dump() for t in terms]
         }
     )  
     
+    
+    
     mg.execute_write(
         """
         UNWIND $relations as r
         MATCH (s:OntologyTerm {id: r.subject_id})
         MATCH (t:OntologyTerm {id: r.target_id})
-        MERGE (s)-(relationship:r.relation_type]->(t) 
+        MERGE (s)-[:RELATED_TO {type: r.relation_type}]->(t) 
         """,
         {
             "relations": [r.model_dump() for r in relations]
         }
     )  
-    print(terms)
-    print(relations)
+    
     return {"terms_uploaded": len(terms), "relations_uploaded": len(relations)}
+
+@router.get('/', summary = "testing backend")
+async def test_backend():
+    return {"Backend going"}

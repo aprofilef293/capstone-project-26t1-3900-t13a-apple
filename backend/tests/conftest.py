@@ -6,6 +6,8 @@ from fastapi.testclient import TestClient
 from app.config import Settings
 from app.main import create_app
 
+from app.services.memgraph import MemgraphService
+
 
 @pytest.fixture
 def settings():
@@ -33,3 +35,11 @@ def client(settings, mock_memgraph):
     app.state.settings = settings
     app.state.memgraph = mock_memgraph
     return TestClient(app, raise_server_exceptions=False)
+
+@pytest.fixture
+def real_client(settings):
+    app = create_app()
+    app.state.settings = settings    
+    app.state.memgraph = MemgraphService(settings)
+    
+    return TestClient(app, raise_server_exceptions=True)

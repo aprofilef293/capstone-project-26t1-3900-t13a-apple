@@ -10,7 +10,7 @@ name: test1
 namespace: test1
 """
 
-VALID_OBO_RELATIONS = b"""format-version: 1.2
+sample_data_2 = b"""format-version: 1.2
 
 [Typedef]
 id: part_of
@@ -34,7 +34,7 @@ name: test3
 namespace: testing_space
 relationship: part_of TEST:0000002
 """
-
+"""
 #Testing if a file was sent
 def test_file_sent(client):
     response = client.post(
@@ -53,13 +53,26 @@ def test_obo_format(client):
     
     assert response.status_code == 400
     
-
+#Testing obo file can be uploaded 
 def test_valid_data_sent(client):
     
     response = client.post(
         "/api/obo-file-upload",
-        files={"file": ("test.obo", io.BytesIO(VALID_OBO_RELATIONS), "text/plain")},
+        files={"file": ("test.obo", io.BytesIO(sample_data_2), "text/plain")},
     )
     
     
+    assert response.status_code == 200
+    
+"""
+    
+#Testing obo file uploaded and querying db
+def test_obo_integration(real_client):
+    
+    response = real_client.post(
+        "/api/obo-file-upload",
+        files={"file": ("test.obo", io.BytesIO(sample_data_2), "text/plain")},
+    )
+    
+    print(response.text)
     assert response.status_code == 200
