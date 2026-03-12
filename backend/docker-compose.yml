@@ -8,8 +8,8 @@ services:
     volumes:
       - memgraph-data:/var/lib/memgraph
     environment:
-      - MEMGRAPH_USER=
-      - MEMGRAPH_PASSWORD=
+      - MEMGRAPH_USER=memgraph
+      - MEMGRAPH_PASSWORD=memgraph
 
   backend:
     build: .
@@ -17,6 +17,8 @@ services:
       - "8000:8000"
     environment:
       - MEMGRAPH_URI=bolt://memgraph:7687
+      - MEMGRAPH_USER=memgraph
+      - MEMGRAPH_PASSWORD=memgraph
       - CORS_ORIGINS=["http://localhost:5173"]
     depends_on:
       - memgraph
