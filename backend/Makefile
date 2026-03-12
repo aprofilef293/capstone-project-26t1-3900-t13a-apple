@@ -28,7 +28,7 @@ docker-up:
 	docker compose up -d
 
 docker-down:
-	docker compose down
+	docker compose down -v
 
 clean:
 	find . -type d -name __pycache__ -exec rm -rf {} +
