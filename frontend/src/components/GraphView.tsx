@@ -71,7 +71,7 @@ const GraphManager = forwardRef<GraphViewRef, unknown>((_, ref) => {
     const sigma = useSigma();
     const camera = useCamera({ duration: 250 });
     const registerEvents = useRegisterEvents();
-    const { nodes, edges, selectedNodeId, setSelectedNodeId, searchQuery, viewLevel } = useStore();
+    const { nodes, edges, selectedNodeId, setSelectedNodeId, searchQuery, viewLevel, setIsNodeSelecting } = useStore();
     const lastClickedNodeRef = useRef(false);
     const { resolvedTheme } = useTheme();
     const isDark = resolvedTheme === "dark";
@@ -268,7 +268,12 @@ const GraphManager = forwardRef<GraphViewRef, unknown>((_, ref) => {
         registerEvents({
             clickNode: ({ node }) => {
                 lastClickedNodeRef.current = true;
-                setSelectedNodeId(node === selectedNodeId ? null : node);
+                // const newId = setSelectedNodeId(node === selectedNodeId ? null : node);
+                const newId = node === selectedNodeId ? null : node;
+                setIsNodeSelecting(true);
+                setTimeout(() => {
+                    setSelectedNodeId(newId);
+                }, 0);
             },
             doubleClickNode: () => setSelectedNodeId(null),
             clickStage: () => {
@@ -281,6 +286,10 @@ const GraphManager = forwardRef<GraphViewRef, unknown>((_, ref) => {
             doubleClickStage: () => setSelectedNodeId(null),
         });
     }, [registerEvents, setSelectedNodeId, selectedNodeId]);
+
+    useEffect(() => {
+        setIsNodeSelecting(false);
+    }, [selectedNodeId, setIsNodeSelecting]);
 
     // Node & Edge Styling (Reducers)
     useEffect(() => {

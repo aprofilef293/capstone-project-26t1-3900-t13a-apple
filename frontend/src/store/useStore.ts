@@ -44,6 +44,9 @@ interface ExplorerState {
     setImportProgress: (progress: number) => void;
     completeImport: () => void;
     failImport: (error: string) => void;
+    // loading spinner
+    isNodeSelecting: boolean;
+    setIsNodeSelecting: (val: boolean) => void;
 }
 
 // Convert Graphology JSON format to our store format
@@ -157,4 +160,7 @@ export const useStore = create<ExplorerState>((set) => ({
     setImportProgress: (progress) => set({ importProgress: progress }),
     completeImport: () => set({ importStatus: 'complete', importProgress: 100 }),
     failImport: (error) => set({ importStatus: 'error', importError: error }),
+    // loading spinner
+    isNodeSelecting: false,
+    setIsNodeSelecting: (val) => set({ isNodeSelecting: val }),
 }));
