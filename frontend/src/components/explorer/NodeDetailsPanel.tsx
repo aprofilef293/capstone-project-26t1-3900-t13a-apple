@@ -28,6 +28,19 @@ const computedAttributeKeys = [
     "y"
 ]
 
+function returnToPrevNode(prevNodes: string[], setPrevNodes: (prevNodes: string[]) => void, setSelectedNodeId: (id: string | null) => void): void {
+    // list will include current node
+    prevNodes.pop();
+    const prevNode = prevNodes.pop();
+    if (prevNode === undefined) {
+        // close info panel if no nodes previously selected
+        setSelectedNodeId(null);
+    } else {
+        setSelectedNodeId(prevNode);
+        setPrevNodes(prevNodes);
+    }
+}
+
 function alphabeticalSort(a: string, b: string): number {
     if (a < b)
         return -1;
@@ -215,7 +228,7 @@ function AttributesSection({
 
 /* ── Main panel ── */
 export function NodeDetailsPanel() {
-    const { selectedNodeId, nodes, graph, setSelectedNodeId } = useStore();
+    const { selectedNodeId, nodes, graph, prevNodes, setPrevNodes, setSelectedNodeId } = useStore();
     const node = nodes.find((n) => n.id === selectedNodeId);
 
     if (!node || !selectedNodeId) {
@@ -283,6 +296,7 @@ export function NodeDetailsPanel() {
                         <X className="w-5 h-5" />
                     </button>
                 </div>
+                <Button onClick={() => returnToPrevNode(prevNodes, setPrevNodes, setSelectedNodeId)}>BACK</Button>
                 <h2 className="text-xl font-bold text-sidebar-foreground pt-2 mb-1 leading-tight">{node.label}</h2>
             </div>
 
