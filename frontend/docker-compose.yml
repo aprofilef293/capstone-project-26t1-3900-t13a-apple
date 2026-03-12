@@ -2,4 +2,4 @@ services:
   frontend:
       build: .
       ports:
-        - "3000:80"
+        - "5173:80"
