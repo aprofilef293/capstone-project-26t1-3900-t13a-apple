@@ -28,6 +28,8 @@ interface ExplorerState {
     selectedNodeId: string | null;
     searchQuery: string;
     viewLevel: number;
+    prevNodes: string[];
+    setPrevNodes: (prevNodes: string[]) => void;
     setSelectedNodeId: (id: string | null) => void;
     setGraphData: (nodes: GraphNode[], edges: GraphEdge[]) => void;
     setSearchQuery: (query: string) => void;
@@ -91,6 +93,17 @@ const createGraph = (nodes: GraphNode[], edges: GraphEdge[]) => {
     return graph;
 };
 
+const updatePrevNodes = (id: string | null) => {
+    const prevNodes = useStore.getState().prevNodes;
+    const setPrevNodes = useStore.getState().setPrevNodes;
+    if (id == null) {
+        setPrevNodes([]);
+    } else if (prevNodes[prevNodes.length - 1] !== id) {
+        prevNodes.push(id);
+        setPrevNodes(prevNodes);
+    }
+}
+
 export const useStore = create<ExplorerState>((set) => ({
     nodes: [],
     edges: [],
@@ -99,7 +112,14 @@ export const useStore = create<ExplorerState>((set) => ({
     searchQuery: "",
     viewLevel: 1,
     isGraphLoading: false,
-    setSelectedNodeId: (id) => set({ selectedNodeId: id }),
+    prevNodes: [],
+    setPrevNodes: (prevNodes) => {
+        set({ prevNodes });
+    },
+    setSelectedNodeId: (id) => {
+        set({ selectedNodeId: id });
+        updatePrevNodes(id);
+    },
     setGraphData: (nodes, edges) => set({
         nodes,
         edges,

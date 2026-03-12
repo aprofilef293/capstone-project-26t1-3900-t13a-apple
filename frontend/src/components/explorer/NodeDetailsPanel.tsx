@@ -1,4 +1,4 @@
-import { ChevronRight, ArrowRight, CornerDownRight, Box, X, type LucideIcon, Waypoints, FlaskConical } from "lucide-react";
+import { ChevronRight, ArrowRight, CornerDownRight, Box, X, type LucideIcon, Waypoints, FlaskConical, CircleChevronLeft } from "lucide-react";
 import { useStore, type GraphNode } from "../../store/useStore";
 import { Badge } from "../ui/badge";
 import { ScrollArea } from "../ui/scroll-area";
@@ -28,6 +28,19 @@ const computedAttributeKeys = [
     "x",
     "y"
 ]
+
+function returnToPrevNode(prevNodes: string[], setPrevNodes: (prevNodes: string[]) => void, setSelectedNodeId: (id: string | null) => void): void {
+    // list will include current node
+    prevNodes.pop();
+    const prevNode = prevNodes.pop();
+    if (prevNode === undefined) {
+        // close info panel if no nodes previously selected
+        setSelectedNodeId(null);
+    } else {
+        setSelectedNodeId(prevNode);
+        setPrevNodes(prevNodes);
+    }
+}
 
 function alphabeticalSort(a: string, b: string): number {
     if (a.toLowerCase() < b.toLowerCase())
@@ -220,7 +233,7 @@ function AttributesSection({
 
 /* ── Main panel ── */
 export function NodeDetailsPanel() {
-    const { selectedNodeId, nodes, graph, setSelectedNodeId } = useStore();
+    const { selectedNodeId, nodes, graph, prevNodes, setPrevNodes, setSelectedNodeId } = useStore();
     const node = nodes.find((n) => n.id === selectedNodeId);
 
     if (!node || !selectedNodeId) {
@@ -277,11 +290,14 @@ export function NodeDetailsPanel() {
         <div className="w-[400px] border-l border-sidebar-border bg-sidebar flex flex-col h-full shadow-xl z-20 transition-colors">
             {/* Header */}
             <div className="p-6 pb-4 border-b border-sidebar-border shadow-sm bg-sidebar/50">
-                <div className="flex items-center gap-2 mb-3">
-                    <Badge variant="secondary" className="bg-blue-500/10 text-blue-600 dark:text-blue-400 hover:bg-blue-500/20 border-blue-500/20 rounded font-mono font-medium text-[10px] px-2 py-0.5">
-                        {node.type} Node
-                    </Badge>
-                    <span className="text-[10px] text-sidebar-foreground/70 font-mono tracking-wider mr-auto">ID: {node.id.toUpperCase()}</span>
+                <div className="flex items-center justify-between mb-3">
+                    <button
+                        onClick={() => returnToPrevNode(prevNodes, setPrevNodes, setSelectedNodeId)}
+                        className="px-2 pb-1 hover:bg-sidebar-accent border border-transparent hover:border-sidebar-border/50 rounded-md transition-all text-sidebar-foreground/50 hover:text-sidebar-foreground flex items-center justify-center cursor-pointer"
+                        title="Go back"
+                    >
+                        <CircleChevronLeft className="w-4 h-5 mt-0.5"/>&nbsp;&nbsp;BACK
+                    </button>
                     <button
                         onClick={() => setSelectedNodeId(null)}
                         className="p-1 hover:bg-sidebar-accent border border-transparent hover:border-sidebar-border/50 rounded-md transition-all text-sidebar-foreground/50 hover:text-sidebar-foreground flex items-center justify-center cursor-pointer"
@@ -291,6 +307,10 @@ export function NodeDetailsPanel() {
                     </button>
                 </div>
                 <h2 className="text-xl font-bold text-sidebar-foreground pt-2 mb-1 leading-tight">{node.label}</h2>
+                <Badge variant="secondary" className="bg-blue-500/10 text-blue-600 dark:text-blue-400 hover:bg-blue-500/20 border-blue-500/20 rounded font-mono font-medium text-[10px] px-2 py-0.5 mr-2 mt-4">
+                    {node.type} Node
+                </Badge>
+                <span className="text-[10px] text-sidebar-foreground/70 font-mono tracking-wider mr-auto">ID: {node.id.toUpperCase()}</span>
             </div>
 
             <ScrollArea className="flex-1 min-h-0 pb-6 px-6 pt-4">
