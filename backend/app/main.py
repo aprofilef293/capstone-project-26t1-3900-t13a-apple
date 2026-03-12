@@ -5,6 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import Settings
 from app.routers import graph
+from app.routers import file_upload
 from app.services.memgraph import MemgraphService
 
 
@@ -51,6 +52,8 @@ def create_app() -> FastAPI:
         allow_headers=["*"],
     )
     app.include_router(graph.router, prefix="/api/graph", tags=["graph"])
+    app.include_router(file_upload.router, prefix="/api", tags=["upload"])
+
     return app
 
 
