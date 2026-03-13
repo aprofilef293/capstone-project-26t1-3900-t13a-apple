@@ -2,6 +2,8 @@
 import io
 import json
 
+import pytest
+
 sample_data_2 = b"""format-version: 1.2
 
 [Typedef]
@@ -57,14 +59,14 @@ def _parse_sse_events(response_text):
     return events
 
 
-# Testing if a file was sent
+@pytest.mark.integration
 def test_file_sent(real_client):
     response = real_client.post("/api/ontology/upload", files={})
 
     assert response.status_code == 422
 
 
-# Testing if an unsupported file type is trying to be uploaded
+@pytest.mark.integration
 def test_unsupported_format(real_client):
     response = real_client.post(
         "/api/ontology/upload",
@@ -74,7 +76,7 @@ def test_unsupported_format(real_client):
     assert response.status_code == 400
 
 
-# Testing obo file uploaded and querying db via SSE stream
+@pytest.mark.integration
 def test_obo_integration(real_client):
     response = real_client.post(
         "/api/ontology/upload",
@@ -99,7 +101,7 @@ def test_obo_integration(real_client):
     assert len(total_nodes) == 2
 
 
-# Testing corrupted file returns an error event in the SSE stream
+@pytest.mark.integration
 def test_corrupted_file(real_client):
     response = real_client.post(
         "/api/ontology/upload",
@@ -111,7 +113,7 @@ def test_corrupted_file(real_client):
     assert any("error" in e for e in events)
 
 
-# Testing the /list endpoint returns uploaded ontologies
+@pytest.mark.integration
 def test_list_ontologies(real_client):
     real_client.post(
         "/api/ontology/upload",
@@ -124,7 +126,7 @@ def test_list_ontologies(real_client):
     assert len(data) >= 1
 
 
-# Testing .owl extension is accepted
+@pytest.mark.integration
 def test_owl_upload(real_client):
     response = real_client.post(
         "/api/ontology/upload",
