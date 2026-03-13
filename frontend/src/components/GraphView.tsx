@@ -4,7 +4,7 @@ import "@react-sigma/core/lib/style.css";
 import { useStore } from "../store/useStore";
 import { useTheme } from "./theme-provider";
 import { NodeBorderProgram } from "@sigma/node-border";
-import { EdgeLineProgram } from "sigma/rendering";
+import { EdgeLineProgram, NodeCircleProgram } from "sigma/rendering";
 import { adjustColorBrightness } from "../lib/utils";
 import { MultiDirectedGraph } from "graphology";
 
@@ -80,8 +80,9 @@ const GraphManager = forwardRef<GraphViewRef, unknown>((_, ref) => {
     // Defer the search query to prevent input lag on heavy graphs
     const deferredSearchQuery = useDeferredValue(searchQuery);
 
-    const largestNodesIds = useMemo(() => {
-        if (!nodes || nodes.length === 0) return new Set<string>();
+    const nodeStyles = useMemo(() => {
+        const styles = new Map<string, { borderColor?: string; borderSize?: number; color?: string; type?: string }>();
+        if (!nodes || nodes.length === 0) return styles;
 
         // Calculate Global Size Percentiles & Average
         const sizes = nodes.map(n => Number(n.size ?? GRAPH_CONFIG.DEFAULT_NODE_SIZE)).sort((a, b) => a - b);
@@ -127,8 +128,26 @@ const GraphManager = forwardRef<GraphViewRef, unknown>((_, ref) => {
             }
         });
 
-        return prominentIds;
-    }, [nodes]);
+        // Pre-calculate style for each node
+        nodes.forEach(node => {
+            const id = node.id;
+            if (prominentIds.has(id)) {
+                const attrs = node.attributes as Record<string, unknown>;
+                const color = (node.color || attrs.color) as string | undefined;
+
+                styles.set(id, {
+                    type: "border",
+                    borderColor: color ? adjustColorBrightness(color, -20) : (isDark ? "#ffffff" : "#000000"),
+                    borderSize: 0.15,
+                    color: color ? adjustColorBrightness(color, isDark ? 25 : -20) : undefined
+                });
+            } else {
+                styles.set(id, {});
+            }
+        });
+
+        return styles;
+    }, [nodes, isDark]);
 
     // Calculate community and neighbor isolation sets
     const isolationData = useMemo(() => {
@@ -159,9 +178,51 @@ const GraphManager = forwardRef<GraphViewRef, unknown>((_, ref) => {
         };
     }, [selectedNodeId, sigma]);
     const fitToView = useCallback(() => {
+        if (isolationData && selectedNodeId) {
+            const nodesToFit = Array.from(new Set([
+                selectedNodeId,
+                ...isolationData.communityNodes,
+                ...isolationData.neighborNodes
+            ]));
+
+            let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+            let validNodesCount = 0;
+
+            for (const id of nodesToFit) {
+                const displayData = sigma.getNodeDisplayData(id) as { x: number, y: number } | undefined;
+                if (displayData && typeof displayData.x === "number" && !isNaN(displayData.x) &&
+                    typeof displayData.y === "number" && !isNaN(displayData.y)) {
+                    minX = Math.min(minX, displayData.x);
+                    maxX = Math.max(maxX, displayData.x);
+                    minY = Math.min(minY, displayData.y);
+                    maxY = Math.max(maxY, displayData.y);
+                    validNodesCount++;
+                }
+            }
+
+            if (validNodesCount > 0 && minX !== Infinity) {
+                let dx = maxX - minX;
+                let dy = maxY - minY;
+
+                dx = Math.max(dx, 0.05);
+                dy = Math.max(dy, 0.05);
+
+                const centerX = (minX + maxX) / 2;
+                const centerY = (minY + maxY) / 2;
+                let ratio = Math.max(dx, dy) * GRAPH_CONFIG.PADDING;
+
+                ratio = Math.max(0.01, Math.min(ratio, 1.5));
+
+                sigma.getCamera().animate(
+                    { x: centerX, y: centerY, ratio },
+                    { duration: GRAPH_CONFIG.ANIMATION_DURATION }
+                );
+                return;
+            }
+        }
         // Fallback or default reset
         camera.reset({ duration: GRAPH_CONFIG.ANIMATION_DURATION });
-    }, [camera]);
+    }, [sigma, camera, isolationData, selectedNodeId]);
 
     useImperativeHandle(ref, () => ({
         zoomIn: camera.zoomIn,
@@ -179,9 +240,10 @@ const GraphManager = forwardRef<GraphViewRef, unknown>((_, ref) => {
     useEffect(() => {
         const graph = sigma.getGraph();
 
-        // Drop nodes/edges that are no longer in the store
-        const incomingNodeIds = new Set(nodes.map(n => n.id));
-        const incomingEdgeIds = new Set(edges.map(e => e.id));
+        const storeNodeIds = nodes.map(n => n.id);
+        const storeEdgeIds = edges.map(e => e.id);
+        const incomingNodeIds = new Set(storeNodeIds);
+        const incomingEdgeIds = new Set(storeEdgeIds);
 
         graph.nodes().forEach(id => {
             if (!incomingNodeIds.has(id)) graph.dropNode(id);
@@ -190,7 +252,7 @@ const GraphManager = forwardRef<GraphViewRef, unknown>((_, ref) => {
             if (!incomingEdgeIds.has(id)) graph.dropEdge(id);
         });
 
-        // Add or update nodes
+        // Add or update nodes - only if data changed
         nodes.forEach(({ type: _, ...node }) => {
             const id = node.id;
             if (!graph.hasNode(id)) {
@@ -209,7 +271,7 @@ const GraphManager = forwardRef<GraphViewRef, unknown>((_, ref) => {
                 graph.mergeEdgeAttributes(edgeId, { ...edge });
             }
         });
-    }, [nodes, edges, isDark, sigma]);
+    }, [nodes, edges, sigma]);
 
     // Click interactions
     useEffect(() => {
@@ -249,22 +311,14 @@ const GraphManager = forwardRef<GraphViewRef, unknown>((_, ref) => {
             const size = attrs.size ?? GRAPH_CONFIG.DEFAULT_NODE_SIZE;
             const finalSize = isSelected ? size * GRAPH_CONFIG.SELECTED_SCALE : size;
 
+            const style = nodeStyles.get(node);
             const newData: NodeAttributes = {
                 ...attrs,
+                ...style,
                 size: finalSize,
                 highlighted: isSelected,
                 zIndex: finalSize,
-                type: undefined,
             };
-
-            if (largestNodesIds.has(node)) {
-                newData.type = "border";
-                newData.borderColor = attrs.color ? adjustColorBrightness(attrs.color, -20) : (isDark ? "#ffffff" : "#000000");
-                newData.borderSize = 0.15;
-                if (attrs.color) {
-                    newData.color = adjustColorBrightness(attrs.color, isDark ? 25 : -20);
-                }
-            }
 
             return newData;
         });
@@ -309,7 +363,7 @@ const GraphManager = forwardRef<GraphViewRef, unknown>((_, ref) => {
             sigma.setSetting("nodeReducer", null);
             sigma.setSetting("edgeReducer", null);
         };
-    }, [selectedNodeId, largestNodesIds, isolationData, isDark, sigma]);
+    }, [selectedNodeId, nodeStyles, isolationData, isDark, sigma]);
 
     // Visibility Filtering
     useEffect(() => {
@@ -429,6 +483,7 @@ export const GraphView = forwardRef<GraphViewRef, unknown>((_, ref) => {
                 ctx.fillText(label, x + size + 4, y + settings.labelSize / 3);
             },
             nodeProgramClasses: {
+                circle: NodeCircleProgram,
                 border: NodeBorderProgram,
             },
             edgeProgramClasses: {

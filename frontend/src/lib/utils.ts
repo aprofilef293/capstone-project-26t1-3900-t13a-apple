@@ -5,8 +5,14 @@ export function cn(...inputs: ClassValue[]) {
     return twMerge(clsx(inputs))
 }
 
+// Cache for adjusted colors to avoid redundant parsing and calculations
+const colorCache: Record<string, string> = {};
+
 // Use it to adjust the colour of major nodes to denote they are diff
 export function adjustColorBrightness(hex: string, percent: number): string {
+    const cacheKey = `${hex}-${percent}`;
+    if (colorCache[cacheKey]) return colorCache[cacheKey];
+
     const cleanHex = hex.replace(/^#/, "");
 
     // Parse RGB
@@ -24,7 +30,9 @@ export function adjustColorBrightness(hex: string, percent: number): string {
     const gg = g.toString(16).padStart(2, "0");
     const bb = b.toString(16).padStart(2, "0");
 
-    return `#${rr}${gg}${bb}`;
+    const result = `#${rr}${gg}${bb}`;
+    colorCache[cacheKey] = result;
+    return result;
 }
 
 export function formatDate(date: Date): string {
