@@ -81,5 +81,38 @@ def test_obo_integration(real_client):
     )
     total_nodes = mg.execute_read("MATCH (n) RETURN n")
     assert len(total_nodes) == 2
-    print(response.text)
     assert response.status_code == 200
+
+
+# Testing corrupted file returns 400
+def test_corrupted_file(real_client):
+    response = real_client.post(
+        "/api/ontology/upload",
+        files={"file": ("bad.obo", io.BytesIO(b"not a valid ontology"), "text/plain")},
+    )
+
+    assert response.status_code == 400
+
+
+# Testing the /list endpoint returns uploaded ontologies
+def test_list_ontologies(real_client):
+    real_client.post(
+        "/api/ontology/upload",
+        files={"file": ("test.obo", io.BytesIO(sample_data_3), "text/plain")},
+    )
+
+    response = real_client.get("/api/ontology/list")
+    assert response.status_code == 200
+    data = response.json()
+    assert len(data) >= 1
+
+
+# Testing .owl extension is accepted
+def test_owl_upload(real_client):
+    response = real_client.post(
+        "/api/ontology/upload",
+        files={"file": ("test.owl", io.BytesIO(sample_data_2), "text/plain")},
+    )
+
+    # owl parsing may fail on obo-formatted data, but it should not reject the extension
+    assert response.status_code != 400 or "Unsupported file type" not in response.text
