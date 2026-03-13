@@ -32,11 +32,7 @@ def _ingest_ontology(
     mg.execute_write("CREATE INDEX ON :OntologyTerm(id);")
 
     # Filter obsolete terms and dump all attributes for dynamic insertion
-    term_dicts = [
-        {**t.model_dump(), "source_file": source_file}
-        for t in terms
-        if not t.is_obsolete
-    ]
+    term_dicts = [{**t.model_dump(), "source_file": source_file} for t in terms if not t.is_obsolete]
 
     # Batch in chunks of 5000 for large ontologies
     batch_size = 5000
