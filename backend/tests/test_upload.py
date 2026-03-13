@@ -53,7 +53,7 @@ def _parse_sse_events(response_text):
     for chunk in response_text.strip().split("\n\n"):
         for line in chunk.split("\n"):
             if line.startswith("data: "):
-                events.append(json.loads(line[len("data: "):]))
+                events.append(json.loads(line[len("data: ") :]))
     return events
 
 
