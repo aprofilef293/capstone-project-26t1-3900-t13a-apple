@@ -26,7 +26,11 @@ def _ingest_terms(
     terms: list[OntologyTerm],
     source_file: str,
 ) -> None:
-    """Clear existing nodes and batch-insert non-obsolete ontology terms into Memgraph.
+    """Batch ingest validated ontology terms and relations into Memgraph.
+
+    Clears all existing OntologyTerm nodes, creates an index on the term id,
+    then inserts non-obsolete terms and their relationships in batches of 5000.
+    All term model attributes are dynamically set on nodes via ``SET n += t``.
 
     Args:
         mg: MemgraphService instance for executing Cypher queries.
