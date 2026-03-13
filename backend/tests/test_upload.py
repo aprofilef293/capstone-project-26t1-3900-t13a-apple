@@ -53,8 +53,8 @@ def test_file_sent(real_client):
     assert response.status_code == 422
 
 
-# Testing if a non .obo file is trying to be uploaded
-def test_obo_format(real_client):
+# Testing if an unsupported file type is trying to be uploaded
+def test_unsupported_format(real_client):
     response = real_client.post(
         "/api/ontology/upload",
         files={"file": ("test.txt", sample_data_2, "text/plain")},
