@@ -101,6 +101,11 @@ async def upload_ontology(request: Request, file: UploadFile = File(...)):
 
     try:
         terms, relations = parse_ontology(tmp_path)
+    except Exception:
+        os.unlink(tmp_path)
+        raise HTTPException(status_code=400, detail="Failed to parse ontology file")
+
+    try:
         mg = request.app.state.memgraph
         _ingest_ontology(mg, terms, relations, file.filename or "unknown")
     finally:
