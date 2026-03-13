@@ -1,121 +1,109 @@
-import io
+import os
+import tempfile
 
 from fastapi import APIRouter, File, HTTPException, Request, UploadFile
-from pronto import Ontology, Term
 
 from app.models.upload import OntologyRelation, OntologyTerm, OntologyUploadResponse
 from app.services.memgraph import MemgraphService
+from app.services.ontology_parser import parse_ontology
 
 router = APIRouter()
 
+ALLOWED_EXTENSIONS = {".obo", ".owl"}
 
-# This function will return the node data and all relationships relevant to the node
-def memgraph_data(term: Term):
-    # Checking if definiton is not none
-    definition = None
-    if term.definition:
-        definition = str(term.definition)
-
-    relations = []
-
-    term_insert = OntologyTerm(
-        id=term.id,
-        name=term.name,
-        namespace=term.namespace,
-        definition=definition,
-        synonyms=[syn.description for syn in term.synonyms],
-        xrefs=[xr.id for xr in term.xrefs],
-        is_obsolete=term.obsolete,
-    )
-
-    # Getting is_a relationships
-    for parent in term.superclasses(distance=1, with_self=False):
-        relations_insert = OntologyRelation(subject_id=term.id, relation_type="is_a", target_id=parent.id)
-        relations.append(relations_insert)
-
-    # Getting all other relationships
-    for relation, targets in term.relationships.items():
-        for target in targets:
-            relations_other_insert = OntologyRelation(
-                subject_id=term.id, relation_type=relation.name, target_id=target.id
-            )
-            relations.append(relations_other_insert)
-
-    return term_insert, relations
+NAMESPACE_COLORS = {
+    "biological_process": "#2563eb",
+    "molecular_function": "#9333ea",
+    "cellular_component": "#10b981",
+}
 
 
-@router.post("/upload", response_model=OntologyUploadResponse, summary="Uploading a .obo file")
-async def upload_obo(request: Request, file: UploadFile = File(...)):
+def _ingest_ontology(
+    mg: MemgraphService,
+    terms: list[OntologyTerm],
+    relations: list[OntologyRelation],
+    source_file: str,
+) -> None:
+    """Batch ingest validated ontology terms and relations into Memgraph."""
+    # Clear existing data before ingesting new file
+    mg.execute_write("MATCH (n:OntologyTerm) DETACH DELETE n;")
 
-    mg: MemgraphService = request.app.state.memgraph
-    # Checking if file was sent
+    # Create index for faster lookups
+    mg.execute_write("CREATE INDEX ON :OntologyTerm(id);")
 
-    # Error checking to ensure that only .obo files are accepted
-    if not file.filename.endswith(".obo"):
-        raise HTTPException(status_code=400, detail="Only .obo files can be uploaded")
+    # Filter obsolete terms and dump all attributes for dynamic insertion
+    term_dicts = [
+        {**t.model_dump(), "source_file": source_file}
+        for t in terms
+        if not t.is_obsolete
+    ]
 
-    # FastAPI
-    byte_stream = await file.read()
+    # Batch in chunks of 5000 for large ontologies
+    batch_size = 5000
+    for i in range(0, len(term_dicts), batch_size):
+        batch = term_dicts[i : i + batch_size]
+        mg.execute_write(
+            """
+            UNWIND $terms AS t
+            MERGE (n:OntologyTerm {id: t.id})
+            SET n += t
+            """,
+            {"terms": batch},
+        )
+
+    # Batch create relationships
+    rel_dicts = [{"subject": r.subject_id, "object": r.object_id, "type": r.relation_type} for r in relations]
+
+    for i in range(0, len(rel_dicts), batch_size):
+        batch = rel_dicts[i : i + batch_size]
+        mg.execute_write(
+            """
+            UNWIND $rels AS r
+            MATCH (s:OntologyTerm {id: r.subject})
+            MATCH (o:OntologyTerm {id: r.object})
+            MERGE (s)-[rel:RELATES_TO {type: r.type}]->(o)
+            """,
+            {"rels": batch},
+        )
+
+
+@router.post("/upload", response_model=OntologyUploadResponse)
+async def upload_ontology(request: Request, file: UploadFile = File(...)):
+    """Upload and ingest an OBO/OWL ontology file."""
+    ext = os.path.splitext(file.filename or "")[1].lower()
+    if ext not in ALLOWED_EXTENSIONS:
+        raise HTTPException(status_code=400, detail=f"Unsupported file type: {ext}. Use .obo or .owl")
+
+    # Save to temp file (Pronto reads from disk)
+    with tempfile.NamedTemporaryFile(delete=False, suffix=ext) as tmp:
+        content = await file.read()
+        tmp.write(content)
+        tmp_path = tmp.name
+
     try:
-        ontology_data = Ontology(io.BytesIO(byte_stream))
-    except Exception as e:
-        print(e)
-        raise HTTPException(status_code=404, detail="Corrupted Ontology file")
+        terms, relations = parse_ontology(tmp_path)
+        mg = request.app.state.memgraph
+        _ingest_ontology(mg, terms, relations, file.filename or "unknown")
+    finally:
+        os.unlink(tmp_path)
 
-    terms: list[OntologyTerm] = []
-    relations: list[OntologyRelation] = []
-
-    for term in ontology_data.terms():
-        term_data, relation_data = memgraph_data(term)
-        # Appending all nodes and their relationships
-        terms.append(term_data)
-        for r in relation_data:
-            relations.append(r)
-
-    # Deleting all old terms and relationships from memgraph
-    mg.execute_write(
-        """
-        MATCH (n)
-        DETACH DELETE n
-        """
-    )
-    # Inserting terms into Memgraph
-    mg.execute_write(
-        """
-        UNWIND $terms as t
-        MERGE (n:OntologyTerm {id:t.id})
-        ON CREATE SET
-            n.name = t.name,
-            n.namespace = t.namespace,
-            n.definition = t.definition,
-            n.synonyms = t.synonyms,
-            n.xrefs = t.xrefs,
-            n.is_obsolete = t.is_obsolete
-        """,
-        {"terms": [t.model_dump() for t in terms]},
-    )
-
-    mg.execute_write(
-        """
-        UNWIND $relations as r
-        MATCH (s:OntologyTerm {id: r.subject_id})
-        MATCH (t:OntologyTerm {id: r.target_id})
-        MERGE (s)-[:RELATED_TO {type: r.relation_type}]->(t)
-        """,
-        {"relations": [r.model_dump() for r in relations]},
-    )
-
-    namespaces = list({t.namespace for t in terms if t.namespace})
+    namespaces = sorted({t.namespace for t in terms if t.namespace})
+    non_obsolete = sum(1 for t in terms if not t.is_obsolete)
 
     return OntologyUploadResponse(
-        filename=file.filename,
-        term_count=len(terms),
+        filename=file.filename or "unknown",
+        term_count=non_obsolete,
         relation_count=len(relations),
         namespaces=namespaces,
-        message=f"Successfully uploaded {file.filename}",
+        message=f"Successfully ingested {non_obsolete} terms and {len(relations)} relations.",
     )
 
 
-@router.get("/", summary="testing backend")
-async def test_backend():
-    return {"Backend going"}
+@router.get("/list")
+def list_ontologies(request: Request):
+    """List distinct ontology sources that have been ingested."""
+    mg = request.app.state.memgraph
+    records = mg.execute_read(
+        "MATCH (n:OntologyTerm) RETURN DISTINCT n.source_file AS source_file, count(n) AS term_count"
+    )
+    return records
