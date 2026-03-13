@@ -73,7 +73,7 @@ const mapTestData = () => {
     });
 
     const edges = rawEdges.map((e, index) => ({
-        id: e.key || `e${index}`,
+        id: e.key || e.id || `e${index}`,
         source: e.source,
         target: e.target,
         color: e.attributes?.color || 'rgba(148, 163, 184, 0.4)' // Soft grey for edges
@@ -130,9 +130,23 @@ export const useStore = create<ExplorerState>((set) => ({
     fetchGraphData: async () => {
         set({ isGraphLoading: true });
         try {
-            const data = await api.fetchGraphData("/graph");
-            const nodes = data.nodes || [];
-            const edges = data.edges || [];
+            const data = await api.fetchGraphData("/api/graph/");
+            const nodes = (data.nodes || []).map((n: any) => ({
+                id: n.key,
+                label: n.attributes?.label || n.key,
+                type: 'Data',
+                x: typeof n.attributes?.x === 'number' ? n.attributes.x : (Math.random() - 0.5) * 10,
+                y: typeof n.attributes?.y === 'number' ? n.attributes.y : (Math.random() - 0.5) * 10,
+                size: n.attributes?.size || 10,
+                color: n.attributes?.color || '#3b82f6',
+                attributes: n.attributes || {}
+            }));
+            const edges = (data.edges || []).map((e: any, index: number) => ({
+                id: e.key || e.id || `e${index}`,
+                source: e.source,
+                target: e.target,
+                color: e.attributes?.color || 'rgba(148, 163, 184, 0.4)'
+            }));
             set({
                 nodes,
                 edges,
@@ -208,10 +222,12 @@ export const useStore = create<ExplorerState>((set) => ({
                     // go straight to real progress, then raise the simulation ceiling
                     set({ importProgress: data.progress });
                     if (data.progress === 25) ceiling = 49;
-                    if (data.progress === 50) ceiling = 99;
+                    if (data.progress === 50) ceiling = 74;
+                    if (data.progress === 75) ceiling = 99;
                     if (data.progress === 100) {
                         clearInterval(ticker);
                         set({ importStatus: 'complete' });
+                        useStore.getState().fetchGraphData();
                     }
                 }
             }

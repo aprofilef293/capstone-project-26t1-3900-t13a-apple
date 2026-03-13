@@ -1,6 +1,6 @@
 // Functions to connect to backend
 
-export async function fetchGraphData(endpoint = '/graph') {
+export async function fetchGraphData(endpoint = '/api/graph/') {
     const response = await fetch(endpoint);
     if (!response.ok) {
         throw new Error(`Failed to fetch from ${endpoint}: ${response.statusText}`);

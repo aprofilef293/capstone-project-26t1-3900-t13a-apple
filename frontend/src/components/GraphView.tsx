@@ -6,6 +6,7 @@ import { useTheme } from "./theme-provider";
 import { NodeBorderProgram } from "@sigma/node-border";
 import { EdgeLineProgram } from "sigma/rendering";
 import { adjustColorBrightness } from "../lib/utils";
+import { MultiDirectedGraph } from "graphology";
 
 /** UI Configuration */
 const GRAPH_CONFIG = {
@@ -158,52 +159,9 @@ const GraphManager = forwardRef<GraphViewRef, unknown>((_, ref) => {
         };
     }, [selectedNodeId, sigma]);
     const fitToView = useCallback(() => {
-        if (isolationData && selectedNodeId) {
-            const nodesToFit = Array.from(new Set([
-                selectedNodeId,
-                ...isolationData.communityNodes,
-                ...isolationData.neighborNodes
-            ]));
-
-            let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
-            let validNodesCount = 0;
-
-            for (const id of nodesToFit) {
-                const displayData = sigma.getNodeDisplayData(id) as { x: number, y: number } | undefined;
-                if (displayData && typeof displayData.x === "number" && !isNaN(displayData.x) &&
-                    typeof displayData.y === "number" && !isNaN(displayData.y)) {
-                    minX = Math.min(minX, displayData.x);
-                    maxX = Math.max(maxX, displayData.x);
-                    minY = Math.min(minY, displayData.y);
-                    maxY = Math.max(maxY, displayData.y);
-                    validNodesCount++;
-                }
-            }
-
-            if (validNodesCount > 0 && minX !== Infinity) {
-                let dx = maxX - minX;
-                let dy = maxY - minY;
-
-                dx = Math.max(dx, 0.05);
-                dy = Math.max(dy, 0.05);
-
-                const centerX = (minX + maxX) / 2;
-                const centerY = (minY + maxY) / 2;
-                let ratio = Math.max(dx, dy) * GRAPH_CONFIG.PADDING;
-
-                ratio = Math.max(0.01, Math.min(ratio, 1.5));
-
-                sigma.getCamera().animate(
-                    { x: centerX, y: centerY, ratio },
-                    { duration: GRAPH_CONFIG.ANIMATION_DURATION }
-                );
-                return;
-            }
-        }
-
         // Fallback or default reset
         camera.reset({ duration: GRAPH_CONFIG.ANIMATION_DURATION });
-    }, [sigma, isolationData, selectedNodeId, camera]);
+    }, [camera]);
 
     useImperativeHandle(ref, () => ({
         zoomIn: camera.zoomIn,
@@ -221,44 +179,34 @@ const GraphManager = forwardRef<GraphViewRef, unknown>((_, ref) => {
     useEffect(() => {
         const graph = sigma.getGraph();
 
-        if (graph.order === 0 && nodes.length > 0) {
-            graph.import({
-                nodes: nodes.map(({ type, ...data }) => ({
-                    key: data.id as string,
-                    attributes: { ...data, nodeType: type }
-                })),
-                edges: edges.map((e) => ({
-                    key: e.id as string,
-                    source: e.source as string,
-                    target: e.target as string,
-                    attributes: e
-                }))
-            });
-            return;
-        }
+        // Drop nodes/edges that are no longer in the store
+        const incomingNodeIds = new Set(nodes.map(n => n.id));
+        const incomingEdgeIds = new Set(edges.map(e => e.id));
 
-        const currentNodes = new Set(graph.nodes() as string[]);
-        const currentEdges = new Set(graph.edges() as string[]);
-        const incomingNodeIds = new Set(nodes.map(n => n.id as string));
-        const incomingEdgeIds = new Set(edges.map(e => e.id as string));
+        graph.nodes().forEach(id => {
+            if (!incomingNodeIds.has(id)) graph.dropNode(id);
+        });
+        graph.edges().forEach(id => {
+            if (!incomingEdgeIds.has(id)) graph.dropEdge(id);
+        });
 
-        currentNodes.forEach(id => !incomingNodeIds.has(id) && graph.dropNode(id));
-        currentEdges.forEach(id => !incomingEdgeIds.has(id) && graph.dropEdge(id));
-
-        nodes.forEach(({ type, ...data }) => {
-            const id = data.id as string;
+        // Add or update nodes
+        nodes.forEach(({ type: _, ...node }) => {
+            const id = node.id;
             if (!graph.hasNode(id)) {
-                graph.addNode(id, { ...data, nodeType: type });
+                graph.addNode(id, { ...node });
             } else {
-                graph.mergeNodeAttributes(id, { ...data, nodeType: type });
+                graph.mergeNodeAttributes(id, { ...node });
             }
         });
 
-        edges.forEach(edge => {
-            if (!graph.hasEdge(edge.id as string)) {
-                graph.addEdgeWithKey(edge.id as string, edge.source as string, edge.target as string, edge);
+        // Add or update edges
+        edges.forEach((edge) => {
+            const edgeId = edge.id;
+            if (!graph.hasEdge(edgeId)) {
+                graph.addEdgeWithKey(edgeId, edge.source, edge.target, { ...edge });
             } else {
-                graph.mergeEdgeAttributes(edge.id as string, edge);
+                graph.mergeEdgeAttributes(edgeId, { ...edge });
             }
         });
     }, [nodes, edges, isDark, sigma]);
@@ -306,6 +254,7 @@ const GraphManager = forwardRef<GraphViewRef, unknown>((_, ref) => {
                 size: finalSize,
                 highlighted: isSelected,
                 zIndex: finalSize,
+                type: undefined,
             };
 
             if (largestNodesIds.has(node)) {
@@ -492,6 +441,7 @@ export const GraphView = forwardRef<GraphViewRef, unknown>((_, ref) => {
 
     return (
         <SigmaContainer
+            graph={MultiDirectedGraph}
             className="absolute inset-0"
             style={{
                 width: "100%",

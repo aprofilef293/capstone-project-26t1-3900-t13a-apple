@@ -22,6 +22,16 @@ class OntologyTerm(BaseModel):
     xrefs: list[str] = []
     is_obsolete: bool = False
 
+    # Preprocessing attributes
+    size: float | None = None
+    percentile_rank: float | None = None
+    pagerank_score: float | None = None
+    colour: str | None = None
+    louvain: int | None = None
+    viewLevel: int | None = None
+    x: float | None = None
+    y: float | None = None
+
 
 class OntologyRelation(BaseModel):
     """A directed relationship between two ontology terms.

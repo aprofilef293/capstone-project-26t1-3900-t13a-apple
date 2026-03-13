@@ -2,11 +2,25 @@ FROM python:3.12-slim
 
 WORKDIR /app
 
-RUN pip install --no-cache-dir poetry && \
+# Install system compilers 
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    g++ \
+    pkg-config \
+    libfftw3-dev \
+    libfftw3-bin \
+    libopenblas-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir poetry && \
     poetry config virtualenvs.create false
 
 COPY pyproject.toml poetry.lock* ./
-RUN poetry install --no-interaction --no-ansi --only main
+
+RUN poetry add "pyfftw@latest" "numba-kdtree@latest" && \
+    poetry update && \
+    poetry install --no-interaction --no-ansi --only main
 
 COPY . .
 
