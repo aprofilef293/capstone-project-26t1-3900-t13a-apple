@@ -22,7 +22,7 @@ export function FileImportStatusInfo() {
                 {importStatus === 'loading' && (
                     <div className="flex flex-col gap-1.5">
                         <Progress value={importProgress} />
-                        <span className="text-xs text-sidebar-foreground/50">{importProgress}%</span>
+                        <span className="text-xs text-sidebar-foreground/50">{Math.round(importProgress)}%</span>
                     </div>
                 )}
                 {importStatus === 'complete' && (
