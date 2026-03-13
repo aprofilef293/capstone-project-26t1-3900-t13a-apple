@@ -38,7 +38,7 @@ class GraphData(BaseModel):
 
     attributes: dict[str, object] = {}
     options: dict[str, object] = Field(
-        default_factory=lambda: {"type": "directed", "multi": False, "allowSelfLoops": True}
+        default_factory=lambda: {"type": "directed", "multi": True, "allowSelfLoops": True}
     )
     nodes: list[SerializedNode] = []
     edges: list[SerializedEdge] = []

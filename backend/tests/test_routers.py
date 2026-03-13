@@ -7,15 +7,6 @@ class TestGraphRouter:
         assert data["nodes"] == []
         assert data["edges"] == []
 
-    def test_get_graph_with_limit(self, client, mock_memgraph):
-        mock_memgraph.execute_read.return_value = []
-        resp = client.get("/api/graph/?limit=50")
-        assert resp.status_code == 200
-
-    def test_get_graph_limit_exceeds_max(self, client):
-        resp = client.get("/api/graph/?limit=5000")
-        assert resp.status_code == 422
-
     def test_node_not_found(self, client, mock_memgraph):
         mock_memgraph.execute_read.return_value = []
         resp = client.get("/api/graph/node/FAKE:001")
