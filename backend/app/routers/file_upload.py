@@ -75,7 +75,7 @@ async def upload_obo(file: UploadFile, request: Request):
     # Deleting all old terms and relationships from memgraph
     mg.execute_write(
         """
-        MATCH (n) 
+        MATCH (n)
         DETACH DELETE n
         """
     )
@@ -84,13 +84,13 @@ async def upload_obo(file: UploadFile, request: Request):
         """
         UNWIND $terms as t
         MERGE (n:OntologyTerm {id:t.id})
-        ON CREATE SET 
+        ON CREATE SET
             n.name = t.name,
             n.namespace = t.namespace,
             n.definition = t.definition,
             n.synonyms = t.synonyms,
             n.xrefs = t.xrefs,
-            n.is_obsolete = t.is_obsolete 
+            n.is_obsolete = t.is_obsolete
         """,
         {"terms": [t.model_dump() for t in terms]},
     )
@@ -100,7 +100,7 @@ async def upload_obo(file: UploadFile, request: Request):
         UNWIND $relations as r
         MATCH (s:OntologyTerm {id: r.subject_id})
         MATCH (t:OntologyTerm {id: r.target_id})
-        MERGE (s)-[:RELATED_TO {type: r.relation_type}]->(t) 
+        MERGE (s)-[:RELATED_TO {type: r.relation_type}]->(t)
         """,
         {"relations": [r.model_dump() for r in relations]},
     )
