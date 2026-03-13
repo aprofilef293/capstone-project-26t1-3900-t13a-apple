@@ -33,3 +33,10 @@ def client(settings, mock_memgraph):
     app.state.settings = settings
     app.state.memgraph = mock_memgraph
     return TestClient(app, raise_server_exceptions=False)
+
+
+@pytest.fixture
+def real_client():
+    app = create_app()
+    with TestClient(app, raise_server_exceptions=True) as client:
+        yield client
