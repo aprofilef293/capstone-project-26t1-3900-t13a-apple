@@ -4,7 +4,7 @@ from pronto import Ontology, Term
 
 from app.models.upload import OntologyRelation, OntologyTerm, OntologyUploadResponse
 import io
-
+from app.services.memgraph import MemgraphService
 router = APIRouter()
 
 
@@ -54,7 +54,7 @@ def memgraph_data(term: Term):
 @router.post('/obo-file-upload', summary = "Uploading a .obo file")
 async def upload_obo(file: UploadFile, request: Request):
     
-    mg = request.app.state.memgraph
+    mg: MemgraphService = request.app.state.memgraph
     #Checking if file was sent    
     
     #Error checking to ensure that only .obo files are accepted
@@ -83,9 +83,14 @@ async def upload_obo(file: UploadFile, request: Request):
             relations.append(r)
     
     
-            
+    #Deleting all old terms and relationships from memgraph
+    mg.execute_write(
+        """
+        MATCH (n) 
+        DETACH DELETE n
+        """
+    )
     #Inserting terms into Memgraph
-    print("NOT FIXED")
     mg.execute_write(
         """
         UNWIND $terms as t
