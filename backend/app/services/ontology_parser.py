@@ -4,7 +4,21 @@ from app.models.upload import OntologyRelation, OntologyTerm
 
 
 def parse_ontology(file_path: str) -> tuple[list[OntologyTerm], list[OntologyRelation]]:
-    """Parse an OBO or OWL file using Pronto and return validated terms and relations."""
+    """Parse an OBO or OWL ontology file and extract terms and relations.
+
+    Uses the Pronto library to read the file from disk. For each term,
+    extracts its metadata (name, namespace, definition, synonyms, xrefs,
+    obsolete status) and its relationships (is_a parents and other
+    relations like part_of, regulates, etc.).
+
+    Args:
+        file_path: Path to the ontology file on disk (.obo or .owl).
+
+    Returns:
+        A tuple of (terms, relations) where terms is a list of
+        OntologyTerm models and relations is a list of
+        OntologyRelation models.
+    """
     ont = pronto.Ontology(file_path)
     terms: list[OntologyTerm] = []
     relations: list[OntologyRelation] = []

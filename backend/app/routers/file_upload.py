@@ -24,7 +24,18 @@ def _ingest_ontology(
     relations: list[OntologyRelation],
     source_file: str,
 ) -> None:
-    """Batch ingest validated ontology terms and relations into Memgraph."""
+    """Batch ingest validated ontology terms and relations into Memgraph.
+
+    Clears all existing OntologyTerm nodes, creates an index on the term id,
+    then inserts non-obsolete terms and their relationships in batches of 5000.
+    All term model attributes are dynamically set on nodes via ``SET n += t``.
+
+    Args:
+        mg: MemgraphService instance for executing Cypher queries.
+        terms: Parsed ontology terms to insert.
+        relations: Parsed relationships between terms.
+        source_file: Original filename, stored on each node for provenance.
+    """
     # Clear existing data before ingesting new file
     mg.execute_write("MATCH (n:OntologyTerm) DETACH DELETE n;")
 
@@ -65,7 +76,19 @@ def _ingest_ontology(
 
 @router.post("/upload", response_model=OntologyUploadResponse)
 async def upload_ontology(request: Request, file: UploadFile = File(...)):
-    """Upload and ingest an OBO/OWL ontology file."""
+    """Upload and ingest an OBO/OWL ontology file.
+
+    Accepts a .obo or .owl file, parses it with Pronto via a temp file,
+    ingests the terms and relations into Memgraph, and returns a summary
+    of what was ingested.
+
+    Args:
+        request: FastAPI request (used to access app.state.memgraph).
+        file: The uploaded ontology file.
+
+    Raises:
+        HTTPException 400: If the file extension is not .obo or .owl.
+    """
     ext = os.path.splitext(file.filename or "")[1].lower()
     if ext not in ALLOWED_EXTENSIONS:
         raise HTTPException(status_code=400, detail=f"Unsupported file type: {ext}. Use .obo or .owl")
@@ -97,7 +120,11 @@ async def upload_ontology(request: Request, file: UploadFile = File(...)):
 
 @router.get("/list")
 def list_ontologies(request: Request):
-    """List distinct ontology sources that have been ingested."""
+    """List distinct ontology sources that have been ingested.
+
+    Returns a list of records with the source filename and the number
+    of terms ingested from each file.
+    """
     mg = request.app.state.memgraph
     records = mg.execute_read(
         "MATCH (n:OntologyTerm) RETURN DISTINCT n.source_file AS source_file, count(n) AS term_count"
