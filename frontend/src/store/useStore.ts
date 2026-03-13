@@ -157,24 +157,68 @@ export const useStore = create<ExplorerState>((set) => ({
     importDate: null,
     importError: null,
     startFileImport: async (file) => {
-        set({ fileName: file.name, importStatus: 'waiting', importDate: new Date() })
-        const uploadData = new FormData();
-        uploadData.append(
-            file.name,
-            file
-        )
-        try {
-            const response = await fetch("/api/ontology/upload", {
-                method: 'POST',
-                body: uploadData,
-            })
-            if (!response.ok) {
-                throw new Error(response.statusText)
+        set({ fileName: file.name, importStatus: 'loading', importProgress: 0, importDate: new Date() });
+
+        // simulate progress bar slowly moving toward the ceiling between real events
+        let ceiling = 24;
+        let simProgress = 0;
+        const ticker = setInterval(() => {
+            simProgress = useStore.getState().importProgress;
+            if (simProgress < ceiling) {
+                set({ importProgress: Math.min(simProgress + 0.5, ceiling) });
             }
-            set({ fileName: file.name, importStatus: 'loading', importProgress: 0, importDate: new Date() })
+        }, 100);
+
+        const formData = new FormData();
+        formData.append('file', file);
+
+        try {
+            const response = await fetch('/api/ontology/upload', {
+                method: 'POST',
+                body: formData,
+            });
+
+            if (!response.ok || !response.body) {
+                throw new Error(response.statusText);
+            }
+
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder();
+            let buffer = '';
+
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+                buffer += decoder.decode(value, { stream: true });
+
+                const parts = buffer.split('\n\n');
+                buffer = parts.pop() ?? '';
+
+                for (const part of parts) {
+                    const line = part.trim();
+                    if (!line.startsWith('data: ')) continue;
+                    const data = JSON.parse(line.slice(6));
+
+                    if (data.error) {
+                        clearInterval(ticker);
+                        set({ importStatus: 'error', importError: data.error });
+                        return;
+                    }
+
+                    // go straight to real progress, then raise the simulation ceiling
+                    set({ importProgress: data.progress });
+                    if (data.progress === 25) ceiling = 49;
+                    if (data.progress === 50) ceiling = 99;
+                    if (data.progress === 100) {
+                        clearInterval(ticker);
+                        set({ importStatus: 'complete' });
+                    }
+                }
+            }
         } catch (error) {
-            console.error("Error importing file", error);
-            set({ fileName: file.name, importStatus: 'error', importDate: new Date() })
+            clearInterval(ticker);
+            console.error('Error importing file', error);
+            set({ importStatus: 'error', importError: String(error) });
         }
     },
     setImportProgress: (progress) => set({ importProgress: progress }),

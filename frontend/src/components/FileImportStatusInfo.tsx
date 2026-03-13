@@ -33,7 +33,7 @@ export function FileImportStatusInfo() {
                 )}
                 {importStatus === 'error' && (
                     <div className="flex items-center gap-1.5 text-red-500">
-                        <span className="text-xs">Failed{importError ? `: ${importError}` : ''}</span>
+                        <span className="text-xs">Failed</span>
                         <XCircle className="w-4 h-4" />
                     </div>
                 )}
