@@ -135,13 +135,8 @@ def _build_graph_data_from_paths(records: list[dict]) -> GraphData:
 )
 def get_graph(
     request: Request,
-    limit: int = Query(
-        200,
-        le=1000,
-        description="Maximum number of OntologyTerm nodes to return (max 1000). Edges are capped at 3x this value.",
-    ),
 ):
-    """Fetch OntologyTerm nodes and their relationships from Memgraph.
+    """Fetch all OntologyTerm nodes and their relationships from Memgraph.
 
     Nodes are arranged in a circular layout and color-coded by namespace
     (biological_process, molecular_function, cellular_component).
@@ -149,14 +144,11 @@ def get_graph(
     """
     mg = request.app.state.memgraph
     node_records = mg.execute_read(
-        "MATCH (n:OntologyTerm) RETURN n LIMIT $limit",
-        {"limit": limit},
+        "MATCH (n:OntologyTerm) RETURN n",
     )
     edge_records = mg.execute_read(
         "MATCH (n:OntologyTerm)-[r]->(m:OntologyTerm) "
-        "RETURN n.id AS source, m.id AS target, type(r) AS rel_type, r.type AS sub_type "
-        "LIMIT $limit",
-        {"limit": limit * 3},
+        "RETURN n.id AS source, m.id AS target, type(r) AS rel_type, r.type AS sub_type",
     )
     return _build_graph_data(node_records, edge_records)
 
