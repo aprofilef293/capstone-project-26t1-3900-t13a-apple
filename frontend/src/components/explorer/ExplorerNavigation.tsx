@@ -96,9 +96,9 @@ export function ExplorerToolbar({
             </div>
 
             {/* Search Bar */}
-            <div className="flex-1 flex justify-center min-w-0">
+            {/* <div className="flex-1 flex justify-center min-w-0">
                 <ExplorerSearch />
-            </div>
+            </div> */}
 
             {/* Metrics Badge */}
             <div className="bg-sidebar/95 shrink-0 backdrop-blur-sm border border-sidebar-border rounded-lg px-2.5 py-1.5 shadow-sm text-[10px] sm:text-xs font-medium flex flex-col items-end gap-0.5 text-muted-foreground pointer-events-auto leading-tight">
