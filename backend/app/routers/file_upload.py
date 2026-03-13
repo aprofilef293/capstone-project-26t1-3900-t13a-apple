@@ -1,9 +1,9 @@
 import io
 
-from fastapi import APIRouter, HTTPException, Request, UploadFile
+from fastapi import APIRouter, File, HTTPException, Request, UploadFile
 from pronto import Ontology, Term
 
-from app.models.upload import OntologyRelation, OntologyTerm
+from app.models.upload import OntologyRelation, OntologyTerm, OntologyUploadResponse
 from app.services.memgraph import MemgraphService
 
 router = APIRouter()
@@ -44,8 +44,8 @@ def memgraph_data(term: Term):
     return term_insert, relations
 
 
-@router.post("/obo-file-upload", summary="Uploading a .obo file")
-async def upload_obo(file: UploadFile, request: Request):
+@router.post("/upload", response_model=OntologyUploadResponse, summary="Uploading a .obo file")
+async def upload_obo(request: Request, file: UploadFile = File(...)):
 
     mg: MemgraphService = request.app.state.memgraph
     # Checking if file was sent
@@ -105,7 +105,15 @@ async def upload_obo(file: UploadFile, request: Request):
         {"relations": [r.model_dump() for r in relations]},
     )
 
-    return {"terms_uploaded": len(terms), "relations_uploaded": len(relations)}
+    namespaces = list({t.namespace for t in terms if t.namespace})
+
+    return OntologyUploadResponse(
+        filename=file.filename,
+        term_count=len(terms),
+        relation_count=len(relations),
+        namespaces=namespaces,
+        message=f"Successfully uploaded {file.filename}",
+    )
 
 
 @router.get("/", summary="testing backend")

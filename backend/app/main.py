@@ -51,7 +51,7 @@ def create_app() -> FastAPI:
         allow_headers=["*"],
     )
     app.include_router(graph.router, prefix="/api/graph", tags=["graph"])
-    app.include_router(file_upload.router, prefix="/api", tags=["upload"])
+    app.include_router(file_upload.router, prefix="/api/ontology", tags=["upload"])
 
     return app
 

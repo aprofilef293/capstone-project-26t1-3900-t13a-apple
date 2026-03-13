@@ -48,7 +48,7 @@ is_a: TEST:0000001
 
 # Testing if a file was sent
 def test_file_sent(real_client):
-    response = real_client.post("/api/obo-file-upload", files={})
+    response = real_client.post("/api/ontology/upload", files={})
 
     assert response.status_code == 422
 
@@ -56,7 +56,7 @@ def test_file_sent(real_client):
 # Testing if a non .obo file is trying to be uploaded
 def test_obo_format(real_client):
     response = real_client.post(
-        "/api/obo-file-upload",
+        "/api/ontology/upload",
         files={"file": ("test.txt", sample_data_2, "text/plain")},
     )
 
@@ -67,7 +67,7 @@ def test_obo_format(real_client):
 def test_obo_integration(real_client):
 
     response = real_client.post(
-        "/api/obo-file-upload",
+        "/api/ontology/upload",
         files={"file": ("test.obo", io.BytesIO(sample_data_2), "text/plain")},
     )
 
@@ -76,7 +76,7 @@ def test_obo_integration(real_client):
     assert len(total_nodes) == 3
 
     response = real_client.post(
-        "/api/obo-file-upload",
+        "/api/ontology/upload",
         files={"file": ("test.obo", io.BytesIO(sample_data_3), "text/plain")},
     )
     total_nodes = mg.execute_read("MATCH (n) RETURN n")
