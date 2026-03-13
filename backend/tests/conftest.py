@@ -1,3 +1,4 @@
+import socket
 from unittest.mock import MagicMock
 
 import pytest
@@ -5,6 +6,17 @@ from fastapi.testclient import TestClient
 
 from app.config import Settings
 from app.main import create_app
+
+
+def _memgraph_available(host="localhost", port=7687):
+    try:
+        with socket.create_connection((host, port), timeout=1):
+            return True
+    except OSError:
+        return False
+
+
+_memgraph_running = _memgraph_available()
 
 
 @pytest.fixture
@@ -37,6 +49,8 @@ def client(settings, mock_memgraph):
 
 @pytest.fixture
 def real_client():
+    if not _memgraph_running:
+        pytest.skip("Memgraph is not running on localhost:7687")
     app = create_app()
     with TestClient(app, raise_server_exceptions=True) as client:
         yield client
