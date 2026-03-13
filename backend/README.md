@@ -1,37 +1,38 @@
 # OBO Explorer Backend
 
+For commands, read the Makefile.
+
+Run the docker container instead of local. If running locally, copy the `.env.example` into `.env`.
+
 ## Setup
 
+API runs at `http://localhost:8000`. Docs at `http://localhost:8000/docs`.
+
 ```bash
-# medgemma api keys
+# not needed
 cp .env.example .env
+
+# install dependencies
 make install
-# start memgraph
+
+# start the docker container
 make docker-up
-# run the dev server
+
+# runs the app with hot reload automatically restarts when changes are made
 make dev
 ```
 
-API will be available at `http://localhost:8000`.
+## Endpoints
 
-## Makefile Commands
+- `POST /api/ontology/upload` — upload a `.obo` or `.owl` file
+- `GET /api/ontology/list` — list uploaded ontologies
+- `GET /api/graph/` — get the full graph
+- `GET /api/graph/node/{node_id}` — get a node and its neighbors
+- `GET /api/graph/search?q=` — search terms by name
 
-Read the makefile commands for shortcuts
+## Structure
 
-## Project Structure
-
-- main starts the app
-- config settins from .env
-- models pydantic schemas for ontology graph cypher query
-- routers/ api endpoints to frontent
-- services
-
-## Environment Variables
-
-See [`.env.example`](.env.example) for all available options:
-
-- `MEMGRAPH_URI` — Bolt connection string (default: `bolt://localhost:7687`)
-- `MEDGEMMA_API_URL` / `MEDGEMMA_API_KEY` — MedGemma endpoint credentials
-- `CORS_ORIGINS` — Allowed origins list
-- `DEBUG` — Enable debug mode
-- `UPLOAD_MAX_SIZE_MB` — Max ontology file upload size
+- `app/models/`: FastAPI validate data and serialises into JSON. For example, OntologyUploadResponse defines what fields the upload endpoint returns.
+- `app/routers/`: API route handlers
+- `app/services/memgraph.py`: Memgraph driver
+- `app/services/ontology_parser.py`:  parses ontology files with Pronto
