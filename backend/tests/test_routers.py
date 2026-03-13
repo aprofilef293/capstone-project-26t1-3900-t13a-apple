@@ -7,7 +7,6 @@ class TestGraphRouter:
         assert data["nodes"] == []
         assert data["edges"] == []
 
-
     def test_node_not_found(self, client, mock_memgraph):
         mock_memgraph.execute_read.return_value = []
         resp = client.get("/api/graph/node/FAKE:001")
