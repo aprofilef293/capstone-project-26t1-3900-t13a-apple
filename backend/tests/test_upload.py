@@ -1,5 +1,6 @@
 # tests/test_upload.py
 import io
+import json
 
 sample_data_2 = b"""format-version: 1.2
 
@@ -46,6 +47,16 @@ is_a: TEST:0000001
 """
 
 
+def _parse_sse_events(response_text):
+    """Parse SSE events from a response body into a list of dicts."""
+    events = []
+    for chunk in response_text.strip().split("\n\n"):
+        for line in chunk.split("\n"):
+            if line.startswith("data: "):
+                events.append(json.loads(line[len("data: "):]))
+    return events
+
+
 # Testing if a file was sent
 def test_file_sent(real_client):
     response = real_client.post("/api/ontology/upload", files={})
@@ -63,13 +74,16 @@ def test_unsupported_format(real_client):
     assert response.status_code == 400
 
 
-# Testing obo file uploaded and querying db
+# Testing obo file uploaded and querying db via SSE stream
 def test_obo_integration(real_client):
-
     response = real_client.post(
         "/api/ontology/upload",
         files={"file": ("test.obo", io.BytesIO(sample_data_2), "text/plain")},
     )
+    assert response.status_code == 200
+
+    events = _parse_sse_events(response.text)
+    assert any(e.get("stage") == "complete" for e in events)
 
     mg = real_client.app.state.memgraph
     total_nodes = mg.execute_read("MATCH (n) RETURN n")
@@ -79,19 +93,22 @@ def test_obo_integration(real_client):
         "/api/ontology/upload",
         files={"file": ("test.obo", io.BytesIO(sample_data_3), "text/plain")},
     )
-    total_nodes = mg.execute_read("MATCH (n) RETURN n")
-    assert len(total_nodes) == 2
     assert response.status_code == 200
 
+    total_nodes = mg.execute_read("MATCH (n) RETURN n")
+    assert len(total_nodes) == 2
 
-# Testing corrupted file returns 400
+
+# Testing corrupted file returns an error event in the SSE stream
 def test_corrupted_file(real_client):
     response = real_client.post(
         "/api/ontology/upload",
         files={"file": ("bad.obo", io.BytesIO(b"not a valid ontology"), "text/plain")},
     )
+    assert response.status_code == 200  # SSE stream still returns 200
 
-    assert response.status_code == 400
+    events = _parse_sse_events(response.text)
+    assert any("error" in e for e in events)
 
 
 # Testing the /list endpoint returns uploaded ontologies
