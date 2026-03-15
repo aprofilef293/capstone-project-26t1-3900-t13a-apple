@@ -253,8 +253,10 @@ const GraphManager = forwardRef<GraphViewRef, unknown>((_, ref) => {
         });
 
         // Add or update nodes - only if data changed
-        nodes.forEach(({ type: _, ...node }) => {
-            const id = node.id;
+        nodes.forEach((nodeItem) => {
+            const id = nodeItem.id;
+            // eslint-disable-next-line @typescript-eslint/no-unused-vars
+            const { type, ...node } = nodeItem;
             if (!graph.hasNode(id)) {
                 graph.addNode(id, { ...node });
             } else {
@@ -295,7 +297,7 @@ const GraphManager = forwardRef<GraphViewRef, unknown>((_, ref) => {
             },
             doubleClickStage: () => setSelectedNodeId(null),
         });
-    }, [registerEvents, setSelectedNodeId, selectedNodeId]);
+    }, [registerEvents, setSelectedNodeId, selectedNodeId, setIsNodeSelecting]);
 
     useEffect(() => {
         setIsNodeSelecting(false);
@@ -305,7 +307,7 @@ const GraphManager = forwardRef<GraphViewRef, unknown>((_, ref) => {
     useEffect(() => {
         const graph = sigma.getGraph();
 
-        sigma.setSetting("nodeReducer", (node: string, data: any) => {
+        sigma.setSetting("nodeReducer", (node: string, data: NodeAttributes) => {
             const attrs = data as NodeAttributes;
             const isSelected = node === selectedNodeId;
             const size = attrs.size ?? GRAPH_CONFIG.DEFAULT_NODE_SIZE;
@@ -388,7 +390,7 @@ const GraphManager = forwardRef<GraphViewRef, unknown>((_, ref) => {
             if (isVisible) visibleNodes.add(id);
         });
 
-        graph.forEachEdge((edge: string, _a: EdgeAttributes, source: string, target: string) => {
+        graph.forEachEdge((edge: string, _: EdgeAttributes, source: string, target: string) => {
             graph.setEdgeAttribute(edge, "hidden", !visibleNodes.has(source) || !visibleNodes.has(target));
         });
     }, [deferredSearchQuery, viewLevel, selectedNodeId, sigma, isolationData]);
