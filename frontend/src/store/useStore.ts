@@ -211,7 +211,9 @@ export const useStore = create<ExplorerState>((set) => ({
                     if (data.progress === 50) ceiling = 99;
                     if (data.progress === 100) {
                         clearInterval(ticker);
-                        set({ importStatus: 'complete' });
+                        set({ importProgress: 99, importStatus: 'loading' });
+                        await useStore.getState().fetchGraphData();
+                        set({ importStatus: 'complete', importProgress: 100 });
                     }
                 }
             }
