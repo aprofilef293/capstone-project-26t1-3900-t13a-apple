@@ -48,6 +48,7 @@ def _node_from_record(node_props: dict, index: int, total: int) -> SerializedNod
             "size": size,
             "color": color,
             "nodeType": node_type,
+            "synonyms": node_props.get("synonyms", []),
         },
     )
 
