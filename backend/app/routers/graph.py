@@ -20,25 +20,34 @@ COLOR_MAP = {
 
 
 def _node_from_record(node_props: dict, index: int, total: int) -> SerializedNode:
-    """Convert Memgraph node properties to a Graphology SerializedNode with circular layout."""
+    # Use stored coordinates if they exist
+    x = node_props.get("x")
+    y = node_props.get("y")
+
+    # Fallback to circular layout if coordinates are missing
+    if x is None or y is None:
+        angle = (2 * math.pi * index) / max(total, 1)
+        radius = math.sqrt(max(total, 1)) * 2
+        x = round(radius * math.cos(angle), 2)
+        y = round(radius * math.sin(angle), 2)
+
     namespace = node_props.get("namespace", "unknown")
     node_type = NODE_TYPE_MAP.get(namespace, "Process")
 
-    angle = (2 * math.pi * index) / max(total, 1)
-    radius = math.sqrt(max(total, 1)) * 2
+    # sigma.js needs colour spelt color
+    color = node_props.get("color") or node_props.get("colour") or COLOR_MAP.get(node_type, "#6b7280")
+    size = node_props.get("size", 12)
 
     return SerializedNode(
         key=node_props["id"],
         attributes={
-            "id": node_props["id"],
+            **node_props,
             "label": node_props.get("name", node_props["id"]),
-            "x": round(radius * math.cos(angle), 2),
-            "y": round(radius * math.sin(angle), 2),
-            "size": 12,
-            "color": COLOR_MAP.get(node_type, "#6b7280"),
+            "x": x,
+            "y": y,
+            "size": size,
+            "color": color,
             "nodeType": node_type,
-            "namespace": namespace,
-            "definition": node_props.get("definition", ""),
             "synonyms": node_props.get("synonyms", []),
         },
     )

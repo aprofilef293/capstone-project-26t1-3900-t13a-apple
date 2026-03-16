@@ -4,8 +4,9 @@ import "@react-sigma/core/lib/style.css";
 import { useStore } from "../store/useStore";
 import { useTheme } from "./theme-provider";
 import { NodeBorderProgram } from "@sigma/node-border";
-import { EdgeLineProgram } from "sigma/rendering";
+import { EdgeLineProgram, NodeCircleProgram } from "sigma/rendering";
 import { adjustColorBrightness } from "../lib/utils";
+import { MultiDirectedGraph } from "graphology";
 
 /** UI Configuration */
 const GRAPH_CONFIG = {
@@ -79,8 +80,9 @@ const GraphManager = forwardRef<GraphViewRef, unknown>((_, ref) => {
     // Defer the search query to prevent input lag on heavy graphs
     const deferredSearchQuery = useDeferredValue(searchQuery);
 
-    const largestNodesIds = useMemo(() => {
-        if (!nodes || nodes.length === 0) return new Set<string>();
+    const nodeStyles = useMemo(() => {
+        const styles = new Map<string, { borderColor?: string; borderSize?: number; color?: string; type?: string }>();
+        if (!nodes || nodes.length === 0) return styles;
 
         // Calculate Global Size Percentiles & Average
         const sizes = nodes.map(n => Number(n.size ?? GRAPH_CONFIG.DEFAULT_NODE_SIZE)).sort((a, b) => a - b);
@@ -126,8 +128,26 @@ const GraphManager = forwardRef<GraphViewRef, unknown>((_, ref) => {
             }
         });
 
-        return prominentIds;
-    }, [nodes]);
+        // Pre-calculate style for each node
+        nodes.forEach(node => {
+            const id = node.id;
+            if (prominentIds.has(id)) {
+                const attrs = node.attributes as Record<string, unknown>;
+                const color = (node.color || attrs.color) as string | undefined;
+
+                styles.set(id, {
+                    type: "border",
+                    borderColor: color ? adjustColorBrightness(color, -20) : (isDark ? "#ffffff" : "#000000"),
+                    borderSize: 0.15,
+                    color: color ? adjustColorBrightness(color, isDark ? 25 : -20) : undefined
+                });
+            } else {
+                styles.set(id, {});
+            }
+        });
+
+        return styles;
+    }, [nodes, isDark]);
 
     // Calculate community and neighbor isolation sets
     const isolationData = useMemo(() => {
@@ -200,10 +220,9 @@ const GraphManager = forwardRef<GraphViewRef, unknown>((_, ref) => {
                 return;
             }
         }
-
         // Fallback or default reset
         camera.reset({ duration: GRAPH_CONFIG.ANIMATION_DURATION });
-    }, [sigma, isolationData, selectedNodeId, camera]);
+    }, [sigma, camera, isolationData, selectedNodeId]);
 
     useImperativeHandle(ref, () => ({
         zoomIn: camera.zoomIn,
@@ -221,47 +240,40 @@ const GraphManager = forwardRef<GraphViewRef, unknown>((_, ref) => {
     useEffect(() => {
         const graph = sigma.getGraph();
 
-        if (graph.order === 0 && nodes.length > 0) {
-            graph.import({
-                nodes: nodes.map(({ type, ...data }) => ({
-                    key: data.id as string,
-                    attributes: { ...data, nodeType: type }
-                })),
-                edges: edges.map((e) => ({
-                    key: e.id as string,
-                    source: e.source as string,
-                    target: e.target as string,
-                    attributes: e
-                }))
-            });
-            return;
-        }
+        const storeNodeIds = nodes.map(n => n.id);
+        const storeEdgeIds = edges.map(e => e.id);
+        const incomingNodeIds = new Set(storeNodeIds);
+        const incomingEdgeIds = new Set(storeEdgeIds);
 
-        const currentNodes = new Set(graph.nodes() as string[]);
-        const currentEdges = new Set(graph.edges() as string[]);
-        const incomingNodeIds = new Set(nodes.map(n => n.id as string));
-        const incomingEdgeIds = new Set(edges.map(e => e.id as string));
+        graph.nodes().forEach(id => {
+            if (!incomingNodeIds.has(id)) graph.dropNode(id);
+        });
+        graph.edges().forEach(id => {
+            if (!incomingEdgeIds.has(id)) graph.dropEdge(id);
+        });
 
-        currentNodes.forEach(id => !incomingNodeIds.has(id) && graph.dropNode(id));
-        currentEdges.forEach(id => !incomingEdgeIds.has(id) && graph.dropEdge(id));
-
-        nodes.forEach(({ type, ...data }) => {
-            const id = data.id as string;
+        // Add or update nodes - only if data changed
+        nodes.forEach((nodeItem) => {
+            const id = nodeItem.id;
+            // eslint-disable-next-line @typescript-eslint/no-unused-vars
+            const { type, ...node } = nodeItem;
             if (!graph.hasNode(id)) {
-                graph.addNode(id, { ...data, nodeType: type });
+                graph.addNode(id, { ...node });
             } else {
-                graph.mergeNodeAttributes(id, { ...data, nodeType: type });
+                graph.mergeNodeAttributes(id, { ...node });
             }
         });
 
-        edges.forEach(edge => {
-            if (!graph.hasEdge(edge.id as string)) {
-                graph.addEdgeWithKey(edge.id as string, edge.source as string, edge.target as string, edge);
+        // Add or update edges
+        edges.forEach((edge) => {
+            const edgeId = edge.id;
+            if (!graph.hasEdge(edgeId)) {
+                graph.addEdgeWithKey(edgeId, edge.source, edge.target, { ...edge });
             } else {
-                graph.mergeEdgeAttributes(edge.id as string, edge);
+                graph.mergeEdgeAttributes(edgeId, { ...edge });
             }
         });
-    }, [nodes, edges, isDark, sigma]);
+    }, [nodes, edges, sigma]);
 
     // Click interactions
     useEffect(() => {
@@ -285,7 +297,7 @@ const GraphManager = forwardRef<GraphViewRef, unknown>((_, ref) => {
             },
             doubleClickStage: () => setSelectedNodeId(null),
         });
-    }, [registerEvents, setSelectedNodeId, selectedNodeId]);
+    }, [registerEvents, setSelectedNodeId, selectedNodeId, setIsNodeSelecting]);
 
     useEffect(() => {
         setIsNodeSelecting(false);
@@ -295,27 +307,20 @@ const GraphManager = forwardRef<GraphViewRef, unknown>((_, ref) => {
     useEffect(() => {
         const graph = sigma.getGraph();
 
-        sigma.setSetting("nodeReducer", (node: string, data: any) => {
+        sigma.setSetting("nodeReducer", (node: string, data: NodeAttributes) => {
             const attrs = data as NodeAttributes;
             const isSelected = node === selectedNodeId;
             const size = attrs.size ?? GRAPH_CONFIG.DEFAULT_NODE_SIZE;
             const finalSize = isSelected ? size * GRAPH_CONFIG.SELECTED_SCALE : size;
 
+            const style = nodeStyles.get(node);
             const newData: NodeAttributes = {
                 ...attrs,
+                ...style,
                 size: finalSize,
                 highlighted: isSelected,
                 zIndex: finalSize,
             };
-
-            if (largestNodesIds.has(node)) {
-                newData.type = "border";
-                newData.borderColor = attrs.color ? adjustColorBrightness(attrs.color, -20) : (isDark ? "#ffffff" : "#000000");
-                newData.borderSize = 0.15;
-                if (attrs.color) {
-                    newData.color = adjustColorBrightness(attrs.color, isDark ? 25 : -20);
-                }
-            }
 
             return newData;
         });
@@ -360,7 +365,7 @@ const GraphManager = forwardRef<GraphViewRef, unknown>((_, ref) => {
             sigma.setSetting("nodeReducer", null);
             sigma.setSetting("edgeReducer", null);
         };
-    }, [selectedNodeId, largestNodesIds, isolationData, isDark, sigma]);
+    }, [selectedNodeId, nodeStyles, isolationData, isDark, sigma]);
 
     // Visibility Filtering
     useEffect(() => {
@@ -385,7 +390,7 @@ const GraphManager = forwardRef<GraphViewRef, unknown>((_, ref) => {
             if (isVisible) visibleNodes.add(id);
         });
 
-        graph.forEachEdge((edge: string, _a: EdgeAttributes, source: string, target: string) => {
+        graph.forEachEdge((edge: string, _: EdgeAttributes, source: string, target: string) => {
             graph.setEdgeAttribute(edge, "hidden", !visibleNodes.has(source) || !visibleNodes.has(target));
         });
     }, [deferredSearchQuery, viewLevel, selectedNodeId, sigma, isolationData]);
@@ -480,6 +485,7 @@ export const GraphView = forwardRef<GraphViewRef, unknown>((_, ref) => {
                 ctx.fillText(label, x + size + 4, y + settings.labelSize / 3);
             },
             nodeProgramClasses: {
+                circle: NodeCircleProgram,
                 border: NodeBorderProgram,
             },
             edgeProgramClasses: {
@@ -492,6 +498,7 @@ export const GraphView = forwardRef<GraphViewRef, unknown>((_, ref) => {
 
     return (
         <SigmaContainer
+            graph={MultiDirectedGraph}
             className="absolute inset-0"
             style={{
                 width: "100%",

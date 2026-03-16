@@ -24,6 +24,6 @@ class Settings(BaseSettings):
     cors_origins: list[str] = ["http://localhost:5173"]
 
     debug: bool = False
-    upload_max_size_mb: int = 50
+    upload_max_size_mb: int = 250
 
     model_config = {"env_file": ".env", "env_file_encoding": "utf-8"}

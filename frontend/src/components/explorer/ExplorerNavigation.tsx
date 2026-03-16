@@ -2,7 +2,6 @@ import { ListTree, Network, type LucideIcon } from "lucide-react";
 import { useMemo, useDeferredValue } from "react";
 import { Button } from "../ui/button";
 import { cn } from "../../lib/utils";
-import { ExplorerSearch } from "./ExplorerSearch";
 
 const VIEW_MODES: { mode: "graph" | "hierarchy"; label: string; icon: LucideIcon }[] = [
     { mode: "graph", label: "Graph", icon: Network },

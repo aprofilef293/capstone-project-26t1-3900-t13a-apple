@@ -4,7 +4,7 @@ import { useStore } from "../store/useStore";
 import { formatDate } from "../lib/utils";
 
 export function FileImportStatusInfo() {
-    const { fileName, importStatus, importProgress, importDate, importError } = useStore();
+    const { fileName, importStatus, importProgress, importDate } = useStore();
 
     return (
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">

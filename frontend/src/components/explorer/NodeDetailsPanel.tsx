@@ -7,7 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "../ui/accordion";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuSeparator, DropdownMenuTrigger } from "../ui/dropdown-menu";
 import { Button } from "../ui/button";
-import React, { useEffect } from "react";
+import React, { useMemo } from "react";
 
 /* ── Reusable connection card list ── */
 interface ConnectionItem {
@@ -25,6 +25,8 @@ const computedAttributeKeys = [
     "pagerank_score",
     "color",
     "viewLevel",
+    "viewlevel",
+    "view_level",
     "x",
     "y"
 ]
@@ -128,13 +130,9 @@ function ConnectionsContent({
     onSelect: (id: string) => void;
 }) {
     const [sortChoice, setSortChoice] = React.useState("name-az");
-    const [inputsList, setInputsList] = React.useState(inputs);
-    const [outputsList, setOutputsList] = React.useState(outputs);
 
-    useEffect(() => {
-        setInputsList(sortList(inputs, sortChoice));
-        setOutputsList(sortList(outputs, sortChoice));
-    }, [inputs, outputs]);
+    const inputsList = useMemo(() => sortList([...inputs], sortChoice), [inputs, sortChoice]);
+    const outputsList = useMemo(() => sortList([...outputs], sortChoice), [outputs, sortChoice]);
 
     return (
         <Tabs defaultValue="tab1">
@@ -152,11 +150,7 @@ function ConnectionsContent({
                         <Button variant="secondary">Sort</Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent className="cursor-pointer">
-                        <DropdownMenuRadioGroup value={sortChoice} onValueChange={((val) => {
-                            setSortChoice(val);
-                            setInputsList(sortList(inputs, val));
-                            setOutputsList(sortList(outputs, val));
-                        })}>
+                        <DropdownMenuRadioGroup value={sortChoice} onValueChange={setSortChoice}>
                             <DropdownMenuRadioItem value="name-az">Name (A-Z)</DropdownMenuRadioItem>
                             <DropdownMenuRadioItem value="name-za">Name (Z-A)</DropdownMenuRadioItem>
                             <DropdownMenuSeparator />
