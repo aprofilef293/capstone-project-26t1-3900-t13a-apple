@@ -23,7 +23,7 @@ def _node_from_record(node_props: dict, index: int, total: int) -> SerializedNod
     # Use stored coordinates if they exist
     x = node_props.get("x")
     y = node_props.get("y")
-    
+
     # Fallback to circular layout if coordinates are missing
     if x is None or y is None:
         angle = (2 * math.pi * index) / max(total, 1)
@@ -34,14 +34,14 @@ def _node_from_record(node_props: dict, index: int, total: int) -> SerializedNod
     namespace = node_props.get("namespace", "unknown")
     node_type = NODE_TYPE_MAP.get(namespace, "Process")
 
-    #sigma.js needs colour spelt color    
+    # sigma.js needs colour spelt color
     color = node_props.get("color") or node_props.get("colour") or COLOR_MAP.get(node_type, "#6b7280")
     size = node_props.get("size", 12)
 
     return SerializedNode(
         key=node_props["id"],
         attributes={
-            **node_props,  
+            **node_props,
             "label": node_props.get("name", node_props["id"]),
             "x": x,
             "y": y,

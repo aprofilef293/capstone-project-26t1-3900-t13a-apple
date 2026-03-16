@@ -4,6 +4,7 @@ import numpy as np
 import dask.dataframe  # to read large graph data
 from utils import pivotMDS, scaleByEdge, pivot_spd
 from simulation.ibFFT_CPU import ibFFT_CPU
+
 try:
     from simulation.ibFFT_GPU import ibFFT_GPU
 except ImportError:
@@ -16,18 +17,23 @@ import numba
 
 
 def readgraph(filename, returnDijMat=False):
-    edges = dask.dataframe.read_csv(filename, header=0,
-                                    names=["src", "tgt", "_"], sep=' ', comment="%", dtype={"src": np.int32, "tgt": np.int32, "_": object})
+    edges = dask.dataframe.read_csv(
+        filename,
+        header=0,
+        names=["src", "tgt", "_"],
+        sep=" ",
+        comment="%",
+        dtype={"src": np.int32, "tgt": np.int32, "_": object},
+    )
     startid = min(edges.src.min().compute(), edges.tgt.min().compute())
     rows = edges.src.compute().to_numpy() - startid
     cols = edges.tgt.compute().to_numpy() - startid
-    idx = (rows != cols)
+    idx = rows != cols
     rows = rows[idx]
     cols = cols[idx]
     N = max(rows.max(), cols.max()) + 1
     data = np.ones_like(rows)
-    graph = csr_matrix((np.append(data, data), (np.append(
-        rows, cols), np.append(cols, rows))), shape=(N, N))
+    graph = csr_matrix((np.append(data, data), (np.append(rows, cols), np.append(cols, rows))), shape=(N, N))
 
     edgesrc = graph.indptr
     edgetgt = graph.indices
@@ -72,8 +78,20 @@ block_dim = (128,)
 
 
 class tFDP:
-    def __init__(self, init='pmds', algo='ibFFT_CPU', max_iter=300, alpha=0.1, beta=8.0, gamma=2.0,
-                 n_interpolation_points=3, intervals_per_integer=1.0, min_num_intervals=100, combine=True, randseed=None):
+    def __init__(
+        self,
+        init="pmds",
+        algo="ibFFT_CPU",
+        max_iter=300,
+        alpha=0.1,
+        beta=8.0,
+        gamma=2.0,
+        n_interpolation_points=3,
+        intervals_per_integer=1.0,
+        min_num_intervals=100,
+        combine=True,
+        randseed=None,
+    ):
         numba.set_num_threads(8)
         self.init = init
         self.max_iter = max_iter
@@ -100,18 +118,17 @@ class tFDP:
         return graph, edgesrc, edgetgt
 
     def graphinfo(self):
-        print("Graph info: N = ",
-              self.graph.shape[0], ", E = ", self.edgetgt.shape[0])
+        print("Graph info: N = ", self.graph.shape[0], ", E = ", self.edgetgt.shape[0])
 
     def optimization(self, graph=None, edgesrc=[], edgetgt=[], init=None, algo=None):
-        if (len(edgesrc) == 0 or len(edgetgt) == 0):
-            if (len(self.edgesrc) == 0 or len(self.edgetgt) == 0):
+        if len(edgesrc) == 0 or len(edgetgt) == 0:
+            if len(self.edgesrc) == 0 or len(self.edgetgt) == 0:
                 raise "Please readGraph or enter a correct data first"
         else:
             self.edgesrc = edgesrc
             self.edgetgt = edgetgt
-        if (graph is None):
-            if (self.graph is None):
+        if graph is None:
+            if self.graph is None:
                 raise "Please readGraph or enter a correct data first"
         else:
             self.graph = graph
@@ -122,8 +139,8 @@ class tFDP:
         graph = self.graph
         edgesrc = self.edgesrc
         edgetgt = self.edgetgt
-        if self.init == 'pmds':
-            if (self.randseed):
+        if self.init == "pmds":
+            if self.randseed:
                 np.random.seed(self.randseed)
             noise_pos = 0.01 * np.random.randn(graph.shape[0], 2)
             pospds = pivotMDS(graph, edgesrc, edgetgt, NP=100, hidden_size=2)
@@ -132,24 +149,45 @@ class tFDP:
         elif type(self.init) is np.ndarray and self.init.shape == (graph.shape[0], 2):
             init = self.init
         n_interpolation_points = 3
-        if (self.combine):
+        if self.combine:
             n_interpolation_points = 1
         posres = init
         t = 0
-        if (self.algo == 'ibFFT_CPU'):
-            posres, t = ibFFT_CPU(init, edgesrc, edgetgt, n_interpolation_points, self.intervals_per_integer, self.min_num_intervals,
-                                  self.alpha, self.beta, self.gamma, self.max_iter, self.combine, self.randseed)
-        if (self.algo == 'ibFFT_GPU'):
-            posres, t = ibFFT_GPU(init, edgesrc, edgetgt, n_interpolation_points, self.intervals_per_integer, self.min_num_intervals,
-                                  self.alpha, self.beta, self.gamma, self.max_iter, self.combine, self.randseed)
+        if self.algo == "ibFFT_CPU":
+            posres, t = ibFFT_CPU(
+                init,
+                edgesrc,
+                edgetgt,
+                n_interpolation_points,
+                self.intervals_per_integer,
+                self.min_num_intervals,
+                self.alpha,
+                self.beta,
+                self.gamma,
+                self.max_iter,
+                self.combine,
+                self.randseed,
+            )
+        if self.algo == "ibFFT_GPU":
+            posres, t = ibFFT_GPU(
+                init,
+                edgesrc,
+                edgetgt,
+                n_interpolation_points,
+                self.intervals_per_integer,
+                self.min_num_intervals,
+                self.alpha,
+                self.beta,
+                self.gamma,
+                self.max_iter,
+                self.combine,
+                self.randseed,
+            )
 
-        if (self.algo == 'Exact'):
-            posres, t = Exact(init, edgesrc, edgetgt, self.alpha,
-                              self.beta, self.gamma, self.max_iter, self.randseed)
-        if (self.algo == 'BH'):
-            posres, t = BH(init, edgesrc, edgetgt, self.alpha,
-                           self.beta, self.gamma, self.max_iter, self.randseed)
-        if (self.algo == 'RVS'):
-            posres, t = RVS(init, edgesrc, edgetgt, self.alpha,
-                            self.beta, self.gamma, self.max_iter, self.randseed)
+        if self.algo == "Exact":
+            posres, t = Exact(init, edgesrc, edgetgt, self.alpha, self.beta, self.gamma, self.max_iter, self.randseed)
+        if self.algo == "BH":
+            posres, t = BH(init, edgesrc, edgetgt, self.alpha, self.beta, self.gamma, self.max_iter, self.randseed)
+        if self.algo == "RVS":
+            posres, t = RVS(init, edgesrc, edgetgt, self.alpha, self.beta, self.gamma, self.max_iter, self.randseed)
         return posres, t

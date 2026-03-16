@@ -31,7 +31,7 @@ def ApplyForce(dC, pos, N):
 def computebias(N, edgesrc, edgetgt, bias):
     for i in prange(N):
         cntSrc = edgesrc[i + 1] - edgesrc[i]
-        for k in range(edgesrc[i], edgesrc[i+1]):
+        for k in range(edgesrc[i], edgesrc[i + 1]):
             j = edgetgt[k]
             cntTgt = edgesrc[j + 1] - edgesrc[j]
             bias[k] = cntTgt / (cntSrc + cntTgt)
@@ -50,17 +50,17 @@ def AttrForce(attr_force, dC, pos, edgesrc, edgetgt, bias, N, a1, alpha):
         dciy = dC[i][1]
         constant = np.float32(1.0)
         constant2 = np.float32(0.5)
-        for k in range(edgesrc[i], edgesrc[i+1]):
+        for k in range(edgesrc[i], edgesrc[i + 1]):
             j = edgetgt[k]
             mv0 = mvix + dcix
             mv1 = mviy + dciy
             b = bias[k]
-            mv0 -= (dC[j][0] + pos[j][0])
-            mv1 -= (dC[j][1] + pos[j][1])
-#             b = b/c
+            mv0 -= dC[j][0] + pos[j][0]
+            mv1 -= dC[j][1] + pos[j][1]
+            #             b = b/c
             R = a1 / (constant + mv0 * mv0 + mv1 * mv1) + b
-            tempforce -= R*mv0
-            tempforce1 -= R*mv1
+            tempforce -= R * mv0
+            tempforce1 -= R * mv1
         mv0 = alpha * tempforce
         mv1 = alpha * tempforce1
         d = np.sqrt(mv0 * mv0 + mv1 * mv1) + 1e-12

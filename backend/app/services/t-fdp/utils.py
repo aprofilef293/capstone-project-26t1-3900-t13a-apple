@@ -1,4 +1,3 @@
-
 from numba import njit, prange
 import numpy as np
 from numba import prange, njit
@@ -8,7 +7,7 @@ from numba import prange, njit
 def getC(C, d, n, k, deltaIS, deltaRJ, sumALL):
     for i in prange(n):
         for j in range(k):
-            C[i][j] = -1.0/2 * (d[j][i]**2 - deltaRJ[j] - deltaIS[i] + sumALL)
+            C[i][j] = -1.0 / 2 * (d[j][i] ** 2 - deltaRJ[j] - deltaIS[i] + sumALL)
     return C
 
 
@@ -29,13 +28,12 @@ def scaleByEdge(pos, edgesrc, edgetgt):
     stop_np = 0.0
     sbot_np = 0.0
     for i in prange(N):
-        for k in range(edgesrc[i], edgesrc[i+1]):
+        for k in range(edgesrc[i], edgesrc[i + 1]):
             j = edgetgt[k]
-            mag = np.sqrt((pos[i][0] - pos[j][0])**2 +
-                          (pos[i][1] - pos[j][1])**2)
+            mag = np.sqrt((pos[i][0] - pos[j][0]) ** 2 + (pos[i][1] - pos[j][1]) ** 2)
             stop_np += mag
             sbot_np += mag * mag
-    return stop_np/sbot_np
+    return stop_np / sbot_np
 
 
 def pivotMDS(graph, edgesrc, edgetgt, NP=200, hidden_size=128):
@@ -53,9 +51,9 @@ def pivotMDS(graph, edgesrc, edgetgt, NP=200, hidden_size=128):
     d[np.isinf(d)] = 0
     (k, n) = d.shape
     d2 = d**2
-    deltaIS = d2.sum(axis=0)/k
-    deltaRJ = d2.sum(axis=1)/n
-    sumALL = d2.sum()/(n*k)
+    deltaIS = d2.sum(axis=0) / k
+    deltaRJ = d2.sum(axis=1) / n
+    sumALL = d2.sum() / (n * k)
     # NP = n_p
     C = np.zeros((n, NP), dtype=np.float64)
     C = getC(C, d, n, k, deltaIS, deltaRJ, sumALL)
@@ -65,7 +63,7 @@ def pivotMDS(graph, edgesrc, edgetgt, NP=200, hidden_size=128):
         V = power_iteration(B, 100).reshape(1, -1)
         lbd = np.dot(V, np.dot(B, V.T))
         pos[:, i] = np.dot(C, V.reshape(-1, 1)).reshape(-1)
-        B = B - lbd / np.linalg.norm(V)**2 * np.dot(V.T, V)
+        B = B - lbd / np.linalg.norm(V) ** 2 * np.dot(V.T, V)
     return pos
 
 
@@ -78,9 +76,9 @@ def pivot_spd(indptr, indice, pivot, p_spd, p_vis, p_next):
         p_next[i][0] = pivot[i]
         p_vis[i][pivot[i]] = 1
         p_spd[i][pivot[i]] = 0.0
-        while (l < r):
+        while l < r:
             p = p_next[i][l]
-            for np in indice[indptr[p]:indptr[p+1]]:
+            for np in indice[indptr[p] : indptr[p + 1]]:
                 if not p_vis[i][np]:
                     p_vis[i][np] = 1
                     p_next[i][r] = np
