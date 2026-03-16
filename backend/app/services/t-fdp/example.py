@@ -1,5 +1,5 @@
-from tfdp import tFDP
 import numpy as np
+from tfdp import tFDP
 
 print("Initialize the numba. It may take a little time.")
 

@@ -1,8 +1,10 @@
-import numpy as np
-from .Exact_BH_Kernel import computebias, AttrForce, ApplyForce
 import sys
 import time
+
+import numpy as np
 from numba import njit
+
+from .Exact_BH_Kernel import ApplyForce, AttrForce, computebias
 
 ###
 # Modified from gove's code.
@@ -62,8 +64,8 @@ def approxRepulse(pos, repl_force, nodeIdx, randIndices, d3alpha, a, c):
 @njit(cache=True)  # L126 function constantRepulse(node)
 def constantRepulse(pos, repl_force, nodeIdx, numNeighbors, nearestNodeIdxs, nearestNodeLen, d3alpha, a, c):
     addRandomNode(nodeIdx, pos, nearestNodeIdxs, nearestNodeLen, numNeighbors)
-    l = nearestNodeLen[nodeIdx]
-    for i in range(l - 1, -1, -1):
+    num_nearest_nodes = nearestNodeLen[nodeIdx]
+    for i in range(num_nearest_nodes - 1, -1, -1):
         currNodeIdx = nearestNodeIdxs[nodeIdx][i]
         if currNodeIdx == nodeIdx:
             continue

@@ -1,8 +1,10 @@
-import numpy as np
-from .Exact_BH_Kernel import *
-import bh_tforce
 import sys
 import time
+
+import bh_tforce
+import numpy as np
+
+from .Exact_BH_Kernel import ApplyForce, AttrForce, computebias
 
 
 def BH(pos, edgesrc, edgetgt, alpha=0.1, beta=8, gamma=2, max_iter=300, seed=None):

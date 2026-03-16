@@ -1,5 +1,5 @@
-from numba import njit, prange, jit
 import numpy as np
+from numba import njit, prange
 
 
 @njit(parallel=False, cache=True)
@@ -98,7 +98,7 @@ def computebias(N, edgesrc, edgetgt, bias):
 def AttrForce(attr_force, dC, pos, edgesrc, edgetgt, bias, N, a1, alpha):
     N = attr_force.shape[0]
     for i in prange(N):
-        cntSrc = edgesrc[i + 1] - edgesrc[i]
+        # cntSrc = edgesrc[i + 1] - edgesrc[i]
         tempforce = 0.0
         tempforce1 = 0.0
         mvix = pos[i][0]
@@ -106,7 +106,7 @@ def AttrForce(attr_force, dC, pos, edgesrc, edgetgt, bias, N, a1, alpha):
         dcix = dC[i][0]
         dciy = dC[i][1]
         constant = np.float32(1.0)
-        constant2 = np.float32(0.5)
+        # constant2 = np.float32(0.5)
         for k in range(edgesrc[i], edgesrc[i + 1]):
             j = edgetgt[k]
             mv0 = mvix + dcix

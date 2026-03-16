@@ -1,19 +1,18 @@
-import pandas as pd
-from scipy.sparse import csr_matrix, tril
-import numpy as np
 import dask.dataframe  # to read large graph data
-from utils import pivotMDS, scaleByEdge, pivot_spd
+import numpy as np
+from scipy.sparse import csr_matrix, tril
 from simulation.ibFFT_CPU import ibFFT_CPU
+from utils import pivot_spd, pivotMDS, scaleByEdge
 
 try:
     from simulation.ibFFT_GPU import ibFFT_GPU
 except ImportError:
     ibFFT_GPU = None
 
-from simulation.Exact import Exact
-from simulation.BH import BH
-from simulation.RVS import RVS
 import numba
+from simulation.BH import BH
+from simulation.Exact import Exact
+from simulation.RVS import RVS
 
 
 def readgraph(filename, returnDijMat=False):
@@ -69,8 +68,10 @@ def readgraph(filename, returnDijMat=False):
 #         (np.array([1]), (np.array([0]), np.array([1]))), shape=(2, 2))
 #     pospds = pivotMDS(graph, edgesrc, edgetgt, NP=2, hidden_size=2)
 #     pospds = scaleByEdge(pospds, edgesrc, edgetgt) * pospds
-#     posres, t = ibFFT_CPU(1.0 * np.array([[0, 1], [2, 3]]), edgesrc, edgetgt, n_interpolation_points, intervals_per_integer, min_num_intervals,
-#                           alpha, beta, gamma, max_iter, combine=True, seed=None)
+#     posres, t = ibFFT_CPU(1.0 * np.array([[0, 1], [2, 3]]), edgesrc, edgetgt,
+#                           n_interpolation_points, intervals_per_integer,
+#                           min_num_intervals, alpha, beta, gamma, max_iter,
+#                           combine=True, seed=None)
 
 
 grid_dim = (256,)

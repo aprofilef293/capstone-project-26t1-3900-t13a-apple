@@ -1,9 +1,20 @@
-import numpy as np
 import sys
 import time
-from .ibFFT_CPU_NumbaKernel import *
-from pyfftw.interfaces.numpy_fft import rfft2, irfft2
+
+import numpy as np
 import pyfftw
+from pyfftw.interfaces.numpy_fft import irfft2, rfft2
+
+from .ibFFT_CPU_NumbaKernel import (
+    ApplyForce,
+    AttrForce,
+    Box_idx,
+    Compute_w_coeff,
+    Interpolate,
+    PotentialsQij,
+    Y_in_box,
+    computebias,
+)
 
 # import numba
 pyfftw.interfaces.cache.enable()
@@ -64,7 +75,7 @@ def ibFFT_repulsive(Y, n_interpolation_points, intervals_per_integer, min_num_in
     ChargesQij[:, :2] = Y
 
     box_width = (max_coord - min_coord) / n_boxes_per_dim
-    n_boxes = n_boxes_per_dim * n_boxes_per_dim
+    # n_boxes = n_boxes_per_dim * n_boxes_per_dim
     n_interpolation_points_1d = n_interpolation_points * n_boxes_per_dim
     n_fft_coeffs = 2 * n_interpolation_points_1d
 

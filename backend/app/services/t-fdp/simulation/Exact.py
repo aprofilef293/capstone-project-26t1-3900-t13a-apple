@@ -1,14 +1,16 @@
-import numpy as np
-from .Exact_BH_Kernel import *
 import sys
 import time
 
+import numpy as np
+
+from .Exact_BH_Kernel import ApplyForce, AttrForce, ReplForce, computebias
+
 
 def Exact(pos, edgesrc, edgetgt, alpha=0.1, beta=8, gamma=2, max_iter=300, seed=None):
-    angle = 0.6
-    neg_c = 1.0
-    verbose = 9
-    n_components = 2
+    # angle = 0.6
+    # neg_c = 1.0
+    # verbose = 9
+    # n_components = 2
     paraFactor = 1.0
     if alpha != 0:
         paraFactor /= alpha

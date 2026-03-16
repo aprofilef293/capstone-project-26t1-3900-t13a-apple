@@ -1,6 +1,5 @@
-from numba import njit, prange
 import numpy as np
-from numba import prange, njit
+from numba import njit, prange
 
 
 @njit(parallel=False, cache=True)
@@ -71,20 +70,20 @@ def pivotMDS(graph, edgesrc, edgetgt, NP=200, hidden_size=128):
 def pivot_spd(indptr, indice, pivot, p_spd, p_vis, p_next):
     num_p = pivot.shape[0]
     for i in prange(num_p):
-        l = 0
+        queue_index = 0
         r = 1
         p_next[i][0] = pivot[i]
         p_vis[i][pivot[i]] = 1
         p_spd[i][pivot[i]] = 0.0
-        while l < r:
-            p = p_next[i][l]
-            for np in indice[indptr[p] : indptr[p + 1]]:
-                if not p_vis[i][np]:
-                    p_vis[i][np] = 1
-                    p_next[i][r] = np
+        while queue_index < r:
+            p = p_next[i][queue_index]
+            for neighbour_idx in indice[indptr[p] : indptr[p + 1]]:
+                if not p_vis[i][neighbour_idx]:
+                    p_vis[i][neighbour_idx] = 1
+                    p_next[i][r] = neighbour_idx
                     r += 1
-                    p_spd[i][np] = p_spd[i][p] + 1
+                    p_spd[i][neighbour_idx] = p_spd[i][p] + 1
 
-            l += 1
-        l += 0
+            queue_index += 1
+        queue_index += 0
         r += 0

@@ -1,8 +1,9 @@
-import numpy as np
-import sys
-import cupy as cnp
-import time
 import os
+import sys
+import time
+
+import cupy as cnp
+import numpy as np
 
 grid_dim = (256,)
 block_dim = (512,)
@@ -77,7 +78,7 @@ def ibFFT_repulsive(Y, n_interpolation_points, intervals_per_integer, min_num_in
     ChargesQij[:, :2] = Y
 
     box_width = (max_coord - min_coord) / n_boxes_per_dim
-    n_boxes = n_boxes_per_dim * n_boxes_per_dim
+    # n_boxes = n_boxes_per_dim * n_boxes_per_dim
     n_interpolation_points_1d = n_interpolation_points * n_boxes_per_dim
     n_fft_coeffs = 2 * n_interpolation_points_1d
 

@@ -1,13 +1,14 @@
-import os
-import sys
-import math
 import colorsys
-import random
-import tempfile
 import logging
+import math
+import os
+import random
+import sys
+import tempfile
+
+import networkx as nx
 import numpy as np
 import scipy.io
-import networkx as nx
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -19,7 +20,7 @@ logger.setLevel(logging.INFO)
 # terms = preprocessor.preprocess(terms, relations)
 
 try:
-    from app.models.upload import OntologyTerm, OntologyRelation
+    from app.models.upload import OntologyRelation, OntologyTerm
 
     t_fdp_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "t-fdp"))
     if t_fdp_path not in sys.path:
