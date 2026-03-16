@@ -53,30 +53,31 @@ interface ExplorerState {
 
 // Convert Graphology JSON format to our store format
 const mapTestData = () => {
-    const rawEdges = (testData as any).edges as any[];
-    const rawNodes = (testData as any).nodes as any[];
+    const data = testData as unknown as { nodes: { key: string; attributes?: Record<string, unknown> }[]; edges: { key?: string; id?: string; source: string; target: string; attributes?: Record<string, unknown> }[] };
+    const rawEdges = data.edges;
+    const rawNodes = data.nodes;
 
     // 2. Map nodes directly from backend payload attributes
     const nodes = rawNodes.map((n) => {
-        const label = n.attributes?.label || n.key;
+        const label = (n.attributes?.label as string) || n.key;
 
         return {
             id: n.key,
             label: label,
-            type: n.attributes?.nodeType || 'Data',
+            type: (n.attributes?.nodeType as string) || 'Data',
             x: typeof n.attributes?.x === 'number' ? n.attributes.x : (Math.random() - 0.5) * 10,
             y: typeof n.attributes?.y === 'number' ? n.attributes.y : (Math.random() - 0.5) * 10,
-            size: n.attributes?.size || 10, // Backend provides size, defaulting to 10
-            color: n.attributes?.color || '#3b82f6', // Backend provides color, defaulting to blue
+            size: (n.attributes?.size as number) || 10,
+            color: (n.attributes?.color as string) || '#3b82f6',
             attributes: n.attributes || {}
         };
     });
 
     const edges = rawEdges.map((e, index) => ({
-        id: e.key || `e${index}`,
+        id: e.key || e.id || `e${index}`,
         source: e.source,
         target: e.target,
-        color: e.attributes?.color || 'rgba(148, 163, 184, 0.4)' // Soft grey for edges
+        color: (e.attributes?.color as string) || 'rgba(148, 163, 184, 0.4)'
     }));
 
     return { nodes, edges };
@@ -130,9 +131,23 @@ export const useStore = create<ExplorerState>((set) => ({
     fetchGraphData: async () => {
         set({ isGraphLoading: true });
         try {
-            const data = await api.fetchGraphData("/graph");
-            const nodes = data.nodes || [];
-            const edges = data.edges || [];
+            const data = await api.fetchGraphData("/api/graph/");
+            const nodes = (data.nodes || []).map((n: { key: string; attributes?: Record<string, unknown> }) => ({
+                id: n.key,
+                label: (n.attributes?.label as string) || n.key,
+                type: (n.attributes?.nodeType as string) || 'Data',
+                x: typeof n.attributes?.x === 'number' ? n.attributes.x : (Math.random() - 0.5) * 10,
+                y: typeof n.attributes?.y === 'number' ? n.attributes.y : (Math.random() - 0.5) * 10,
+                size: (n.attributes?.size as number) || 10,
+                color: (n.attributes?.color as string) || '#3b82f6',
+                attributes: n.attributes || {}
+            }));
+            const edges = (data.edges || []).map((e: { key?: string, id?: string, source: string, target: string, attributes?: Record<string, unknown> }, index: number) => ({
+                id: e.key || e.id || `e${index}`,
+                source: e.source,
+                target: e.target,
+                color: (e.attributes?.color as string) || 'rgba(148,163,184,0.4)'
+            }));
             set({
                 nodes,
                 edges,
@@ -208,7 +223,8 @@ export const useStore = create<ExplorerState>((set) => ({
                     // go straight to real progress, then raise the simulation ceiling
                     set({ importProgress: data.progress });
                     if (data.progress === 25) ceiling = 49;
-                    if (data.progress === 50) ceiling = 99;
+                    if (data.progress === 50) ceiling = 74;
+                    if (data.progress === 75) ceiling = 99;
                     if (data.progress === 100) {
                         clearInterval(ticker);
                         set({ importProgress: 99, importStatus: 'loading' });

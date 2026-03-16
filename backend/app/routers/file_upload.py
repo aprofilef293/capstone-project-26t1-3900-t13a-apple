@@ -7,6 +7,7 @@ from fastapi import APIRouter, File, HTTPException, Request, UploadFile
 from fastapi.responses import StreamingResponse
 
 from app.models.upload import OntologyRelation, OntologyTerm
+from app.services.graph_preprocessing import OntologyGraphPreprocessor
 from app.services.memgraph import MemgraphService
 from app.services.ontology_parser import parse_ontology
 
@@ -106,9 +107,15 @@ async def upload_ontology(request: Request, file: UploadFile = File(...)):
             yield f"data: {json.dumps({'progress': 25, 'stage': 'parsed'})}\n\n"
             await asyncio.sleep(0)
 
+            # Preprocessing step
+            preprocessor = OntologyGraphPreprocessor()
+            terms = await asyncio.to_thread(preprocessor.preprocess, terms, relations)
+            yield f"data: {json.dumps({'progress': 50, 'stage': 'preprocessed'})}\n\n"
+            await asyncio.sleep(0)
+
             mg = request.app.state.memgraph
             await asyncio.to_thread(_ingest_terms, mg, terms, filename)
-            yield f"data: {json.dumps({'progress': 60, 'stage': 'terms_ingested'})}\n\n"
+            yield f"data: {json.dumps({'progress': 75, 'stage': 'terms_ingested'})}\n\n"
             await asyncio.sleep(0)
 
             await asyncio.to_thread(_ingest_relations, mg, relations)
