@@ -256,7 +256,7 @@ export const useStore = create<ExplorerState>((set) => ({
     isMultiSelect: localStorage.getItem('isMultiSelect') === 'true',
     setIsMultiSelect: (val: boolean) => {
         localStorage.setItem('isMultiSelect', String(val));
-        set({ isMultiSelect: val });
+        set({ isMultiSelect: val, ...(val && { selectedNodeId: null }) });
     },
     selectedNodeIds: [],
     setSelectedNodeIds: (ids: string[]) => set({ selectedNodeIds: ids }),
