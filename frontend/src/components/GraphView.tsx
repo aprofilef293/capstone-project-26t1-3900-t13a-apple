@@ -72,18 +72,11 @@ const GraphManager = forwardRef<GraphViewRef, unknown>((_, ref) => {
     const sigma = useSigma();
     const camera = useCamera({ duration: 250 });
     const registerEvents = useRegisterEvents();
-    const { nodes, edges, isMultiSelect, toggleNodeSelection, selectedNodeId, setSelectedNodeId, searchQuery, viewLevel, setIsNodeSelecting, selectedNodeIds } = useStore();    const lastClickedNodeRef = useRef(false);
+    const { nodes, edges, isMultiSelect, toggleNodeSelection, selectedNodeId, setSelectedNodeId, searchQuery, viewLevel, setIsNodeSelecting, selectedNodeIds } = useStore();
+    const lastClickedNodeRef = useRef(false);
     const { resolvedTheme } = useTheme();
     const isDark = resolvedTheme === "dark";
     
-    const handleNodeClick = (id: string) => {
-        if (isMultiSelect) {
-            toggleNodeSelection(id);
-        } else {
-            setSelectedNodeId(id);
-        }
-    };
-
     // Defer the search query to prevent input lag on heavy graphs
     const deferredSearchQuery = useDeferredValue(searchQuery);
 
