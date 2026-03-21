@@ -20,7 +20,7 @@ export function ExplorerToolbar({
     onViewModeChange: (mode: "graph" | "hierarchy") => void;
 }) {
     const { nodes, edges, viewLevel, searchQuery, selectedNodeId } = useStore();
-    const [isMultiSelect, setIsMultiSelect] = useState(false);
+    const { isMultiSelect, setIsMultiSelect } = useStore();
 
     const deferredSearchQuery = useDeferredValue(searchQuery);
 
@@ -102,7 +102,7 @@ export function ExplorerToolbar({
                 <div className="flex items-center self-start bg-sidebar/95 backdrop-blur-sm border border-sidebar-border rounded-lg p-3 shadow-sm pointer-events-auto gap-2 mt-1 w-fit">
                     <span className="text-xs font-medium text-sidebar-foreground/80">Multi-Select</span>
                     <Switch
-                        checked={isMultiSelect}
+                        checked={isMultiSelect} 
                         onCheckedChange={setIsMultiSelect}
                         aria-label="Toggle multi-select mode"
                     />

@@ -49,6 +49,13 @@ interface ExplorerState {
     // loading spinner
     isNodeSelecting: boolean;
     setIsNodeSelecting: (val: boolean) => void;
+    // multi-select toggle switch
+    isMultiSelect: boolean;
+    setIsMultiSelect: (val: boolean) => void;
+    selectedNodeIds: string[];
+    setSelectedNodeIds: (ids: string[]) => void;
+    toggleNodeSelection: (id: string) => void;
+    clearSelectedNodes: () => void;
 }
 
 // Convert Graphology JSON format to our store format
@@ -245,4 +252,23 @@ export const useStore = create<ExplorerState>((set) => ({
     // loading spinner
     isNodeSelecting: false,
     setIsNodeSelecting: (val) => set({ isNodeSelecting: val }),
+    // multi-select toggle switch
+    isMultiSelect: localStorage.getItem('isMultiSelect') === 'true',
+    setIsMultiSelect: (val: boolean) => {
+        localStorage.setItem('isMultiSelect', String(val));
+        set({ isMultiSelect: val });
+    },
+    selectedNodeIds: [],
+    setSelectedNodeIds: (ids: string[]) => set({ selectedNodeIds: ids }),
+    toggleNodeSelection: (id: string) => set((state) => {
+    if (!state.isMultiSelect) return { selectedNodeIds: [id] };
+    if (state.selectedNodeIds.includes(id)) {
+        return { selectedNodeIds: state.selectedNodeIds.filter(nid => nid !== id) };
+    }
+    if (state.selectedNodeIds.length < 10) {
+        return { selectedNodeIds: [...state.selectedNodeIds, id] };
+    }
+    return {};
+    }),
+    clearSelectedNodes: () => set({ selectedNodeIds: [] }),
 }));
