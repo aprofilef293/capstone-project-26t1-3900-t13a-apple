@@ -78,7 +78,7 @@ export function ExplorerToolbar({
 
     return (
         <div className="absolute top-6 left-6 right-6 z-20 flex items-start justify-between gap-4 pointer-events-none transition-all duration-300">
-            <div className="flex flex-col gap-4 shrink-0 bg-sidebar/95 backdrop-blur-sm rounded-lg p-1.5 shadow-sm pointer-events-auto">
+            <div className="flex flex-col gap-4">
                 {/* View Toggles */}
                 <div className="flex shrink-0 bg-sidebar/95 backdrop-blur-sm border border-sidebar-border rounded-lg p-1.5 shadow-sm pointer-events-auto">
                     {VIEW_MODES.map(({ mode, label, icon: Icon }) => (
