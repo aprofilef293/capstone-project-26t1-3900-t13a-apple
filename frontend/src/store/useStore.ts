@@ -179,6 +179,7 @@ export const useStore = create<ExplorerState>((set) => ({
     importDate: null,
     importError: null,
     startFileImport: async (file) => {
+        localStorage.setItem('isMultiSelect', 'false'); 
         set({ fileName: file.name, importStatus: 'loading', importProgress: 0, importDate: new Date() });
 
         // simulate progress bar slowly moving toward the ceiling between real events
