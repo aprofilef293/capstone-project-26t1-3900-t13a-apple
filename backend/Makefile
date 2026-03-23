@@ -25,7 +25,7 @@ test:
 all: format fix lint test
 
 docker-up:
-	docker compose up -d
+	docker compose up --build
 
 docker-down:
 	docker compose down -v
