@@ -129,6 +129,11 @@ async def upload_ontology(request: Request, file: UploadFile = File(...)):
             await asyncio.sleep(0)
 
             await asyncio.to_thread(_ingest_relations, mg, relations)
+
+            langchain_search = getattr(request.app.state, "langchain_search", None)
+            if langchain_search is not None:
+                langchain_search.refresh_schema()
+
             yield f"data: {json.dumps({'progress': 100, 'stage': 'complete', 'filename': filename})}\n\n"
         except Exception as e:
             yield f"data: {json.dumps({'error': str(e), 'error_code': 503})}\n\n"
