@@ -37,7 +37,7 @@ const MultiSelectNodeSidebar: React.FC = () => {
   );
 
   return (
-    <aside className="w-80 max-w-[400px] h-full bg-sidebar/95 border-l border-sidebar-border shadow-lg z-30 flex flex-col p-4">
+    <aside className="w-[400px] h-full bg-sidebar/95 border-l border-sidebar-border shadow-lg z-30 flex flex-col p-4">
       <div className="flex items-center justify-between mb-4">
         <Badge
           variant="secondary"
@@ -54,8 +54,10 @@ const MultiSelectNodeSidebar: React.FC = () => {
         </button>
       </div>
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-lg font-semibold">Selected Nodes Details</h2>
-        <span className="ml-2 flex-shrink-0 text-xs font-normal text-gray-500 dark:text-zinc-400 bg-gray-100 dark:bg-zinc-800 rounded-full px-2.5 py-0.5">
+        <h2 className="text-lg font-semibold">
+          Selected Nodes Details
+        </h2>
+        <span className="ml-2 text-xs font-normal text-gray-500 dark:text-zinc-400 bg-gray-100 dark:bg-zinc-800 rounded-full px-2.5 py-0.5">
           {selectedNodeIds.length === 1
             ? "1 node selected"
             : `${selectedNodeIds.length} nodes selected`}
