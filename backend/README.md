@@ -18,6 +18,9 @@ make install
 # start the docker container
 make docker-up
 
+# download MedGemma model (only needed once)
+docker compose exec ollama ollama pull medgemma
+
 # runs the app with hot reload automatically restarts when changes are made
 make dev
 ```
@@ -28,11 +31,13 @@ make dev
 - `GET /api/ontology/list` — list uploaded ontologies
 - `GET /api/graph/` — get the full graph
 - `GET /api/graph/node/{node_id}` — get a node and its neighbors
-- `GET /api/graph/search?q=` — search terms by name
+- `GET /api/graph/search?q=` — search terms by name, id, definition, synonyms, comments, and relationship types
+- `GET /api/graph/semantic-search?q=` — natural language search using MedGemma + LangChain
 
 ## Structure
 
 - `app/models/`: FastAPI validate data and serialises into JSON. For example, OntologyUploadResponse defines what fields the upload endpoint returns.
 - `app/routers/`: API route handlers
 - `app/services/memgraph.py`: Memgraph driver
-- `app/services/ontology_parser.py`:  parses ontology files with Pronto
+- `app/services/ontology_parser.py`: parses ontology files with Pronto
+- `app/services/langchain_search.py`: natural language search via MemgraphQAChain + MedGemma
