@@ -5,6 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import Settings
 from app.routers import file_upload, graph
+from app.services.langchain_search import LangChainSearchService
 from app.services.memgraph import MemgraphService
 
 
@@ -21,6 +22,12 @@ async def lifespan(app: FastAPI):
     settings = Settings()
     app.state.settings = settings
     app.state.memgraph = MemgraphService(settings)
+
+    if settings.medgemma_api_url and settings.medgemma_api_key:
+        app.state.langchain_search = LangChainSearchService(settings)
+    else:
+        app.state.langchain_search = None
+
     yield
     # Shutdown
     app.state.memgraph.close()
