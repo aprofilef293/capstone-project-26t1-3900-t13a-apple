@@ -1,7 +1,7 @@
-import React, {useState} from "react";
+import React, { useState, useEffect } from "react";
 import { useStore } from "../../store/useStore";
 import { Badge } from "../ui/badge";
-import { X } from "lucide-react";
+import { Trash, X } from "lucide-react";
 
 type GraphNode = {
   id: string;
@@ -21,7 +21,16 @@ const MultiSelectNodeSidebar: React.FC = () => {
   const clearSelectedNodes = useStore((s) => s.clearSelectedNodes);
   const [showSidebar, setShowSidebar] = useState(true);
 
-  if (!isMultiSelect || selectedNodeIds.length === 0) return null;
+  useEffect(() => {
+    if (isMultiSelect && selectedNodeIds.length > 0) {
+      setShowSidebar(true);
+    } else {
+      setShowSidebar(false);
+    }
+  }, [isMultiSelect, selectedNodeIds]);
+
+  if (!isMultiSelect || selectedNodeIds.length === 0 || !showSidebar)
+    return null;
 
   const selectedNodes: GraphNode[] = nodes.filter((n) =>
     selectedNodeIds.includes(n.id),
@@ -46,12 +55,6 @@ const MultiSelectNodeSidebar: React.FC = () => {
       </div>
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-lg font-semibold">Selected Nodes Details</h2>
-        <button
-          className="text-xs px-2 py-1 rounded bg-sidebar-accent text-sidebar-accent-foreground hover:bg-sidebar-primary"
-          onClick={clearSelectedNodes}
-        >
-          Clear
-        </button>
       </div>
       <div className="flex flex-col gap-3 overflow-y-auto">
         {selectedNodes.map((node) => (
@@ -70,6 +73,15 @@ const MultiSelectNodeSidebar: React.FC = () => {
             </div>
           </div>
         ))}
+      </div>
+      <div className="mt-auto flex justify-start pt-4">
+        <button
+          className="flex items-center gap-1 text-xs p-1.5 rounded text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:text-zinc-500 dark:hover:text-zinc-300 dark:hover:bg-zinc-800 transition-colors"
+          onClick={clearSelectedNodes}
+          title="Clear selection"
+        >
+          <Trash className="w-4 h-4" />
+        </button>
       </div>
     </aside>
   );
