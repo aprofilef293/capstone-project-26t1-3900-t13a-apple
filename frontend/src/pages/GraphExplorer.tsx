@@ -72,7 +72,6 @@ export function GraphExplorer() {
                 {isMultiSelect && selectedNodeIds.length > 0 ? (
                     <MultiSelectNodeSidebar />
                 ) : selectedNodeId ? (
-                    
                     <NodeDetailsPanel />
                 ) : null}
             </div>
