@@ -240,17 +240,7 @@ const GraphManager = forwardRef<GraphViewRef, unknown>((_, ref) => {
     useEffect(() => {
         const graph = sigma.getGraph();
 
-        const storeNodeIds = nodes.map(n => n.id);
-        const storeEdgeIds = edges.map(e => e.id);
-        const incomingNodeIds = new Set(storeNodeIds);
-        const incomingEdgeIds = new Set(storeEdgeIds);
-
-        graph.nodes().forEach(id => {
-            if (!incomingNodeIds.has(id)) graph.dropNode(id);
-        });
-        graph.edges().forEach(id => {
-            if (!incomingEdgeIds.has(id)) graph.dropEdge(id);
-        });
+        graph.clear();
 
         // Add or update nodes - only if data changed
         nodes.forEach((nodeItem) => {
