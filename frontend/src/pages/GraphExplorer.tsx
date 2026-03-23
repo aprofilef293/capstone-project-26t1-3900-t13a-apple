@@ -23,7 +23,6 @@ export function GraphExplorer() {
 
     return (
         <div className="flex flex-col h-full w-full relative">
-            <MultiSelectNodeSidebar />
             <div className="flex-1 flex relative overflow-hidden bg-background">
                 {/* Main Content Area */}
                 <div className="flex-1 relative flex flex-col">
@@ -66,6 +65,9 @@ export function GraphExplorer() {
                         )}
                     </div>
                 </div>
+
+                {/* Multi-select sidebar */}
+                <MultiSelectNodeSidebar />
 
                 {/* Right Details Panel */}
                 {selectedNodeId && (

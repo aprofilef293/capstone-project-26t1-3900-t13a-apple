@@ -26,10 +26,7 @@ const MultiSelectNodeSidebar: React.FC = () => {
   );
 
   return (
-    <aside
-      className="fixed top-0 right-0 h-full w-80 bg-sidebar/95 border-l border-sidebar-border shadow-lg z-50 flex flex-col p-4"
-      style={{ minWidth: 320, maxWidth: 400 }}
-    >
+    <aside className="w-80 max-w-[400px] h-full bg-sidebar/95 border-l border-sidebar-border shadow-lg z-30 flex flex-col p-4">
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-lg font-semibold">Selected Nodes Details</h2>
         <button
