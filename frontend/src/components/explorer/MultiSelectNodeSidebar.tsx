@@ -40,6 +40,8 @@ const MultiSelectNodeSidebar: React.FC = () => {
 
   return (
     <aside className="w-[400px] h-full bg-sidebar/95 border-l border-sidebar-border shadow-lg z-30 flex flex-col p-4">
+      
+      {/* multi-select mode badge + close side panel btn */}
       <div className="flex items-center justify-between mb-4">
         <Badge
           variant="secondary"
@@ -55,6 +57,8 @@ const MultiSelectNodeSidebar: React.FC = () => {
           <X className="w-5 h-5" />
         </button>
       </div>
+
+      {/* selected nodes header + counter for number of nodes selected */}
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-lg font-semibold">Selected Nodes Details</h2>
         <span className="ml-2 text-xs font-normal text-gray-500 dark:text-zinc-400 bg-gray-100 dark:bg-zinc-800 rounded-full px-2.5 py-0.5">
@@ -63,6 +67,8 @@ const MultiSelectNodeSidebar: React.FC = () => {
             : `${selectedNodeIds.length} nodes selected`}
         </span>
       </div>
+
+      {/* info cards for selected nodes */}
       <div className="flex flex-col gap-3 overflow-y-auto">
         {selectedNodes.map((node) => (
           <div
@@ -90,6 +96,8 @@ const MultiSelectNodeSidebar: React.FC = () => {
           </div>
         ))}
       </div>
+
+      {/* side panel footer (only trash icon / button for now to clear all selected nodes from graph) */}
       <div className="mt-auto flex justify-start pt-4">
         <button
           className="flex items-center gap-1 text-xs p-1.5 rounded text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:text-zinc-500 dark:hover:text-zinc-300 dark:hover:bg-zinc-800 transition-colors"
