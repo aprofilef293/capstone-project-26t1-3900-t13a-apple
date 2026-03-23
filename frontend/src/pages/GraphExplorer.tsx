@@ -8,6 +8,7 @@ import type { GraphViewRef } from "../components/GraphView";
 import { HierarchyView } from "../components/explorer/HierarchyView";
 import { NodeSizeFilter } from "../components/explorer/NodeSizeFilter";
 import { useStore } from "../store/useStore";
+import MultiSelectNodeSidebar from "../components/layout/MultiSelectNodeSidebar";
 
 export function GraphExplorer() {
     const selectedNodeId = useStore((state) => state.selectedNodeId);
@@ -22,6 +23,7 @@ export function GraphExplorer() {
 
     return (
         <div className="flex flex-col h-full w-full relative">
+            <MultiSelectNodeSidebar />
             <div className="flex-1 flex relative overflow-hidden bg-background">
                 {/* Main Content Area */}
                 <div className="flex-1 relative flex flex-col">
