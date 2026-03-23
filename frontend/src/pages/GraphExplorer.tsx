@@ -16,6 +16,8 @@ export function GraphExplorer() {
     const [viewMode, setViewMode] = useState<'graph' | 'hierarchy'>('graph');
     const graphViewRef = useRef<GraphViewRef>(null);
     const isNodeSelecting = useStore((state) => state.isNodeSelecting);
+    const isMultiSelect = useStore((state) => state.isMultiSelect);
+    const selectedNodeIds = useStore((state) => state.selectedNodeIds);
     
     useEffect(() => {
         fetchGraphData();
@@ -66,13 +68,13 @@ export function GraphExplorer() {
                     </div>
                 </div>
 
-                {/* Multi-select sidebar */}
-                <MultiSelectNodeSidebar />
-
-                {/* Right Details Panel */}
-                {selectedNodeId && (
+                {/* Multi-select sidebar + Right details panel */}
+                {isMultiSelect && selectedNodeIds.length > 0 ? (
+                    <MultiSelectNodeSidebar />
+                ) : selectedNodeId ? (
+                    
                     <NodeDetailsPanel />
-                )}
+                ) : null}
             </div>
         </div>
     );

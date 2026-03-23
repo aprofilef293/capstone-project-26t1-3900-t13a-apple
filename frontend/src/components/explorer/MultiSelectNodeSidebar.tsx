@@ -31,14 +31,6 @@ const MultiSelectNodeSidebar: React.FC = () => {
   const [showSidebar, setShowSidebar] = useState(true);
   const [selectedAttribute, setSelectedAttribute] = useState<string>("");
 
-  useEffect(() => {
-    if (isMultiSelect && selectedNodeIds.length > 0) {
-      setShowSidebar(true);
-    } else {
-      setShowSidebar(false);
-    }
-  }, [isMultiSelect, selectedNodeIds]);
-
   if (!isMultiSelect || selectedNodeIds.length === 0 || !showSidebar)
     return null;
 
