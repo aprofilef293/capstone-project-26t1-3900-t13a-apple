@@ -8,7 +8,7 @@ import type { GraphViewRef } from "../components/GraphView";
 import { HierarchyView } from "../components/explorer/HierarchyView";
 import { NodeSizeFilter } from "../components/explorer/NodeSizeFilter";
 import { useStore } from "../store/useStore";
-import MultiSelectNodeSidebar from "../components/layout/MultiSelectNodeSidebar";
+import MultiSelectNodeSidebar from "../components/explorer/MultiSelectNodeSidebar";
 
 export function GraphExplorer() {
     const selectedNodeId = useStore((state) => state.selectedNodeId);
