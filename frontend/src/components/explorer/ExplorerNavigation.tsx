@@ -9,6 +9,7 @@ const VIEW_MODES: { mode: "graph" | "hierarchy"; label: string; icon: LucideIcon
 ];
 
 import { useStore } from "../../store/useStore";
+import { ExplorerSearch } from "./ExplorerSearch";
 
 export function ExplorerToolbar({
     viewMode,
@@ -75,29 +76,29 @@ export function ExplorerToolbar({
 
     return (
         <div className="absolute top-6 left-6 right-6 z-20 flex items-start justify-between gap-4 pointer-events-none transition-all duration-300">
-            {/* View Toggles */}
-            <div className="flex shrink-0 bg-sidebar/95 backdrop-blur-sm border border-sidebar-border rounded-lg p-1.5 shadow-sm pointer-events-auto">
-                {VIEW_MODES.map(({ mode, label, icon: Icon }) => (
-                    <Button
-                        key={mode}
-                        variant="ghost"
-                        onClick={() => onViewModeChange(mode)}
-                        className={cn(
-                            "h-8 px-3 text-xs font-medium gap-2",
-                            viewMode === mode
-                                ? "bg-blue-500/10 text-blue-600 dark:bg-blue-600/10 dark:text-blue-400"
-                                : "text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent"
-                        )}
-                    >
-                        <Icon className="w-4 h-4" /> {label}
-                    </Button>
-                ))}
-            </div>
+            <div className="flex gap-4 w-xl">
+                {/* View Toggles */}
+                <div className="flex shrink-0 bg-sidebar/95 backdrop-blur-sm border border-sidebar-border rounded-lg p-1.5 shadow-sm pointer-events-auto">
+                    {VIEW_MODES.map(({ mode, label, icon: Icon }) => (
+                        <Button
+                            key={mode}
+                            variant="ghost"
+                            onClick={() => onViewModeChange(mode)}
+                            className={cn(
+                                "h-8 px-3 text-xs font-medium gap-2",
+                                viewMode === mode
+                                    ? "bg-blue-500/10 text-blue-600 dark:bg-blue-600/10 dark:text-blue-400"
+                                    : "text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent"
+                            )}
+                        >
+                            <Icon className="w-4 h-4" /> {label}
+                        </Button>
+                    ))}
+                </div>
 
-            {/* Search Bar */}
-            {/* <div className="flex-1 flex justify-center min-w-0">
+                {/* Search Bar */}
                 <ExplorerSearch />
-            </div> */}
+            </div>
 
             {/* Metrics Badge */}
             <div className="bg-sidebar/95 shrink-0 backdrop-blur-sm border border-sidebar-border rounded-lg px-2.5 py-1.5 shadow-sm text-[10px] sm:text-xs font-medium flex flex-col items-end gap-0.5 text-muted-foreground pointer-events-auto leading-tight">
