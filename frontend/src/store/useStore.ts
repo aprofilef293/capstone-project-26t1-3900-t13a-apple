@@ -259,17 +259,27 @@ export const useStore = create<ExplorerState>((set) => ({
         localStorage.setItem('isMultiSelect', String(val));
         set({ isMultiSelect: val, ...(val && { selectedNodeId: null }) });
     },
-    selectedNodeIds: [],
-    setSelectedNodeIds: (ids: string[]) => set({ selectedNodeIds: ids }),
+    selectedNodeIds: JSON.parse(localStorage.getItem('selectedNodeIds') || '[]'),
+    setSelectedNodeIds: (ids: string[]) => {
+    localStorage.setItem('selectedNodeIds', JSON.stringify(ids));
+    set({ selectedNodeIds: ids });
+    },
     toggleNodeSelection: (id: string) => set((state) => {
-    if (!state.isMultiSelect) return { selectedNodeIds: [id] };
-    if (state.selectedNodeIds.includes(id)) {
-        return { selectedNodeIds: state.selectedNodeIds.filter(nid => nid !== id) };
+    let newIds;
+    if (!state.isMultiSelect) {
+        newIds = [id];
+    } else if (state.selectedNodeIds.includes(id)) {
+        newIds = state.selectedNodeIds.filter(nid => nid !== id);
+    } else if (state.selectedNodeIds.length < 10) {
+        newIds = [...state.selectedNodeIds, id];
+    } else {
+        newIds = state.selectedNodeIds;
     }
-    if (state.selectedNodeIds.length < 10) {
-        return { selectedNodeIds: [...state.selectedNodeIds, id] };
-    }
-    return {};
+    localStorage.setItem('selectedNodeIds', JSON.stringify(newIds));
+    return { selectedNodeIds: newIds };
     }),
-    clearSelectedNodes: () => set({ selectedNodeIds: [] }),
+    clearSelectedNodes: () => {
+    localStorage.setItem('selectedNodeIds', JSON.stringify([]));
+    set({ selectedNodeIds: [] });
+    },
 }));
