@@ -229,7 +229,6 @@ def get_shortest_path(
     """
     mg = request.app.state.memgraph
 
-    # Validate both nodes exist
     check = mg.execute_read(
         "MATCH (n:OntologyTerm) WHERE n.id IN [$source, $target] RETURN n.id AS id",
         {"source": source, "target": target},
@@ -241,7 +240,6 @@ def get_shortest_path(
         raise HTTPException(status_code=404, detail=f"Node '{target}' not found")
 
     if source == target:
-        # Path to self: just return the single node
         records = mg.execute_read(
             "MATCH (n:OntologyTerm {id: $id}) RETURN n, null AS r, null AS m",
             {"id": source},

@@ -62,9 +62,7 @@ class TestGraphRouter:
 
     def test_shortest_path(self, client, mock_memgraph):
         mock_memgraph.execute_read.side_effect = [
-            # Node existence check
             [{"id": "T:1"}, {"id": "T:3"}],
-            # shortestPath query
             [
                 {
                     "n": {"id": "T:1", "name": "term1", "namespace": "biological_process"},
@@ -92,7 +90,7 @@ class TestGraphRouter:
     def test_shortest_path_no_path(self, client, mock_memgraph):
         mock_memgraph.execute_read.side_effect = [
             [{"id": "T:1"}, {"id": "T:2"}],
-            [],  # no path found
+            [],
         ]
         resp = client.get("/api/graph/path?source=T:1&target=T:2")
         assert resp.status_code == 404
