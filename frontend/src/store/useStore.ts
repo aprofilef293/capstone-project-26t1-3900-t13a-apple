@@ -32,6 +32,8 @@ interface ExplorerState {
     setPrevNodes: (prevNodes: string[]) => void;
     setSelectedNodeId: (id: string | null) => void;
     setGraphData: (nodes: GraphNode[], edges: GraphEdge[]) => void;
+    showSearchResults: boolean,
+    setShowSearchResults: (show: boolean) => void;
     setSearchQuery: (query: string) => void;
     setViewLevel: (level: number) => void;
     fetchGraphData: () => Promise<void>;
@@ -127,6 +129,8 @@ export const useStore = create<ExplorerState>((set) => ({
         graph: createGraph(nodes, edges)
     }),
     setSearchQuery: (query) => set({ searchQuery: query }),
+    showSearchResults: false,
+    setShowSearchResults: (show) => set({ showSearchResults: show }),
     setViewLevel: (level) => set({ viewLevel: level }),
     fetchGraphData: async () => {
         set({ isGraphLoading: true });

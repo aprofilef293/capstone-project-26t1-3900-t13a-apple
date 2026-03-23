@@ -8,14 +8,17 @@ import type { GraphViewRef } from "../components/GraphView";
 import { HierarchyView } from "../components/explorer/HierarchyView";
 import { NodeSizeFilter } from "../components/explorer/NodeSizeFilter";
 import { useStore } from "../store/useStore";
+import { SearchResultsPanel } from "@/components/explorer/SearchResultsPanel";
 
 export function GraphExplorer() {
     const selectedNodeId = useStore((state) => state.selectedNodeId);
+    const searchQuery = useStore((state) => state.searchQuery);
+    const showSearchResults = useStore((state) => state.showSearchResults);
     const fetchGraphData = useStore((state) => state.fetchGraphData);
     const [viewMode, setViewMode] = useState<'graph' | 'hierarchy'>('graph');
     const graphViewRef = useRef<GraphViewRef>(null);
     const isNodeSelecting = useStore((state) => state.isNodeSelecting);
-    
+
     useEffect(() => {
         fetchGraphData();
     }, [fetchGraphData]);
@@ -68,6 +71,11 @@ export function GraphExplorer() {
                 {/* Right Details Panel */}
                 {selectedNodeId && (
                     <NodeDetailsPanel />
+                )}
+
+                {/* Right Search Results Panel */}
+                {searchQuery && showSearchResults && (
+                    <SearchResultsPanel />
                 )}
             </div>
         </div>
