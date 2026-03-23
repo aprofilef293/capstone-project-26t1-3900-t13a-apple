@@ -19,6 +19,7 @@ export function UploadBox({
     const navigate = useNavigate();
     const inputRef = useRef<HTMLInputElement>(null);
     const startFileImport = useStore((s) => s.startFileImport);
+    const clearSelectedNodes = useStore((s) => s.clearSelectedNodes);
 
     const handleUpload = () => {
         navigate({ to: '/manager' });
@@ -28,6 +29,7 @@ export function UploadBox({
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
+        clearSelectedNodes(); 
         startFileImport(file);
         navigate({ to: '/manager' });
     };
