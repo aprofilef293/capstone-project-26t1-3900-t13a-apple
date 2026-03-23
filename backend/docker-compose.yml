@@ -1,12 +1,13 @@
 services:
   memgraph:
-    image: memgraph/memgraph-platform:latest
+    image: memgraph/memgraph
     ports:
       - "7687:7687"
       - "7444:7444"
-      - "3000:3000"
     volumes:
       - memgraph-data:/var/lib/memgraph
+      - memgraph-log:/var/log/memgraph
+    command: ["--log-level=TRACE"]
     environment:
       - MEMGRAPH_USER=memgraph
       - MEMGRAPH_PASSWORD=memgraph
@@ -39,3 +40,4 @@ services:
 volumes:
   memgraph-data:
   ollama-data:
+  memgraph-log:
