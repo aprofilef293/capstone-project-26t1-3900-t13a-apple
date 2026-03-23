@@ -2,6 +2,13 @@ import React, { useState, useEffect } from "react";
 import { useStore } from "../../store/useStore";
 import { Badge } from "../ui/badge";
 import { Trash, X, ChevronRight } from "lucide-react";
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+} from "../ui/select";
 
 type GraphNode = {
   id: string;
@@ -22,6 +29,7 @@ const MultiSelectNodeSidebar: React.FC = () => {
   const nodes = useStore((s) => s.nodes);
   const clearSelectedNodes = useStore((s) => s.clearSelectedNodes);
   const [showSidebar, setShowSidebar] = useState(true);
+  const [selectedAttribute, setSelectedAttribute] = useState<string>("");
 
   useEffect(() => {
     if (isMultiSelect && selectedNodeIds.length > 0) {
@@ -38,9 +46,14 @@ const MultiSelectNodeSidebar: React.FC = () => {
     selectedNodeIds.includes(n.id),
   );
 
+  const attributeKeys = Array.from(
+    new Set(
+      selectedNodes.flatMap((node) => Object.keys(node.attributes || {})),
+    ),
+  );
+
   return (
     <aside className="w-[400px] h-full bg-sidebar/95 border-l border-sidebar-border shadow-lg z-30 flex flex-col p-4">
-      
       {/* multi-select mode badge + close side panel btn */}
       <div className="flex items-center justify-between mb-4">
         <Badge
@@ -68,6 +81,26 @@ const MultiSelectNodeSidebar: React.FC = () => {
         </span>
       </div>
 
+      {/* sub-heading + dropdown for comparing attributes */}
+      <div className="flex flex-col mb-4">
+        <span className="mr-2 text-sm font-medium">Compare attributes</span>
+        <Select value={selectedAttribute} onValueChange={setSelectedAttribute}>
+          <SelectTrigger className="w-full">
+            <SelectValue placeholder="Select attribute" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="id">id</SelectItem>
+            {attributeKeys
+              .filter((key) => key !== "id")
+              .map((key) => (
+                <SelectItem key={key} value={key}>
+                  {key}
+                </SelectItem>
+              ))}
+          </SelectContent>
+        </Select>
+      </div>
+
       {/* info cards for selected nodes */}
       <div className="flex flex-col gap-3 overflow-y-auto">
         {selectedNodes.map((node) => (
@@ -85,10 +118,21 @@ const MultiSelectNodeSidebar: React.FC = () => {
                   {node.label}
                 </div>
                 <div className="text-xs text-gray-500 dark:text-zinc-400">
-                  ID:{" "}
-                  <span className="font-mono text-gray-400 dark:text-zinc-500">
-                    {node.id}
-                  </span>
+                  {selectedAttribute ? (
+                    <>
+                      {selectedAttribute}:{" "}
+                      <span className="font-mono text-gray-400 dark:text-zinc-500">
+                        {String(node.attributes[selectedAttribute] ?? "N/A")}
+                      </span>
+                    </>
+                  ) : (
+                    <>
+                      id:{" "}
+                      <span className="font-mono text-gray-400 dark:text-zinc-500">
+                        {node.id}
+                      </span>
+                    </>
+                  )}
                 </div>
               </div>
               <ChevronRight className="w-5 h-5 text-gray-300 dark:text-zinc-600 group-hover:text-gray-500 dark:group-hover:text-zinc-300 transition-colors" />
@@ -96,7 +140,6 @@ const MultiSelectNodeSidebar: React.FC = () => {
           </div>
         ))}
       </div>
-
       {/* side panel footer (only trash icon / button for now to clear all selected nodes from graph) */}
       <div className="mt-auto flex justify-start pt-4">
         <button
