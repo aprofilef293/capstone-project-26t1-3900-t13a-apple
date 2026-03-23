@@ -207,7 +207,7 @@ export const useStore = create<ExplorerState>((set) => ({
                 try {
                     
                     const errorBody = await response.json();
-                    // Try to extract a message from the error body (FastAPI returns 'detail')
+                    // Try to extract a message from the error body
                     if (errorBody.detail) {
                         if (Array.isArray(errorBody.detail) && errorBody.detail[0]?.msg) {
                             errorMsg = errorBody.detail[0].msg;
