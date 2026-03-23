@@ -106,13 +106,21 @@ async def upload_ontology(request: Request, file: UploadFile = File(...)):
             terms, relations = await asyncio.to_thread(parse_ontology, tmp_path)
             yield f"data: {json.dumps({'progress': 25, 'stage': 'parsed'})}\n\n"
             await asyncio.sleep(0)
+        except Exception as e:
+            yield f"data: {json.dumps({'error': str(e), 'error_code': 422})}\n\n"
+            return
 
+        try:
             # Preprocessing step
             preprocessor = OntologyGraphPreprocessor()
             terms = await asyncio.to_thread(preprocessor.preprocess, terms, relations)
             yield f"data: {json.dumps({'progress': 50, 'stage': 'preprocessed'})}\n\n"
             await asyncio.sleep(0)
+        except Exception as e:
+            yield f"data: {json.dumps({'error': str(e), 'error_code': 500})}\n\n"
+            return
 
+        try:
             mg = request.app.state.memgraph
             await asyncio.to_thread(_ingest_terms, mg, terms, filename)
             yield f"data: {json.dumps({'progress': 75, 'stage': 'terms_ingested'})}\n\n"
@@ -121,7 +129,7 @@ async def upload_ontology(request: Request, file: UploadFile = File(...)):
             await asyncio.to_thread(_ingest_relations, mg, relations)
             yield f"data: {json.dumps({'progress': 100, 'stage': 'complete', 'filename': filename})}\n\n"
         except Exception as e:
-            yield f"data: {json.dumps({'error': str(e)})}\n\n"
+            yield f"data: {json.dumps({'error': str(e), 'error_code': 503})}\n\n"
         finally:
             os.unlink(tmp_path)
 
