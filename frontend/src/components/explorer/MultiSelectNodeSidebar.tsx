@@ -62,9 +62,9 @@ const MultiSelectNodeSidebar: React.FC = () => {
             <div className="font-medium text-base mb-1 text-gray-900 dark:text-zinc-100">
               {node.label}
             </div>
-            <div className="text-xs text-gray-400 dark:text-zinc-400">
+            <div className="text-xs text-gray-500 dark:text-zinc-400">
               ID:{" "}
-              <span className="font-mono text-gray-500 dark:text-zinc-500">
+              <span className="font-mono text-gray-400 dark:text-zinc-500">
                 {node.id}
               </span>
             </div>
