@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useStore } from "../../store/useStore";
 import { Badge } from "../ui/badge";
-import { Trash, X } from "lucide-react";
+import { Trash, X, ChevronRight } from "lucide-react";
 
 type GraphNode = {
   id: string;
@@ -17,6 +17,8 @@ type GraphNode = {
 const MultiSelectNodeSidebar: React.FC = () => {
   const isMultiSelect = useStore((s) => s.isMultiSelect);
   const selectedNodeIds = useStore((s) => s.selectedNodeIds);
+  const setIsMultiSelect = useStore((s) => s.setIsMultiSelect);
+  const setSelectedNodeId = useStore((s) => s.setSelectedNodeId);
   const nodes = useStore((s) => s.nodes);
   const clearSelectedNodes = useStore((s) => s.clearSelectedNodes);
   const [showSidebar, setShowSidebar] = useState(true);
@@ -54,9 +56,7 @@ const MultiSelectNodeSidebar: React.FC = () => {
         </button>
       </div>
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-lg font-semibold">
-          Selected Nodes Details
-        </h2>
+        <h2 className="text-lg font-semibold">Selected Nodes Details</h2>
         <span className="ml-2 text-xs font-normal text-gray-500 dark:text-zinc-400 bg-gray-100 dark:bg-zinc-800 rounded-full px-2.5 py-0.5">
           {selectedNodeIds.length === 1
             ? "1 node selected"
@@ -67,16 +67,25 @@ const MultiSelectNodeSidebar: React.FC = () => {
         {selectedNodes.map((node) => (
           <div
             key={node.id}
-            className="bg-white border border-gray-200 dark:bg-zinc-900 dark:border-zinc-700/60 rounded-lg p-4 shadow-sm flex flex-col"
+            className="bg-white border border-gray-200 dark:bg-zinc-900 dark:border-zinc-700/60 rounded-lg p-4 shadow-sm flex flex-col cursor-pointer group transition-all"
+            onClick={() => {
+              setIsMultiSelect(false);
+              setSelectedNodeId(node.id);
+            }}
           >
-            <div className="font-medium text-base mb-1 text-gray-900 dark:text-zinc-100">
-              {node.label}
-            </div>
-            <div className="text-xs text-gray-500 dark:text-zinc-400">
-              ID:{" "}
-              <span className="font-mono text-gray-400 dark:text-zinc-500">
-                {node.id}
-              </span>
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="font-medium text-base mb-1 text-gray-900 dark:text-zinc-100">
+                  {node.label}
+                </div>
+                <div className="text-xs text-gray-500 dark:text-zinc-400">
+                  ID:{" "}
+                  <span className="font-mono text-gray-400 dark:text-zinc-500">
+                    {node.id}
+                  </span>
+                </div>
+              </div>
+              <ChevronRight className="w-5 h-5 text-gray-300 group-hover:text-blue-500 transition-colors" />
             </div>
           </div>
         ))}
