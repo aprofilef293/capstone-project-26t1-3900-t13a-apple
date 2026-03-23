@@ -34,14 +34,23 @@ export function FileImportStatusInfo() {
                 {importStatus === 'error' && (
                     <div className="flex flex-col gap-1.5 text-red-500">
                         <div className="flex items-center gap-1.5">
-                        <span className="text-xs">Failed</span>
-                        <XCircle className="w-4 h-4" />
+                            <XCircle className="w-4 h-4 shrink-0" />
+                            <span className="text-xs">
+                                Failed {importError && typeof importError !== "string" && importError.code != null
+                                    ? `(${importError.code})`
+                                    : ""}
+                            </span>
                         </div>
                         {importError && (
-                        <span className="text-xs break-all">{importError}</span>
+                            <span
+                                className="text-xs text-red-400 line-clamp-2 cursor-default"
+                                title={typeof importError === "string" ? importError : importError.message}
+                            >
+                                {typeof importError === "string" ? importError : importError.message}
+                            </span>
                         )}
                     </div>
-                    )}
+                )}
                 {importStatus === 'idle' && (
                     <span className="text-xs text-sidebar-foreground/50">—</span>
                 )}

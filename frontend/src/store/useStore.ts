@@ -39,7 +39,7 @@ interface ExplorerState {
     // File import
     fileName: string | null;
     importStatus: 'idle' | 'waiting' | 'loading' | 'complete' | 'error';
-    importError: string | null;
+    importError: { message: string; code?: number } | string | null;
     importProgress: number;
     importDate: Date | null;
     startFileImport: (file: File) => void;
@@ -202,7 +202,25 @@ export const useStore = create<ExplorerState>((set) => ({
             });
 
             if (!response.ok || !response.body) {
-                throw new Error(response.statusText);
+                let errorMsg = response.statusText;
+                let errorCode = response.status;
+                try {
+                    
+                    const errorBody = await response.json();
+                    // Try to extract a message from the error body (FastAPI returns 'detail')
+                    if (errorBody.detail) {
+                        if (Array.isArray(errorBody.detail) && errorBody.detail[0]?.msg) {
+                            errorMsg = errorBody.detail[0].msg;
+                        } else if (typeof errorBody.detail === "string") {
+                            errorMsg = errorBody.detail;
+                        }
+                    }
+                } catch (e) {
+                    // fallback to statusText (ie. errorMsg)
+                }
+                set({ importStatus: 'error', importError: { message: errorMsg, code: errorCode } });
+                clearInterval(ticker);
+                return;
             }
 
             const reader = response.body.getReader();
@@ -224,7 +242,11 @@ export const useStore = create<ExplorerState>((set) => ({
 
                     if (data.error) {
                         clearInterval(ticker);
-                        set({ importStatus: 'error', importError: data.error });
+                        const errorMsg = typeof data.error === 'string'
+                            ? data.error
+                            : data.error.message ?? data.error.detail ?? JSON.stringify(data.error);
+                        const errorCode = data.error_code ?? undefined;
+                        set({ importStatus: 'error', importError: { message: errorMsg, code: errorCode } });
                         return;
                     }
 
@@ -244,7 +266,7 @@ export const useStore = create<ExplorerState>((set) => ({
         } catch (error) {
             clearInterval(ticker);
             console.error('Error importing file', error);
-            set({ importStatus: 'error', importError: String(error) });
+            set({ importStatus: 'error', importError: { message: String(error) } });
         }
     },
     setImportProgress: (progress) => set({ importProgress: progress }),
