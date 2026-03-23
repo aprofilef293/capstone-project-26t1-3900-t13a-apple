@@ -85,7 +85,7 @@ const MultiSelectNodeSidebar: React.FC = () => {
                   </span>
                 </div>
               </div>
-              <ChevronRight className="w-5 h-5 text-gray-300 group-hover:text-blue-500 transition-colors" />
+              <ChevronRight className="w-5 h-5 text-gray-300 dark:text-zinc-600 group-hover:text-gray-500 dark:group-hover:text-zinc-300 transition-colors" />
             </div>
           </div>
         ))}
