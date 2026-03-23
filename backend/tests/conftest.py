@@ -40,10 +40,22 @@ def mock_memgraph():
 
 
 @pytest.fixture
+def mock_langchain_search():
+    lcs = MagicMock()
+    lcs.query.return_value = {
+        "answer": "Apoptosis is programmed cell death.",
+        "cypher": "MATCH (n:OntologyTerm) WHERE n.name = 'apoptosis' RETURN n",
+        "context": "[{'n': {'id': 'GO:0006915', 'name': 'apoptosis'}}]",
+    }
+    return lcs
+
+
+@pytest.fixture
 def client(settings, mock_memgraph):
     app = create_app()
     app.state.settings = settings
     app.state.memgraph = mock_memgraph
+    app.state.langchain_search = None
     return TestClient(app, raise_server_exceptions=False)
 
 
