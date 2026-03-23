@@ -207,7 +207,8 @@ def get_node_neighborhood(
     "/search",
     response_model=GraphData,
     summary="Search graph nodes",
-    description="Perform a case-insensitive substring search over OntologyTerm node names. "
+    description="Perform a case-insensitive substring search over OntologyTerm node properties "
+    "(name, id, definition, comment, synonyms) and relationship types. "
     "Matching nodes are returned together with their immediate neighbors and connecting edges. "
     "Results are capped at 100 rows.",
     response_description="Subgraph of matching nodes, their neighbors, and connecting edges.",
@@ -217,24 +218,37 @@ def search_graph(
     q: str = Query(
         ...,
         min_length=1,
-        description="Case-insensitive search term matched against node names using CONTAINS.",
+        description="Case-insensitive search term matched against node properties and relationship types.",
     ),
 ):
-    """Search OntologyTerm nodes by name and return the matching subgraph.
+    """Search OntologyTerm nodes across multiple fields.
 
-    Performs a case-insensitive CONTAINS match on the *name* property of
-    every OntologyTerm node. Each matching node is returned along with its
-    immediate neighbors and the edges between them. The total number of
-    result rows is limited to 100.
+    Matches the query against name, id, definition, comment, synonyms,
+    and relationship types (e.g. is_a, part_of). Each matching node is
+    returned along with its immediate neighbors and connecting edges.
     """
     mg = request.app.state.memgraph
     records = mg.execute_read(
-        "MATCH (n:OntologyTerm) WHERE toLower(n.name) CONTAINS toLower($q) "
+        "MATCH (n:OntologyTerm) "
+        "WHERE toLower(n.name) CONTAINS toLower($q) "
+        "OR toLower(n.id) CONTAINS toLower($q) "
+        "OR (n.definition IS NOT NULL AND toLower(n.definition) CONTAINS toLower($q)) "
+        "OR (n.comment IS NOT NULL AND toLower(n.comment) CONTAINS toLower($q)) "
+        "OR ANY(s IN n.synonyms WHERE toLower(s) CONTAINS toLower($q)) "
+        "WITH n "
         "OPTIONAL MATCH (n)-[r]-(m:OntologyTerm) "
         "RETURN n, r, m LIMIT 100",
         {"q": q},
     )
-    return _build_graph_data_from_paths(records)
+
+    rel_records = mg.execute_read(
+        "MATCH (n:OntologyTerm)-[r:RELATES_TO]-(m:OntologyTerm) "
+        "WHERE toLower(r.type) CONTAINS toLower($q) "
+        "RETURN n, r, m LIMIT 100",
+        {"q": q},
+    )
+
+    return _build_graph_data_from_paths(records + rel_records)
 
 
 @router.get(
