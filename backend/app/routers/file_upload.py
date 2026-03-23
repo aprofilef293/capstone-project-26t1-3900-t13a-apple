@@ -29,7 +29,7 @@ def _ingest_terms(
 ) -> None:
     """Batch ingest validated ontology terms and relations into Memgraph.
 
-    Clears all existing OntologyTerm nodes, creates an index on the term id,
+    Drops the entire graph, creates an index on the term id,
     then inserts non-obsolete terms and their relationships in batches of 5000.
     All term model attributes are dynamically set on nodes via ``SET n += t``.
 
@@ -38,7 +38,9 @@ def _ingest_terms(
         terms: Parsed ontology terms to insert.
         source_file: Original filename, stored on each node for provenance.
     """
-    mg.execute_write("MATCH (n:OntologyTerm) DETACH DELETE n;")
+    mg.execute_write("STORAGE MODE IN_MEMORY_ANALYTICAL;")
+    mg.execute_write("DROP GRAPH;")
+    mg.execute_write("STORAGE MODE IN_MEMORY_TRANSACTIONAL;")
     mg.execute_write("CREATE INDEX ON :OntologyTerm(id);")
     term_dicts = [{**t.model_dump(), "source_file": source_file} for t in terms if not t.is_obsolete]
     batch_size = 5000
