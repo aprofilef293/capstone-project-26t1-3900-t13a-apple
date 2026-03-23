@@ -28,6 +28,18 @@ class SerializedEdge(BaseModel):
     attributes: dict[str, object] = {}
 
 
+class SemanticSearchResponse(BaseModel):
+    """Response from the semantic search endpoint.
+
+    Contains the LLM-generated answer, the Cypher query that was executed,
+    and the raw context returned from Memgraph.
+    """
+
+    answer: str
+    cypher: str = ""
+    context: str = ""
+
+
 class GraphData(BaseModel):
     """Top-level response for GET /api/graph.
 
