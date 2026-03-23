@@ -18,6 +18,7 @@ class OntologyTerm(BaseModel):
     name: str
     namespace: str | None = None
     definition: str | None = None
+    comment: str | None = None
     synonyms: list[str] = []
     xrefs: list[str] = []
     is_obsolete: bool = False

@@ -30,6 +30,7 @@ def parse_ontology(file_path: str) -> tuple[list[OntologyTerm], list[OntologyRel
                 name=term.name or term.id,
                 namespace=term.namespace,
                 definition=str(term.definition) if term.definition else None,
+                comment=str(term.comment) if term.comment else None,
                 synonyms=[str(s.description) for s in term.synonyms],
                 xrefs=[str(x) for x in term.xrefs],
                 is_obsolete=term.obsolete,
