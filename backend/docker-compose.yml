@@ -11,6 +11,13 @@ services:
       - MEMGRAPH_USER=memgraph
       - MEMGRAPH_PASSWORD=memgraph
 
+  ollama:
+    image: ollama/ollama:latest
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama-data:/root/.ollama
+
   backend:
     build: .
     ports:
@@ -19,12 +26,16 @@ services:
       - MEMGRAPH_URI=bolt://memgraph:7687
       - MEMGRAPH_USER=memgraph
       - MEMGRAPH_PASSWORD=memgraph
+      - MEDGEMMA_API_URL=http://ollama:11434/v1
+      - MEDGEMMA_API_KEY=ollama
       - CORS_ORIGINS=["http://localhost:5173"]
     depends_on:
       - memgraph
+      - ollama
     volumes:
       - .:/app
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 
 volumes:
   memgraph-data:
+  ollama-data:
