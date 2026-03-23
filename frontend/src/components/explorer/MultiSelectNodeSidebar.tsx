@@ -82,7 +82,7 @@ const MultiSelectNodeSidebar: React.FC = () => {
       </div>
 
       {/* sub-heading + dropdown for comparing attributes */}
-      <div className="flex flex-col mb-4">
+      <div className="flex flex-col gap-3 mb-4">
         <span className="mr-2 text-sm font-medium">Compare attributes</span>
         <Select value={selectedAttribute} onValueChange={setSelectedAttribute}>
           <SelectTrigger className="w-full">
