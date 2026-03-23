@@ -2,7 +2,7 @@ import math
 
 from fastapi import APIRouter, HTTPException, Query, Request
 
-from app.models.graph import GraphData, SerializedEdge, SerializedNode
+from app.models.graph import GraphData, SemanticSearchResponse, SerializedEdge, SerializedNode
 
 router = APIRouter()
 
@@ -235,3 +235,33 @@ def search_graph(
         {"q": q},
     )
     return _build_graph_data_from_paths(records)
+
+
+@router.get(
+    "/semantic-search",
+    response_model=SemanticSearchResponse,
+    summary="Semantic search via natural language",
+    description="Ask a natural-language question about the ontology graph. "
+    "Uses an LLM (MedGemma) to translate the question into a Cypher query, "
+    "execute it against Memgraph, and return a natural-language answer.",
+    response_description="LLM-generated answer with the Cypher query and raw context.",
+)
+def semantic_search(
+    request: Request,
+    q: str = Query(
+        ...,
+        min_length=1,
+        description="Natural-language question about the ontology graph.",
+    ),
+):
+    search_service = getattr(request.app.state, "langchain_search", None)
+    if search_service is None:
+        raise HTTPException(
+            status_code=503,
+            detail="Semantic search is not configured. Set MEDGEMMA_API_URL and MEDGEMMA_API_KEY.",
+        )
+
+    try:
+        return search_service.query(q)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Semantic search failed: {e}")
