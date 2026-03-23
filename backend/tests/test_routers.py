@@ -59,3 +59,50 @@ class TestGraphRouter:
     def test_search_graph_empty_query(self, client):
         resp = client.get("/api/graph/search?q=")
         assert resp.status_code == 422
+
+    def test_shortest_path(self, client, mock_memgraph):
+        mock_memgraph.execute_read.side_effect = [
+            # Node existence check
+            [{"id": "T:1"}, {"id": "T:3"}],
+            # shortestPath query
+            [
+                {
+                    "n": {"id": "T:1", "name": "term1", "namespace": "biological_process"},
+                    "r": {"type": "is_a"},
+                    "m": {"id": "T:2", "name": "term2", "namespace": "biological_process"},
+                },
+                {
+                    "n": {"id": "T:2", "name": "term2", "namespace": "biological_process"},
+                    "r": {"type": "part_of"},
+                    "m": {"id": "T:3", "name": "term3", "namespace": "molecular_function"},
+                },
+            ],
+        ]
+        resp = client.get("/api/graph/path?source=T:1&target=T:3")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert len(data["nodes"]) == 3
+        assert len(data["edges"]) == 2
+
+    def test_shortest_path_source_not_found(self, client, mock_memgraph):
+        mock_memgraph.execute_read.return_value = []
+        resp = client.get("/api/graph/path?source=FAKE:1&target=FAKE:2")
+        assert resp.status_code == 404
+
+    def test_shortest_path_no_path(self, client, mock_memgraph):
+        mock_memgraph.execute_read.side_effect = [
+            [{"id": "T:1"}, {"id": "T:2"}],
+            [],  # no path found
+        ]
+        resp = client.get("/api/graph/path?source=T:1&target=T:2")
+        assert resp.status_code == 404
+
+    def test_shortest_path_same_node(self, client, mock_memgraph):
+        mock_memgraph.execute_read.side_effect = [
+            [{"id": "T:1"}],
+            [{"n": {"id": "T:1", "name": "term1", "namespace": "biological_process"}, "r": None, "m": None}],
+        ]
+        resp = client.get("/api/graph/path?source=T:1&target=T:1")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert len(data["nodes"]) == 1
