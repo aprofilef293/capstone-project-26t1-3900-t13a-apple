@@ -112,6 +112,21 @@ const updatePrevNodes = (id: string | null) => {
     }
 }
 
+// load persisted file info helper
+const getPersistedFileInfo = () => {
+    try {
+        const errorRaw = localStorage.getItem('importError');
+        return {
+            fileName: localStorage.getItem('importFileName') || null,
+            importStatus: (localStorage.getItem('importStatus') as ExplorerState['importStatus']) || 'idle',
+            importDate: localStorage.getItem('importDate') ? new Date(localStorage.getItem('importDate')!) : null,
+            importError: errorRaw ? JSON.parse(errorRaw) : null,
+        };
+    } catch {
+        return { fileName: null, importStatus: 'idle' as const, importDate: null, importError: null };
+    }
+};
+
 export const useStore = create<ExplorerState>((set) => ({
     nodes: [],
     edges: [],
@@ -173,14 +188,21 @@ export const useStore = create<ExplorerState>((set) => ({
         }
     },
     // File import
-    fileName: null,
-    importStatus: 'idle',
+    fileName: getPersistedFileInfo().fileName,
+    importStatus: getPersistedFileInfo().importStatus === 'loading' 
+        ? 'error'  // file upload interrupted by refresh
+        : getPersistedFileInfo().importStatus,
     importProgress: 0,
-    importDate: null,
-    importError: null,
+    importDate: getPersistedFileInfo().importDate,
+    importError: getPersistedFileInfo().importError,
     startFileImport: async (file) => {
-        set({ fileName: file.name, importStatus: 'loading', importProgress: 0, importDate: new Date() });
-
+        const now = new Date();
+        localStorage.setItem('importFileName', file.name);
+        localStorage.setItem('importStatus', 'loading');
+        localStorage.setItem('importDate', now.toISOString());
+        localStorage.setItem('importError', JSON.stringify(null)); 
+        set({ fileName: file.name, importStatus: 'loading', importProgress: 0, importDate: now, importError: null }); 
+        
         useStore.getState().setIsMultiSelect(false);
         // simulate progress bar slowly moving toward the ceiling between real events
         let ceiling = 24;
@@ -218,6 +240,8 @@ export const useStore = create<ExplorerState>((set) => ({
                 } catch (e) {
                     // fallback to statusText (ie. errorMsg)
                 }
+                localStorage.setItem('importStatus', 'error');
+                localStorage.setItem('importError', JSON.stringify({ message: errorMsg, code: errorCode }));
                 set({ importStatus: 'error', importError: { message: errorMsg, code: errorCode } });
                 clearInterval(ticker);
                 return;
@@ -246,6 +270,8 @@ export const useStore = create<ExplorerState>((set) => ({
                             ? data.error
                             : data.error.message ?? data.error.detail ?? JSON.stringify(data.error);
                         const errorCode = data.error_code ?? undefined;
+                        localStorage.setItem('importStatus', 'error');
+                        localStorage.setItem('importError', JSON.stringify({ message: errorMsg, code: errorCode }));
                         set({ importStatus: 'error', importError: { message: errorMsg, code: errorCode } });
                         return;
                     }
@@ -259,6 +285,7 @@ export const useStore = create<ExplorerState>((set) => ({
                         clearInterval(ticker);
                         set({ importProgress: 99, importStatus: 'loading' });
                         await useStore.getState().fetchGraphData();
+                        localStorage.setItem('importStatus', 'complete');
                         set({ importStatus: 'complete', importProgress: 100 });
                     }
                 }
@@ -266,6 +293,8 @@ export const useStore = create<ExplorerState>((set) => ({
         } catch (error) {
             clearInterval(ticker);
             console.error('Error importing file', error);
+            localStorage.setItem('importStatus', 'error');
+            localStorage.setItem('importError', JSON.stringify({ message: String(error) }));
             set({ importStatus: 'error', importError: { message: String(error) } });
         }
     },
