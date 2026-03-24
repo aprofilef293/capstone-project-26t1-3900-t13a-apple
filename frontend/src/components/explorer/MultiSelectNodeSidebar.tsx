@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { useStore } from "../../store/useStore";
 import { Badge } from "../ui/badge";
 import { Trash, X, ChevronRight } from "lucide-react";
