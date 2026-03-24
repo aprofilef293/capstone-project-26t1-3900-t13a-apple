@@ -18,8 +18,8 @@ make install
 # start the docker container
 make docker-up
 
-# download MedGemma model (only needed once)
-docker compose exec ollama ollama pull medgemma
+# download LLM model
+docker compose exec ollama ollama pull gemma3
 
 # runs the app with hot reload automatically restarts when changes are made
 make dev
@@ -32,7 +32,7 @@ make dev
 - `GET /api/graph/` — get the full graph
 - `GET /api/graph/node/{node_id}` — get a node and its neighbors
 - `GET /api/graph/search?q=` — search terms by name, id, definition, synonyms, comments, and relationship types
-- `GET /api/graph/semantic-search?q=` — natural language search using MedGemma + LangChain
+- `GET /api/graph/semantic-search?q=` — natural language search using LLM + LangChain
 
 ## Structure
 
@@ -40,4 +40,4 @@ make dev
 - `app/routers/`: API route handlers
 - `app/services/memgraph.py`: Memgraph driver
 - `app/services/ontology_parser.py`: parses ontology files with Pronto
-- `app/services/langchain_search.py`: natural language search via MemgraphQAChain + MedGemma
+- `app/services/langchain_search.py`: natural language search via MemgraphQAChain + LLM
