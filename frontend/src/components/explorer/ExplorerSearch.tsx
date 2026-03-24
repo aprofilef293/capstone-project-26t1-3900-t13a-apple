@@ -15,6 +15,13 @@ export function ExplorerSearch() {
                         setSearchQuery(e.target.value);
                         if (e.target.value) setViewLevel(1);
                     }}
+                    onKeyDown={(e) => {
+                        if (e.key === 'Enter' && searchQuery != '') {
+                            updateSearchResults();
+                            setShowSearchResults(true);
+                            setSelectedNodeId(null);
+                        }
+                    }}
                     placeholder="Search nodes..."
                     className="w-full bg-transparent border-none text-sm text-sidebar-foreground placeholder:text-sidebar-foreground/50 focus:outline-none focus:ring-0"
                 />
