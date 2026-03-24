@@ -38,7 +38,7 @@ function SearchResults({
 }
 
 export function SearchResultsPanel() {
-    const { searchQuery, setSearchQuery, searchResults, setShowSearchResults, setViewLevel, setSelectedNodeId } = useStore();
+    const { searchQuery, setSearchQuery, searchResults, setViewLevel, setSelectedNodeId, setInfoPanelMode } = useStore();
 
     return (
         <div className="w-[400px] border-l border-sidebar-border bg-sidebar flex flex-col h-full shadow-xl z-20 transition-colors">
@@ -50,7 +50,7 @@ export function SearchResultsPanel() {
                         onClick={() => {
                             setSearchQuery("");
                             setViewLevel(1);
-                            setShowSearchResults(false);
+                            setInfoPanelMode('closed');
                         }}
                         className="p-1 hover:bg-sidebar-accent border border-transparent hover:border-sidebar-border/50 rounded-md transition-all text-sidebar-foreground/50 hover:text-sidebar-foreground flex items-center justify-center cursor-pointer"
                         title="Close details"

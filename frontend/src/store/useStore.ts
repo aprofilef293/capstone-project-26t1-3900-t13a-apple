@@ -32,8 +32,6 @@ interface ExplorerState {
     setPrevNodes: (prevNodes: string[]) => void;
     setSelectedNodeId: (id: string | null) => void;
     setGraphData: (nodes: GraphNode[], edges: GraphEdge[]) => void;
-    showSearchResults: boolean,
-    setShowSearchResults: (show: boolean) => void;
     setSearchQuery: (query: string) => void;
     searchResults: GraphNode[];
     updateSearchResults: () => void;
@@ -60,6 +58,8 @@ interface ExplorerState {
     setSelectedNodeIds: (ids: string[]) => void;
     toggleNodeSelection: (id: string) => void;
     clearSelectedNodes: () => void;
+    infoPanelMode: 'node-info' | 'search-results' | 'multi-select' | 'closed';
+    setInfoPanelMode: (mode: 'node-info' | 'search-results' | 'multi-select' | 'closed') => void;
 }
 
 // Convert Graphology JSON format to our store format
@@ -131,6 +131,7 @@ export const useStore = create<ExplorerState>((set) => ({
     setSelectedNodeId: (id) => {
         set({ selectedNodeId: id });
         updatePrevNodes(id);
+        if (id) useStore.getState().setInfoPanelMode('node-info');
     },
     setGraphData: (nodes, edges) => set({
         nodes,
@@ -159,8 +160,6 @@ export const useStore = create<ExplorerState>((set) => ({
             set({ searchResults: [] });
         }
     },
-    showSearchResults: false,
-    setShowSearchResults: (show) => set({ showSearchResults: show }),
     setViewLevel: (level) => set({ viewLevel: level }),
     fetchGraphData: async () => {
         set({ isGraphLoading: true });
@@ -232,7 +231,6 @@ export const useStore = create<ExplorerState>((set) => ({
                 let errorMsg = response.statusText;
                 let errorCode = response.status;
                 try {
-                    
                     const errorBody = await response.json();
                     // Try to extract a message from the error body
                     if (errorBody.detail) {
@@ -307,6 +305,7 @@ export const useStore = create<ExplorerState>((set) => ({
     setIsMultiSelect: (val: boolean) => {
         localStorage.setItem('isMultiSelect', String(val));
         set({ isMultiSelect: val, ...(val && { selectedNodeId: null }) });
+        if (!val) set({ selectedNodeIds: [] });
     },
     selectedNodeIds: JSON.parse(localStorage.getItem('selectedNodeIds') || '[]'),
     setSelectedNodeIds: (ids: string[]) => {
@@ -328,7 +327,13 @@ export const useStore = create<ExplorerState>((set) => ({
     return { selectedNodeIds: newIds };
     }),
     clearSelectedNodes: () => {
-    localStorage.setItem('selectedNodeIds', JSON.stringify([]));
-    set({ selectedNodeIds: [] });
+        localStorage.setItem('selectedNodeIds', JSON.stringify([]));
+        set({ selectedNodeIds: [] });
+    },
+    infoPanelMode: 'closed',
+    setInfoPanelMode: (mode) => {
+        set({ infoPanelMode: mode });
+        if (mode === 'closed' || mode === 'search-results') useStore.getState().setSelectedNodeId(null);
+        set({ isMultiSelect: mode === 'multi-select' });
     },
 }));

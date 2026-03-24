@@ -12,15 +12,9 @@ import { SearchResultsPanel } from "@/components/explorer/SearchResultsPanel";
 import MultiSelectNodeSidebar from "../components/explorer/MultiSelectNodeSidebar";
 
 export function GraphExplorer() {
-    const selectedNodeId = useStore((state) => state.selectedNodeId);
-    const searchQuery = useStore((state) => state.searchQuery);
-    const showSearchResults = useStore((state) => state.showSearchResults);
-    const fetchGraphData = useStore((state) => state.fetchGraphData);
+    const { searchQuery, fetchGraphData, isNodeSelecting, selectedNodeIds, infoPanelMode } = useStore();
     const [viewMode, setViewMode] = useState<'graph' | 'hierarchy'>('graph');
     const graphViewRef = useRef<GraphViewRef>(null);
-    const isNodeSelecting = useStore((state) => state.isNodeSelecting);
-    const isMultiSelect = useStore((state) => state.isMultiSelect);
-    const selectedNodeIds = useStore((state) => state.selectedNodeIds);
 
     useEffect(() => {
         fetchGraphData();
@@ -71,15 +65,19 @@ export function GraphExplorer() {
                     </div>
                 </div>
 
-                {/* Multi-select sidebar + Right details panel */}
-                {isMultiSelect && selectedNodeIds.length > 0 ? (
-                    <MultiSelectNodeSidebar />
-                ) : selectedNodeId ? (
+                {infoPanelMode === 'node-info' && (
                     <NodeDetailsPanel />
-                ): null}
+                )}
 
-                {/* Right Search Results Panel */}
-                {searchQuery && showSearchResults && (
+                {infoPanelMode === 'multi-select'
+                && selectedNodeIds.length > 0
+                && (
+                    <MultiSelectNodeSidebar />
+                )}
+
+                {infoPanelMode === 'search-results'
+                && searchQuery
+                && (
                     <SearchResultsPanel />
                 )}
             </div>
