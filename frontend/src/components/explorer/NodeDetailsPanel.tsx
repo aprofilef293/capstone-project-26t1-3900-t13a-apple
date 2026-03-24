@@ -209,7 +209,7 @@ function AttributesSection({
                                 <div key={key} className="group">
                                     <div className="flex justify-between text-xs items-start gap-4">
                                         <span className="text-sidebar-foreground/70 font-medium shrink-0 pt-0.5">{key}</span>
-                                        <span className="font-mono text-sidebar-foreground text-right break-words select-all">{String(value)}</span>
+                                        <span className="font-mono text-sidebar-foreground text-right break-words select-all max-w-[200px]">{String(value)}</span>
                                     </div>
                                     {index < array.length - 1 && <Separator className="bg-sidebar-border/30 mt-3" />}
                                 </div>
@@ -281,7 +281,7 @@ export function NodeDetailsPanel() {
     const hasAttributes = Object.keys(node.attributes ?? {}).length > 0;
 
     return (
-        <div className="w-[400px] border-l border-sidebar-border bg-sidebar flex flex-col h-full shadow-xl z-20 transition-colors">
+        <div className="w-[400px] border-l border-sidebar-border bg-sidebar flex flex-col h-full shadow-xl z-20 transition-colors overflow-x-hidden min-w-0">
             {/* Header */}
             <div className="p-6 pb-4 border-b border-sidebar-border shadow-sm bg-sidebar/50">
                 <div className="flex items-center justify-between mb-3">
@@ -307,8 +307,8 @@ export function NodeDetailsPanel() {
                 <span className="text-[10px] text-sidebar-foreground/70 font-mono tracking-wider mr-auto">ID: {node.id.toUpperCase()}</span>
             </div>
 
-            <ScrollArea className="flex-1 min-h-0 pb-6 px-6 pt-4">
-                <Accordion type="multiple" className="max-w-lg" defaultValue={["node-data"]}>
+            <ScrollArea className="flex-1 min-h-0 pb-6 px-6 pt-4 min-w-0">
+                <Accordion type="multiple" className="max-w-lg min-w-0" defaultValue={["node-data"]}>
                     {/* Main Data */}
                     <AccordionItem value="node-data">
                         <AttributesSection node={node} sectionTitle="Node Data" icon={Box} hasAttributes={hasAttributes} includeComputed={false} />
