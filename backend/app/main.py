@@ -23,7 +23,7 @@ async def lifespan(app: FastAPI):
     app.state.settings = settings
     app.state.memgraph = MemgraphService(settings)
 
-    if settings.medgemma_api_url and settings.medgemma_api_key:
+    if settings.llm_api_url and settings.llm_api_key:
         app.state.langchain_search = LangChainSearchService(settings)
     else:
         app.state.langchain_search = None

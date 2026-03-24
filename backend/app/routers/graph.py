@@ -256,7 +256,7 @@ def search_graph(
     response_model=SemanticSearchResponse,
     summary="Semantic search via natural language",
     description="Ask a natural-language question about the ontology graph. "
-    "Uses an LLM (MedGemma) to translate the question into a Cypher query, "
+    "Uses an LLM to translate the question into a Cypher query, "
     "execute it against Memgraph, and return a natural-language answer.",
     response_description="LLM-generated answer with the Cypher query and raw context.",
 )
@@ -272,7 +272,7 @@ def semantic_search(
     if search_service is None:
         raise HTTPException(
             status_code=503,
-            detail="Semantic search is not configured. Set MEDGEMMA_API_URL and MEDGEMMA_API_KEY.",
+            detail="Semantic search is not configured. Set LLM_API_URL and LLM_API_KEY.",
         )
 
     try:
