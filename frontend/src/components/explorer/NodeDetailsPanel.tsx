@@ -227,14 +227,26 @@ function AttributesSection({
 
 /* ── Main panel ── */
 export function NodeDetailsPanel() {
-    const { selectedNodeId, nodes, graph, prevNodes, setPrevNodes, setSelectedNodeId } = useStore();
+    const { selectedNodeId, nodes, graph, prevNodes, setPrevNodes, setSelectedNodeId, setInfoPanelMode } = useStore();
     const node = nodes.find((n) => n.id === selectedNodeId);
 
     if (!node || !selectedNodeId) {
         return (
-            <div className="w-96 border-l border-sidebar-border bg-sidebar flex flex-col items-center justify-center p-6 text-center text-sidebar-foreground/70 transition-colors">
-                <Box className="w-12 h-12 mb-4 opacity-20" />
-                <p>Select a node to view its details</p>
+            <div className="w-96 border-l border-sidebar-border bg-sidebar p-6 text-sidebar-foreground/70 transition-colors">
+                <div className="flex justify-end">
+
+                <button
+                    onClick={() => setInfoPanelMode('closed')}
+                    className="p-1 hover:bg-sidebar-accent border border-transparent hover:border-sidebar-border/50 rounded-md transition-all text-sidebar-foreground/50 hover:text-sidebar-foreground flex items-center justify-center cursor-pointer"
+                    title="Close details"
+                >
+                    <X className="w-5 h-5" />
+                </button>
+                </div>
+                <div className="flex flex-col items-center justify-center text-center mt-10">
+                    <Box className="w-12 h-12 mb-4 opacity-20" />
+                    <p>Select a node to view its details</p>
+                </div>
             </div>
         );
     }
@@ -293,7 +305,7 @@ export function NodeDetailsPanel() {
                         <CircleChevronLeft className="w-4 h-5 mt-0.5"/>&nbsp;&nbsp;BACK
                     </button>
                     <button
-                        onClick={() => setSelectedNodeId(null)}
+                        onClick={() => setInfoPanelMode('closed')}
                         className="p-1 hover:bg-sidebar-accent border border-transparent hover:border-sidebar-border/50 rounded-md transition-all text-sidebar-foreground/50 hover:text-sidebar-foreground flex items-center justify-center cursor-pointer"
                         title="Close details"
                     >

@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import testData from '../data/test_data.json';
 import * as api from '../lib/api';
 import { MultiDirectedGraph } from 'graphology';
+import { INITIAL_NODES } from '@/data/mockData';
 
 export interface GraphNode {
     id: string;
@@ -33,6 +34,9 @@ interface ExplorerState {
     setSelectedNodeId: (id: string | null) => void;
     setGraphData: (nodes: GraphNode[], edges: GraphEdge[]) => void;
     setSearchQuery: (query: string) => void;
+    searchResults: GraphNode[];
+    searchResultsQuery: string;
+    updateSearchResults: () => void;
     setViewLevel: (level: number) => void;
     fetchGraphData: () => Promise<void>;
     isGraphLoading: boolean;
@@ -56,6 +60,8 @@ interface ExplorerState {
     setSelectedNodeIds: (ids: string[]) => void;
     toggleNodeSelection: (id: string) => void;
     clearSelectedNodes: () => void;
+    infoPanelMode: 'node-info' | 'search-results' | 'multi-select' | 'closed';
+    setInfoPanelMode: (mode: 'node-info' | 'search-results' | 'multi-select' | 'closed') => void;
 }
 
 // Convert Graphology JSON format to our store format
@@ -142,6 +148,7 @@ export const useStore = create<ExplorerState>((set) => ({
     setSelectedNodeId: (id) => {
         set({ selectedNodeId: id });
         updatePrevNodes(id);
+        if (id) useStore.getState().setInfoPanelMode('node-info');
     },
     setGraphData: (nodes, edges) => set({
         nodes,
@@ -149,6 +156,29 @@ export const useStore = create<ExplorerState>((set) => ({
         graph: createGraph(nodes, edges)
     }),
     setSearchQuery: (query) => set({ searchQuery: query }),
+    searchResults: [],
+    searchResultsQuery: '',
+    updateSearchResults: async () => {
+        try {
+            set({searchResultsQuery: useStore.getState().searchQuery});
+            const response = await api.fetchGraphData(`/api/graph/search?q=${useStore.getState().searchQuery}`);
+            const nodes = (response.nodes || []).map((n: { key: string; attributes?: Record<string, unknown> }) => ({
+                id: n.key,
+                label: (n.attributes?.label as string) || n.key,
+                type: (n.attributes?.nodeType as string) || 'Data',
+                x: typeof n.attributes?.x === 'number' ? n.attributes.x : (Math.random() - 0.5) * 10,
+                y: typeof n.attributes?.y === 'number' ? n.attributes.y : (Math.random() - 0.5) * 10,
+                size: (n.attributes?.size as number) || 10,
+                color: (n.attributes?.color as string) || '#3b82f6',
+                attributes: n.attributes || {}
+            }));
+            set({ searchResults: nodes });
+        } catch (error) {
+            console.error('Error getting search results', error);
+            set({ importStatus: 'error', importError: String(error) });
+            set({ searchResults: INITIAL_NODES });
+        }
+    },
     setViewLevel: (level) => set({ viewLevel: level }),
     fetchGraphData: async () => {
         set({ isGraphLoading: true });
@@ -227,7 +257,6 @@ export const useStore = create<ExplorerState>((set) => ({
                 let errorMsg = response.statusText;
                 let errorCode = response.status;
                 try {
-                    
                     const errorBody = await response.json();
                     // Try to extract a message from the error body
                     if (errorBody.detail) {
@@ -309,6 +338,7 @@ export const useStore = create<ExplorerState>((set) => ({
     setIsMultiSelect: (val: boolean) => {
         localStorage.setItem('isMultiSelect', String(val));
         set({ isMultiSelect: val, ...(val && { selectedNodeId: null }) });
+        if (!val) set({ selectedNodeIds: [] });
     },
     selectedNodeIds: JSON.parse(localStorage.getItem('selectedNodeIds') || '[]'),
     setSelectedNodeIds: (ids: string[]) => {
@@ -330,7 +360,13 @@ export const useStore = create<ExplorerState>((set) => ({
     return { selectedNodeIds: newIds };
     }),
     clearSelectedNodes: () => {
-    localStorage.setItem('selectedNodeIds', JSON.stringify([]));
-    set({ selectedNodeIds: [] });
+        localStorage.setItem('selectedNodeIds', JSON.stringify([]));
+        set({ selectedNodeIds: [] });
+    },
+    infoPanelMode: 'closed',
+    setInfoPanelMode: (mode) => {
+        set({ infoPanelMode: mode });
+        if (mode === 'closed' || mode === 'search-results') useStore.getState().setSelectedNodeId(null);
+        set({ isMultiSelect: mode === 'multi-select' });
     },
 }));
