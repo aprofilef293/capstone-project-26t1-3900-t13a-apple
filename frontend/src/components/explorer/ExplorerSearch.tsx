@@ -3,7 +3,7 @@ import { useStore } from "../../store/useStore";
 import { Button } from "../ui/button";
 
 export function ExplorerSearch() {
-    const { searchQuery, setSearchQuery, setShowSearchResults, setViewLevel, setSelectedNodeId } = useStore();
+    const { searchQuery, setSearchQuery, updateSearchResults, setShowSearchResults, setViewLevel, setSelectedNodeId } = useStore();
 
     return (
         <div className="flex-1 w-full max-w-xl bg-sidebar/95 backdrop-blur-sm border border-sidebar-border rounded-lg p-1.5 flex items-center gap-2 pointer-events-auto shadow-sm transition-colors mx-auto">
@@ -28,6 +28,7 @@ export function ExplorerSearch() {
                     </Button>
                 )}
                 <Button onClick={() => {
+                    updateSearchResults();
                     setShowSearchResults(true);
                     setSelectedNodeId(null);
                 }} variant="ghost" size="icon" className="hover:bg-blue-500/10">

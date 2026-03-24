@@ -35,6 +35,8 @@ interface ExplorerState {
     showSearchResults: boolean,
     setShowSearchResults: (show: boolean) => void;
     setSearchQuery: (query: string) => void;
+    searchResults: GraphNode[];
+    updateSearchResults: () => void;
     setViewLevel: (level: number) => void;
     fetchGraphData: () => Promise<void>;
     isGraphLoading: boolean;
@@ -129,6 +131,27 @@ export const useStore = create<ExplorerState>((set) => ({
         graph: createGraph(nodes, edges)
     }),
     setSearchQuery: (query) => set({ searchQuery: query }),
+    searchResults: [],
+    updateSearchResults: async () => {
+        try {
+            const response = await api.fetchGraphData(`/api/graph/search?q=${useStore.getState().searchQuery}`);
+            const nodes = (response.nodes || []).map((n: { key: string; attributes?: Record<string, unknown> }) => ({
+                id: n.key,
+                label: (n.attributes?.label as string) || n.key,
+                type: (n.attributes?.nodeType as string) || 'Data',
+                x: typeof n.attributes?.x === 'number' ? n.attributes.x : (Math.random() - 0.5) * 10,
+                y: typeof n.attributes?.y === 'number' ? n.attributes.y : (Math.random() - 0.5) * 10,
+                size: (n.attributes?.size as number) || 10,
+                color: (n.attributes?.color as string) || '#3b82f6',
+                attributes: n.attributes || {}
+            }));
+            set({ searchResults: nodes });
+        } catch (error) {
+            console.error('Error getting search results', error);
+            set({ importStatus: 'error', importError: String(error) });
+            set({ searchResults: [] });
+        }
+    },
     showSearchResults: false,
     setShowSearchResults: (show) => set({ showSearchResults: show }),
     setViewLevel: (level) => set({ viewLevel: level }),

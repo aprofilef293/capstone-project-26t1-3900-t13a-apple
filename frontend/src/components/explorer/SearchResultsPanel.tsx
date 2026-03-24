@@ -1,45 +1,71 @@
-import { X, Waypoints } from "lucide-react";
+import { X, ChevronRight, type LucideIcon, ArrowRight } from "lucide-react";
 import { ScrollArea } from "../ui/scroll-area";
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "../ui/accordion";
-import { useStore } from "../../store/useStore";
+import { useStore, type GraphNode } from "../../store/useStore";
+
+function SearchResults({
+    items,
+    icon: Icon,
+    onSelect,
+}: {
+    items: GraphNode[];
+    icon: LucideIcon;
+    onSelect: (id: string) => void;
+}) {
+    if (items.length === 0) return null;
+
+    return (
+        <div className="space-y-1.5">
+            {items.map((item) => (
+                <div
+                    key={item.id}
+                    onClick={() => onSelect(item.id)}
+                    className="flex items-center justify-between p-2.5 rounded-lg border border-sidebar-border/50 bg-sidebar-accent/30 hover:bg-sidebar-accent/80 hover:border-sidebar-border cursor-pointer group transition-all"
+                >
+                    <div className="flex items-center gap-3">
+                        <div className="p-1.5 rounded-md text-black" style={{ backgroundColor: item.color }}>
+                            <Icon className="w-3.5 h-3.5"/>
+                        </div>
+                        <div>
+                            <div className="text-xs font-medium text-sidebar-foreground group-hover:text-blue-500 transition-colors truncate max-w-[200px]">{item.label}</div>
+                            <div className="text-[10px] text-sidebar-foreground/50">{item.type}</div>
+                        </div>
+                    </div>
+                    <ChevronRight className="w-3.5 h-3.5 text-sidebar-foreground/30 group-hover:text-sidebar-foreground/80" />
+                </div>
+            ))}
+        </div>
+    );
+}
 
 export function SearchResultsPanel() {
-    const { } = useStore();
+    const { searchQuery, setSearchQuery, searchResults, setShowSearchResults, setViewLevel, setSelectedNodeId } = useStore();
 
     return (
         <div className="w-[400px] border-l border-sidebar-border bg-sidebar flex flex-col h-full shadow-xl z-20 transition-colors">
             {/* Header */}
             <div className="p-6 pb-4 border-b border-sidebar-border shadow-sm bg-sidebar/50">
-                <button
-                    onClick={() => {return}}
-                    className="p-1 hover:bg-sidebar-accent border border-transparent hover:border-sidebar-border/50 rounded-md transition-all text-sidebar-foreground/50 hover:text-sidebar-foreground flex items-center justify-center cursor-pointer"
-                    title="Close details"
-                >
-                    <X className="w-5 h-5" />
-                </button>
+                <div className="flex justify-between">
+                    <h2 className="text-xl font-bold text-sidebar-foreground pt-2 mb-1 leading-tight">Search Results</h2>
+                    <button
+                        onClick={() => {
+                            setSearchQuery("");
+                            setViewLevel(1);
+                            setShowSearchResults(false);
+                        }}
+                        className="p-1 hover:bg-sidebar-accent border border-transparent hover:border-sidebar-border/50 rounded-md transition-all text-sidebar-foreground/50 hover:text-sidebar-foreground flex items-center justify-center cursor-pointer"
+                        title="Close details"
+                    >
+                        <X className="w-5 h-5" />
+                    </button>
+                </div>
+                <span className="text-[12px] text-sidebar-foreground/70 font-mono tracking-wider mr-auto">Query: {searchQuery}</span>
             </div>
 
             <ScrollArea className="flex-1 min-h-0 pb-6 px-6 pt-4">
-                <Accordion type="multiple" className="max-w-lg" defaultValue={["node-data"]}>
-                    {/* Main Data */}
-                    <AccordionItem value="node-data">
-                    </AccordionItem>
-                    {/* Connections */}
-                    <AccordionItem value="connections" className="pt-2">
-                        <AccordionTrigger className="cursor-pointer">
-                            <h3 className="text-xs font-bold text-sidebar-foreground mb-3 flex items-center gap-2 uppercase tracking-wider">
-                                <Waypoints className="w-3.5 h-3.5" /> Connections
-                            </h3>
-                        </AccordionTrigger>
-                        <AccordionContent>
-                            <div className="space-y-4">
-                            </div>
-                        </AccordionContent>
-                    </AccordionItem>
-                    {/* Computed Attributes */}
-                    <AccordionItem value="computed-attributes" className="pt-2">
-                    </AccordionItem>
-                </Accordion>
+                <SearchResults items={searchResults} icon={ArrowRight} onSelect={setSelectedNodeId} />
+                {searchResults.length === 0 && (
+                    <div className="text-s text-sidebar-foreground/40 px-1">No results found.</div>
+                )}
             </ScrollArea>
         </div>
     );
