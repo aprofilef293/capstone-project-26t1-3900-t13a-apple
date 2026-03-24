@@ -22,16 +22,10 @@ type GraphNode = {
 };
 
 const MultiSelectNodeSidebar: React.FC = () => {
-  const isMultiSelect = useStore((s) => s.isMultiSelect);
-  const selectedNodeIds = useStore((s) => s.selectedNodeIds);
-  const setIsMultiSelect = useStore((s) => s.setIsMultiSelect);
-  const setSelectedNodeId = useStore((s) => s.setSelectedNodeId);
-  const nodes = useStore((s) => s.nodes);
-  const clearSelectedNodes = useStore((s) => s.clearSelectedNodes);
-  const [showSidebar, setShowSidebar] = useState(true);
+  const { selectedNodeIds, setSelectedNodeId, nodes, clearSelectedNodes, infoPanelMode, setInfoPanelMode } = useStore();
   const [selectedAttribute, setSelectedAttribute] = useState<string>("");
 
-  if (!isMultiSelect || selectedNodeIds.length === 0 || !showSidebar)
+  if (infoPanelMode !== 'multi-select' || selectedNodeIds.length === 0)
     return null;
 
   const selectedNodes: GraphNode[] = nodes.filter((n) =>
@@ -55,7 +49,7 @@ const MultiSelectNodeSidebar: React.FC = () => {
           Multi-select Mode
         </Badge>
         <button
-          onClick={() => setShowSidebar(false)}
+          onClick={() => setInfoPanelMode('closed')}
           className="p-1 hover:bg-sidebar-accent border border-transparent hover:border-sidebar-border/50 rounded-md transition-all text-sidebar-foreground/50 hover:text-sidebar-foreground flex items-center justify-center cursor-pointer"
           title="Close details"
         >
@@ -100,8 +94,8 @@ const MultiSelectNodeSidebar: React.FC = () => {
             key={node.id}
             className="bg-white border border-gray-200 dark:bg-zinc-900 dark:border-zinc-700/60 rounded-lg p-4 shadow-sm flex flex-col cursor-pointer group transition-all"
             onClick={() => {
-              setIsMultiSelect(false);
               setSelectedNodeId(node.id);
+              setInfoPanelMode('node-info');
             }}
           >
             <div className="flex items-center justify-between">
@@ -136,7 +130,10 @@ const MultiSelectNodeSidebar: React.FC = () => {
       <div className="mt-auto flex justify-start pt-4">
         <button
           className="flex items-center gap-1 text-xs p-1.5 rounded text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:text-zinc-500 dark:hover:text-zinc-300 dark:hover:bg-zinc-800 transition-colors"
-          onClick={clearSelectedNodes}
+          onClick={() => {
+            clearSelectedNodes();
+            setInfoPanelMode('closed');
+          }}
           title="Clear selection"
         >
           <Trash className="w-4 h-4" />
