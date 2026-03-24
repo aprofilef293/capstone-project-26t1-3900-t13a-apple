@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import testData from '../data/test_data.json';
 import * as api from '../lib/api';
 import { MultiDirectedGraph } from 'graphology';
+import { INITIAL_NODES } from '@/data/mockData';
 
 export interface GraphNode {
     id: string;
@@ -34,6 +35,7 @@ interface ExplorerState {
     setGraphData: (nodes: GraphNode[], edges: GraphEdge[]) => void;
     setSearchQuery: (query: string) => void;
     searchResults: GraphNode[];
+    searchResultsQuery: string;
     updateSearchResults: () => void;
     setViewLevel: (level: number) => void;
     fetchGraphData: () => Promise<void>;
@@ -140,8 +142,10 @@ export const useStore = create<ExplorerState>((set) => ({
     }),
     setSearchQuery: (query) => set({ searchQuery: query }),
     searchResults: [],
+    searchResultsQuery: '',
     updateSearchResults: async () => {
         try {
+            set({searchResultsQuery: useStore.getState().searchQuery});
             const response = await api.fetchGraphData(`/api/graph/search?q=${useStore.getState().searchQuery}`);
             const nodes = (response.nodes || []).map((n: { key: string; attributes?: Record<string, unknown> }) => ({
                 id: n.key,
@@ -157,7 +161,7 @@ export const useStore = create<ExplorerState>((set) => ({
         } catch (error) {
             console.error('Error getting search results', error);
             set({ importStatus: 'error', importError: String(error) });
-            set({ searchResults: [] });
+            set({ searchResults: INITIAL_NODES });
         }
     },
     setViewLevel: (level) => set({ viewLevel: level }),

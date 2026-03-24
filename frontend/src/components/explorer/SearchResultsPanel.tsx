@@ -14,7 +14,7 @@ function SearchResults({
     if (items.length === 0) return null;
 
     return (
-        <div className="space-y-1.5">
+        <div className="space-y-3">
             {items.map((item) => (
                 <div
                     key={item.id}
@@ -38,7 +38,7 @@ function SearchResults({
 }
 
 export function SearchResultsPanel() {
-    const { searchQuery, setSearchQuery, searchResults, setViewLevel, setSelectedNodeId, setInfoPanelMode } = useStore();
+    const { setSearchQuery, searchResults, searchResultsQuery, setViewLevel, setSelectedNodeId, setInfoPanelMode } = useStore();
 
     return (
         <div className="w-[400px] border-l border-sidebar-border bg-sidebar flex flex-col h-full shadow-xl z-20 transition-colors">
@@ -58,7 +58,7 @@ export function SearchResultsPanel() {
                         <X className="w-5 h-5" />
                     </button>
                 </div>
-                <span className="text-[12px] text-sidebar-foreground/70 font-mono tracking-wider mr-auto">Query: {searchQuery}</span>
+                <span className="text-[12px] text-sidebar-foreground/70 font-mono tracking-wider mr-auto">Query: {searchResultsQuery}</span>
             </div>
 
             <ScrollArea className="flex-1 min-h-0 pb-6 px-6 pt-4">
