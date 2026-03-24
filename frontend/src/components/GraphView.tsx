@@ -72,11 +72,11 @@ const GraphManager = forwardRef<GraphViewRef, unknown>((_, ref) => {
     const sigma = useSigma();
     const camera = useCamera({ duration: 250 });
     const registerEvents = useRegisterEvents();
-    const { nodes, edges, selectedNodeId, setSelectedNodeId, searchQuery, viewLevel, setIsNodeSelecting } = useStore();
+    const { nodes, edges, isMultiSelect, toggleNodeSelection, selectedNodeId, setSelectedNodeId, searchQuery, viewLevel, setIsNodeSelecting, selectedNodeIds } = useStore();
     const lastClickedNodeRef = useRef(false);
     const { resolvedTheme } = useTheme();
     const isDark = resolvedTheme === "dark";
-
+    
     // Defer the search query to prevent input lag on heavy graphs
     const deferredSearchQuery = useDeferredValue(searchQuery);
 
@@ -240,17 +240,7 @@ const GraphManager = forwardRef<GraphViewRef, unknown>((_, ref) => {
     useEffect(() => {
         const graph = sigma.getGraph();
 
-        const storeNodeIds = nodes.map(n => n.id);
-        const storeEdgeIds = edges.map(e => e.id);
-        const incomingNodeIds = new Set(storeNodeIds);
-        const incomingEdgeIds = new Set(storeEdgeIds);
-
-        graph.nodes().forEach(id => {
-            if (!incomingNodeIds.has(id)) graph.dropNode(id);
-        });
-        graph.edges().forEach(id => {
-            if (!incomingEdgeIds.has(id)) graph.dropEdge(id);
-        });
+        graph.clear();
 
         // Add or update nodes - only if data changed
         nodes.forEach((nodeItem) => {
@@ -280,11 +270,14 @@ const GraphManager = forwardRef<GraphViewRef, unknown>((_, ref) => {
         registerEvents({
             clickNode: ({ node }) => {
                 lastClickedNodeRef.current = true;
-                // const newId = setSelectedNodeId(node === selectedNodeId ? null : node);
-                const newId = node === selectedNodeId ? null : node;
-                setIsNodeSelecting(true);
                 setTimeout(() => {
-                    setSelectedNodeId(newId);
+                    if (isMultiSelect) {
+                        toggleNodeSelection(node);
+                    } else {
+                        setIsNodeSelecting(true);
+                        const newId = node === selectedNodeId ? null : node;
+                        setSelectedNodeId(newId);
+                    }
                 }, 0);
             },
             doubleClickNode: () => setSelectedNodeId(null),
@@ -297,11 +290,11 @@ const GraphManager = forwardRef<GraphViewRef, unknown>((_, ref) => {
             },
             doubleClickStage: () => setSelectedNodeId(null),
         });
-    }, [registerEvents, setSelectedNodeId, selectedNodeId, setIsNodeSelecting]);
+    }, [registerEvents, setSelectedNodeId, selectedNodeId, setIsNodeSelecting, isMultiSelect, toggleNodeSelection]);
 
     useEffect(() => {
         setIsNodeSelecting(false);
-    }, [selectedNodeId, setIsNodeSelecting]);
+    }, [selectedNodeId, selectedNodeIds, setIsNodeSelecting]);
 
     // Node & Edge Styling (Reducers)
     useEffect(() => {
@@ -309,7 +302,9 @@ const GraphManager = forwardRef<GraphViewRef, unknown>((_, ref) => {
 
         sigma.setSetting("nodeReducer", (node: string, data: NodeAttributes) => {
             const attrs = data as NodeAttributes;
-            const isSelected = node === selectedNodeId;
+            const isSelected = isMultiSelect 
+                ? selectedNodeIds.includes(node) 
+                : node === selectedNodeId;
             const size = attrs.size ?? GRAPH_CONFIG.DEFAULT_NODE_SIZE;
             const finalSize = isSelected ? size * GRAPH_CONFIG.SELECTED_SCALE : size;
 
@@ -365,7 +360,7 @@ const GraphManager = forwardRef<GraphViewRef, unknown>((_, ref) => {
             sigma.setSetting("nodeReducer", null);
             sigma.setSetting("edgeReducer", null);
         };
-    }, [selectedNodeId, nodeStyles, isolationData, isDark, sigma]);
+    }, [selectedNodeId, isMultiSelect, selectedNodeIds, nodeStyles, isolationData, isDark, sigma]);
 
     // Visibility Filtering
     useEffect(() => {

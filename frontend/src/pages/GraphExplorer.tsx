@@ -9,6 +9,7 @@ import { HierarchyView } from "../components/explorer/HierarchyView";
 import { NodeSizeFilter } from "../components/explorer/NodeSizeFilter";
 import { useStore } from "../store/useStore";
 import { SearchResultsPanel } from "@/components/explorer/SearchResultsPanel";
+import MultiSelectNodeSidebar from "../components/explorer/MultiSelectNodeSidebar";
 
 export function GraphExplorer() {
     const selectedNodeId = useStore((state) => state.selectedNodeId);
@@ -18,6 +19,8 @@ export function GraphExplorer() {
     const [viewMode, setViewMode] = useState<'graph' | 'hierarchy'>('graph');
     const graphViewRef = useRef<GraphViewRef>(null);
     const isNodeSelecting = useStore((state) => state.isNodeSelecting);
+    const isMultiSelect = useStore((state) => state.isMultiSelect);
+    const selectedNodeIds = useStore((state) => state.selectedNodeIds);
 
     useEffect(() => {
         fetchGraphData();
@@ -68,10 +71,12 @@ export function GraphExplorer() {
                     </div>
                 </div>
 
-                {/* Right Details Panel */}
-                {selectedNodeId && (
+                {/* Multi-select sidebar + Right details panel */}
+                {isMultiSelect && selectedNodeIds.length > 0 ? (
+                    <MultiSelectNodeSidebar />
+                ) : selectedNodeId ? (
                     <NodeDetailsPanel />
-                )}
+                ): null}
 
                 {/* Right Search Results Panel */}
                 {searchQuery && showSearchResults && (
