@@ -1,5 +1,5 @@
 import { ListTree, Network, type LucideIcon } from "lucide-react";
-import { useMemo, useDeferredValue, useState } from "react";
+import { useMemo, useDeferredValue } from "react";
 import { Button } from "../ui/button";
 import { cn } from "../../lib/utils";
 import { ExplorerSearch } from "./ExplorerSearch";
