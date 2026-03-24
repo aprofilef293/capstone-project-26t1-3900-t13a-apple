@@ -2,7 +2,6 @@ import { create } from 'zustand';
 import testData from '../data/test_data.json';
 import * as api from '../lib/api';
 import { MultiDirectedGraph } from 'graphology';
-import { INITIAL_NODES } from '@/data/mockData';
 
 export interface GraphNode {
     id: string;
@@ -50,6 +49,8 @@ interface ExplorerState {
     setImportProgress: (progress: number) => void;
     completeImport: () => void;
     failImport: (error: string) => void;
+    searchError: string | null;
+    setSearchError: (error: string | null) => void;
     // loading spinner
     isNodeSelecting: boolean;
     setIsNodeSelecting: (val: boolean) => void;
@@ -172,11 +173,11 @@ export const useStore = create<ExplorerState>((set) => ({
                 color: (n.attributes?.color as string) || '#3b82f6',
                 attributes: n.attributes || {}
             }));
-            set({ searchResults: nodes });
+            set({ searchResults: nodes, searchError: null });
         } catch (error) {
             console.error('Error getting search results', error);
-            set({ importStatus: 'error', importError: String(error) });
-            set({ searchResults: INITIAL_NODES });
+            set({ searchError: String(error) });
+            set({ searchResults: [] });
         }
     },
     setViewLevel: (level) => set({ viewLevel: level }),
@@ -330,6 +331,8 @@ export const useStore = create<ExplorerState>((set) => ({
     setImportProgress: (progress) => set({ importProgress: progress }),
     completeImport: () => set({ importStatus: 'complete', importProgress: 100 }),
     failImport: (error) => set({ importStatus: 'error', importError: error }),
+    searchError: null,
+    setSearchError: (error) => set({searchError: error}),
     // loading spinner
     isNodeSelecting: false,
     setIsNodeSelecting: (val) => set({ isNodeSelecting: val }),
