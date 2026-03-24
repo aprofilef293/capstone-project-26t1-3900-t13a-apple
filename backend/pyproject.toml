@@ -50,5 +50,8 @@ target-version = "py311"
 [tool.ruff.lint]
 select = ["E", "F", "W", "I"]
 
+[tool.ruff.lint.per-file-ignores]
+"app/services/langchain_search.py" = ["E501"]
+
 [tool.ruff.format]
 quote-style = "double"

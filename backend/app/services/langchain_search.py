@@ -3,8 +3,8 @@ import re
 from typing import Any, Dict, List
 
 from langchain_core.prompts import PromptTemplate
-from langchain_memgraph.chains.graph_qa import MemgraphQAChain
 from langchain_memgraph import MemgraphLangChain
+from langchain_memgraph.chains.graph_qa import MemgraphQAChain
 from langchain_openai import ChatOpenAI
 
 from app.config import Settings
@@ -95,7 +95,7 @@ Question: list terms from source file example.owl
 MATCH (n:OntologyTerm) WHERE n.source_file = "example.owl" RETURN n.id, n.name
 
 Question: {question}
-"""
+""",
 )
 
 
@@ -109,6 +109,7 @@ class _SanitizedMemgraph(MemgraphLangChain):
 
     def query(self, query: str, params: dict = {}) -> List[Dict[str, Any]]:
         return super().query(_clean_cypher(query), params)
+
 
 logger = logging.getLogger(__name__)
 
