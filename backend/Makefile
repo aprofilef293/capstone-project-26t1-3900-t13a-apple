@@ -1,4 +1,4 @@
-.PHONY: install dev format lint fix check test all docker-up docker-down clean loc
+.PHONY: install dev format lint fix check test all docker-up docker-down llm clean loc
 
 install:
 	poetry install
@@ -28,7 +28,10 @@ docker-up:
 	docker compose up --build
 
 docker-down:
-	docker compose down -v
+	docker compose down
+
+llm:
+	docker compose exec ollama ollama pull gemma3
 
 clean:
 	find . -type d -name __pycache__ -exec rm -rf {} +
