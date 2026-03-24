@@ -12,15 +12,17 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libopenblas-dev \
     && rm -rf /var/lib/apt/lists/*
 
+ENV PIP_DEFAULT_TIMEOUT=300
+ENV POETRY_HTTP_TIMEOUT=300
+
 RUN pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir poetry && \
-    poetry config virtualenvs.create false
+    poetry config virtualenvs.create false && \
+    poetry config installer.max-workers 1
 
 COPY pyproject.toml poetry.lock* ./
 
-RUN poetry add "pyfftw@latest" "numba-kdtree@latest" && \
-    poetry update && \
-    poetry install --no-interaction --no-ansi --only main
+RUN poetry install --no-interaction --no-ansi --only main
 
 COPY . .
 

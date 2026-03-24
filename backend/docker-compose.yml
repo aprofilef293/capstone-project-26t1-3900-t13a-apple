@@ -27,8 +27,9 @@ services:
       - MEMGRAPH_URI=bolt://memgraph:7687
       - MEMGRAPH_USER=memgraph
       - MEMGRAPH_PASSWORD=memgraph
-      - MEDGEMMA_API_URL=http://ollama:11434/v1
-      - MEDGEMMA_API_KEY=ollama
+      - LLM_API_URL=http://ollama:11434/v1
+      - LLM_API_KEY=ollama
+      - LLM_MODEL=gemma3
       - CORS_ORIGINS=["http://localhost:5173"]
     depends_on:
       - memgraph
