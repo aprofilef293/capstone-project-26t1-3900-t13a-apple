@@ -1,9 +1,19 @@
 import { useState, useMemo, useRef, useEffect } from "react";
 import { Search, X } from "lucide-react";
 import { useStore } from "../../store/useStore";
+import { Button } from "../ui/button";
 
 export function ExplorerSearch() {
-    const { searchQuery, setSearchQuery, setViewLevel, nodes, setSelectedNodeId } = useStore();
+    const { 
+        searchQuery, 
+        setSearchQuery, 
+        setViewLevel, 
+        nodes, 
+        setSelectedNodeId,
+        updateSearchResults,
+        setInfoPanelMode
+    } = useStore();
+    
     const [isOpen, setIsOpen] = useState(false);
     const wrapperRef = useRef<HTMLDivElement>(null);
 
@@ -18,8 +28,7 @@ export function ExplorerSearch() {
         return () => document.removeEventListener("mousedown", handleClickOutside);
     }, []);
 
-    // Calculate ranked search results based on the query
-    // Later will need to be updated to seamlessly support semantic, some thought will need to be put into the design
+    // Calculate ranked search results based on the query (Local filtering)
     const searchResults = useMemo(() => {
         if (!searchQuery.trim()) return [];
         const query = searchQuery.toLowerCase().trim();
@@ -30,7 +39,7 @@ export function ExplorerSearch() {
                 const id = node.id.toLowerCase();
 
                 let score = 0;
-                // Highest priority: Exect match
+                // Highest priority: Exact match
                 if (label === query || id === query) score = 4;
                 // High priority: Starts with query
                 else if (label.startsWith(query) || id.startsWith(query)) score = 3;
@@ -52,6 +61,14 @@ export function ExplorerSearch() {
         return results.slice(0, 50); // Limit results
     }, [nodes, searchQuery]);
 
+    const handleSearchTrigger = () => {
+        if (searchQuery.trim()) {
+            updateSearchResults();
+            setInfoPanelMode('search-results');
+            setIsOpen(false);
+        }
+    };
+
     return (
         <div ref={wrapperRef} className="relative flex-1 w-full max-w-xl pointer-events-auto mx-auto group">
             <div className="bg-sidebar/95 backdrop-blur-sm border border-sidebar-border rounded-lg p-1.5 flex items-center gap-2 shadow-sm transition-colors">
@@ -61,6 +78,11 @@ export function ExplorerSearch() {
                         type="text"
                         value={searchQuery}
                         onFocus={() => setIsOpen(true)}
+                        onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                                handleSearchTrigger();
+                            }
+                        }}
                         onChange={(e) => {
                             setSearchQuery(e.target.value);
                             setIsOpen(true);
@@ -70,18 +92,29 @@ export function ExplorerSearch() {
                         className="w-full bg-transparent border-none text-sm text-sidebar-foreground placeholder:text-sidebar-foreground/50 focus:outline-none focus:ring-0"
                     />
                     {searchQuery && (
-                        <button
+                        <Button
                             onClick={() => {
                                 setSearchQuery("");
                                 setIsOpen(false);
                                 setViewLevel(1);
+                                setInfoPanelMode('closed');
                             }}
-                            className="focus:outline-none"
+                            variant="ghost"
+                            size="sm"
+                            className="h-6 w-6 p-0 hover:bg-sidebar-accent"
                         >
                             <X className="w-4 h-4 text-sidebar-foreground/70 hover:text-sidebar-foreground transition-colors" />
-                        </button>
+                        </Button>
                     )}
                 </div>
+                <Button 
+                    onClick={handleSearchTrigger} 
+                    variant="ghost" 
+                    size="icon" 
+                    className="h-8 w-8 hover:bg-blue-500/10"
+                >
+                    <Search className="w-4 h-4 text-sidebar-foreground/70" />
+                </Button>
             </div>
 
             {/* Render dropdown if open and query is not empty */}
@@ -89,7 +122,7 @@ export function ExplorerSearch() {
                 <div className="absolute top-full left-0 right-0 mt-2 bg-sidebar border border-sidebar-border rounded-lg shadow-lg overflow-hidden z-[100] max-h-[400px] flex flex-col pointer-events-auto">
                     {searchResults.length === 0 ? (
                         <div className="p-4 text-center text-sm text-sidebar-foreground/70">
-                            No results found for "{searchQuery}"
+                            No quick matches for "{searchQuery}". Press Enter for deep search.
                         </div>
                     ) : (
                         <div className="overflow-y-auto py-2 custom-scrollbar">
@@ -128,3 +161,4 @@ export function ExplorerSearch() {
         </div>
     );
 }
+
