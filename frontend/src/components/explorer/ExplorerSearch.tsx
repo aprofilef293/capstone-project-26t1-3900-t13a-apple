@@ -4,16 +4,16 @@ import { useStore } from "../../store/useStore";
 import { Button } from "../ui/button";
 
 export function ExplorerSearch() {
-    const { 
-        searchQuery, 
-        setSearchQuery, 
-        setViewLevel, 
-        nodes, 
+    const {
+        searchQuery,
+        setSearchQuery,
+        setViewLevel,
+        nodes,
         setSelectedNodeId,
         updateSearchResults,
         setInfoPanelMode
     } = useStore();
-    
+
     const [isOpen, setIsOpen] = useState(false);
     const wrapperRef = useRef<HTMLDivElement>(null);
 
@@ -70,8 +70,8 @@ export function ExplorerSearch() {
     };
 
     return (
-        <div ref={wrapperRef} className="relative flex-1 w-full max-w-xl pointer-events-auto mx-auto group">
-            <div className="bg-sidebar/95 backdrop-blur-sm border border-sidebar-border rounded-lg p-1.5 flex items-center gap-2 shadow-sm transition-colors">
+        <div ref={wrapperRef} className="relative w-full max-w-lg pointer-events-auto mx-auto group">
+            <div className="w-full bg-sidebar/95 backdrop-blur-sm border border-sidebar-border rounded-lg p-1.5 flex items-center gap-2 shadow-sm transition-colors">
                 <div className="flex-1 flex items-center gap-2 px-3 h-8">
                     <Search className="w-4 h-4 text-sidebar-foreground/70" />
                     <input
@@ -107,10 +107,10 @@ export function ExplorerSearch() {
                         </Button>
                     )}
                 </div>
-                <Button 
-                    onClick={handleSearchTrigger} 
-                    variant="ghost" 
-                    size="icon" 
+                <Button
+                    onClick={handleSearchTrigger}
+                    variant="ghost"
+                    size="icon"
                     className="h-8 w-8 hover:bg-blue-500/10"
                 >
                     <Search className="w-4 h-4 text-sidebar-foreground/70" />
