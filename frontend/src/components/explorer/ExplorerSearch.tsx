@@ -1,5 +1,6 @@
 import { useState, useMemo, useRef, useEffect } from "react";
 import { Search, X } from "lucide-react";
+import Fuse from "fuse.js";
 import { useStore } from "../../store/useStore";
 import { Button } from "../ui/button";
 
@@ -28,38 +29,23 @@ export function ExplorerSearch() {
         return () => document.removeEventListener("mousedown", handleClickOutside);
     }, []);
 
-    // Calculate ranked search results based on the query (Local filtering)
+    // Build the Fuse index whenever nodes change
+    const fuse = useMemo(() => new Fuse(nodes, {
+        keys: [
+            { name: "label", weight: 0.7 },
+            { name: "id", weight: 0.3 },
+        ],
+        threshold: 0.4,       // 0 = exact, 1 = match anything; 0.4 is inbetween
+        includeScore: true,
+        minMatchCharLength: 1,
+        ignoreLocation: true,
+    }), [nodes]);
+
+    // Run the fuzzy search on every query change
     const searchResults = useMemo(() => {
         if (!searchQuery.trim()) return [];
-        const query = searchQuery.toLowerCase().trim();
-
-        const results = nodes
-            .map(node => {
-                const label = (node.label || node.id).toLowerCase();
-                const id = node.id.toLowerCase();
-
-                let score = 0;
-                // Highest priority: Exact match
-                if (label === query || id === query) score = 4;
-                // High priority: Starts with query
-                else if (label.startsWith(query) || id.startsWith(query)) score = 3;
-                // Medium priority: Contains query
-                else if (label.includes(query)) score = 2;
-                // Low priority: ID contains query
-                else if (id.includes(query)) score = 1;
-
-                return { node, score };
-            })
-            .filter(item => item.score > 0)
-            .sort((a, b) => {
-                // Sort by descending score
-                if (a.score !== b.score) return b.score - a.score;
-                // Tiebreaker: alphabetical by label
-                return (a.node.label || a.node.id).localeCompare(b.node.label || b.node.id);
-            });
-
-        return results.slice(0, 50); // Limit results
-    }, [nodes, searchQuery]);
+        return fuse.search(searchQuery).slice(0, 50).map(r => r.item);
+    }, [fuse, searchQuery]);
 
     const handleSearchTrigger = () => {
         if (searchQuery.trim()) {
@@ -73,7 +59,7 @@ export function ExplorerSearch() {
         <div ref={wrapperRef} className="relative w-full max-w-lg pointer-events-auto mx-auto group">
             <div className="w-full bg-sidebar/95 backdrop-blur-sm border border-sidebar-border rounded-lg p-1.5 flex items-center gap-2 shadow-sm transition-colors">
                 <div className="flex-1 flex items-center gap-2 px-3 h-8">
-                    <Search className="w-4 h-4 text-sidebar-foreground/70" />
+                    <Search className="w-4 h-4 text-sidebar-foreground/70 cursor-pointer hover:text-sidebar-foreground transition-colors" onClick={handleSearchTrigger} />
                     <input
                         type="text"
                         value={searchQuery}
@@ -126,7 +112,7 @@ export function ExplorerSearch() {
                         </div>
                     ) : (
                         <div className="overflow-y-auto py-2 custom-scrollbar">
-                            {searchResults.map(({ node }) => (
+                            {searchResults.map((node) => (
                                 <button
                                     key={node.id}
                                     onClick={() => {
