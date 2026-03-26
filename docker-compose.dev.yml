@@ -1,0 +1,48 @@
+services:
+  memgraph:
+    image: memgraph/memgraph
+    ports:
+      - "7687:7687"
+      - "7444:7444"
+    volumes:
+      - memgraph-data:/var/lib/memgraph
+      - memgraph-log:/var/log/memgraph
+    command: ["--log-level=TRACE"]
+    environment:
+      - MEMGRAPH_USER=memgraph
+      - MEMGRAPH_PASSWORD=memgraph
+
+  backend:
+    build:
+      context: ./backend
+      target: dev
+    ports:
+      - "8000:8000"
+    environment:
+      - MEMGRAPH_URI=bolt://memgraph:7687
+      - MEMGRAPH_USER=memgraph
+      - MEMGRAPH_PASSWORD=memgraph
+      - CORS_ORIGINS=["http://localhost:5173"]
+    depends_on:
+      - memgraph
+    volumes:
+      - ./backend:/app
+      - /app/.venv
+
+  frontend:
+    build:
+      context: ./frontend
+      target: dev
+    ports:
+      - "5173:5173"
+    environment:
+      - VITE_API_TARGET=http://backend:8000
+    depends_on:
+      - backend
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+
+volumes:
+  memgraph-data:
+  memgraph-log:

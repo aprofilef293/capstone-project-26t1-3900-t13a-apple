@@ -11,9 +11,13 @@ services:
     environment:
       - MEMGRAPH_USER=memgraph
       - MEMGRAPH_PASSWORD=memgraph
+    networks:
+      - capstone
 
   backend:
-    build: .
+    build:
+      context: .
+      target: dev
     ports:
       - "8000:8000"
     environment:
@@ -25,8 +29,15 @@ services:
       - memgraph
     volumes:
       - .:/app
-    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+      - /app/.venv
+    networks:
+      - capstone
 
 volumes:
   memgraph-data:
   memgraph-log:
+
+networks:
+  capstone:
+    name: capstone
+    driver: bridge
