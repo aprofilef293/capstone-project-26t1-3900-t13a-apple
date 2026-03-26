@@ -42,14 +42,14 @@ const MultiSelectNodeSidebar: React.FC = () => {
   );
 
   return (
-    <aside className="w-[400px] shrink-0 h-full overflow-hidden bg-sidebar/95 border-l border-sidebar-border shadow-lg z-30 flex flex-col p-4">
+    <aside className="w-[400px] shrink-0 h-full overflow-hidden bg-sidebar/95 border-l border-sidebar-border shadow-lg z-30 flex flex-col p-6">
       {/* Header */}
       <div className="flex items-start justify-between mb-4">
-        <div className="flex flex-col gap-1">
+        <div className="flex flex-col gap-3">
           <h2 className="text-lg font-semibold">
             {hasPath ? "Path" : "Selected Nodes"}
           </h2>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
             <Badge
               variant="secondary"
               className="bg-blue-500/10 text-blue-600 dark:text-blue-400 hover:bg-blue-500/20 border-blue-500/20 rounded font-mono font-medium text-[10px] px-2 py-0.5"
