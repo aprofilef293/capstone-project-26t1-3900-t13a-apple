@@ -12,13 +12,19 @@ import { SearchResultsPanel } from "@/components/explorer/SearchResultsPanel";
 import MultiSelectNodeSidebar from "../components/explorer/MultiSelectNodeSidebar";
 
 export function GraphExplorer() {
-    const { searchQuery, fetchGraphData, isNodeSelecting, selectedNodeIds, infoPanelMode } = useStore();
+    const { searchQuery, fetchGraphData, isNodeSelecting, selectedNodeIds, infoPanelMode,  isMultiSelect, fetchPath } = useStore();
     const [viewMode, setViewMode] = useState<'graph' | 'hierarchy'>('graph');
     const graphViewRef = useRef<GraphViewRef>(null);
 
     useEffect(() => {
         fetchGraphData();
     }, [fetchGraphData]);
+
+    useEffect(() => {
+        if (isMultiSelect && selectedNodeIds.length >= 2) {
+            fetchPath();
+        }
+    }, [isMultiSelect, selectedNodeIds, fetchPath]);
 
     return (
         <div className="flex flex-col h-full w-full relative">
