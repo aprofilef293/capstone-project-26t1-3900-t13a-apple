@@ -247,9 +247,9 @@ def get_shortest_path(
         return _build_graph_data_from_paths(records)
 
     cypher = (
-        f"MATCH p = shortestPath((a:OntologyTerm {{id: $source}})"
-        f"-[*..{max_depth}]-"
-        f"(b:OntologyTerm {{id: $target}})) "
+        f"MATCH p = (a:OntologyTerm {{id: $source}})"
+        f"-[*BFS ..{max_depth}]-"
+        f"(b:OntologyTerm {{id: $target}}) "
         "WITH nodes(p) AS ns, relationships(p) AS rs "
         "UNWIND range(0, size(rs)-1) AS i "
         "RETURN ns[i] AS n, rs[i] AS r, ns[i+1] AS m"
