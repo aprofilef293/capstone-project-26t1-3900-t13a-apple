@@ -204,6 +204,68 @@ def get_node_neighborhood(
 
 
 @router.get(
+    "/path",
+    response_model=GraphData,
+    summary="Shortest path between two nodes",
+    description="Return the shortest undirected path between two OntologyTerm nodes. "
+    "Returns 404 if either node does not exist, or 404 if no path is found.",
+    response_description="Subgraph containing all nodes and edges along the shortest path.",
+)
+def get_shortest_path(
+    request: Request,
+    source: str = Query(..., description="ID of the start node (e.g. GO:0008150)"),
+    target: str = Query(..., description="ID of the end node (e.g. GO:0003674)"),
+    max_depth: int = Query(
+        50,
+        ge=1,
+        le=50,
+        description="Maximum path length to search (1–50).",
+    ),
+):
+    """Return the shortest path between two OntologyTerm nodes.
+
+    Uses Memgraph's ``shortestPath`` to find the shortest undirected path
+    between *source* and *target*, bounded by *max_depth* hops.
+    """
+    mg = request.app.state.memgraph
+
+    check = mg.execute_read(
+        "MATCH (n:OntologyTerm) WHERE n.id IN [$source, $target] RETURN n.id AS id",
+        {"source": source, "target": target},
+    )
+    found_ids = {r["id"] for r in check}
+    if source not in found_ids:
+        raise HTTPException(status_code=404, detail=f"Node '{source}' not found")
+    if target not in found_ids:
+        raise HTTPException(status_code=404, detail=f"Node '{target}' not found")
+
+    if source == target:
+        records = mg.execute_read(
+            "MATCH (n:OntologyTerm {id: $id}) RETURN n, null AS r, null AS m",
+            {"id": source},
+        )
+        return _build_graph_data_from_paths(records)
+
+    cypher = (
+        f"MATCH p = (a:OntologyTerm {{id: $source}})"
+        f"-[*BFS ..{max_depth}]-"
+        f"(b:OntologyTerm {{id: $target}}) "
+        "WITH nodes(p) AS ns, relationships(p) AS rs "
+        "UNWIND range(0, size(rs)-1) AS i "
+        "RETURN ns[i] AS n, rs[i] AS r, ns[i+1] AS m"
+    )
+    records = mg.execute_read(cypher, {"source": source, "target": target})
+
+    if not records:
+        raise HTTPException(
+            status_code=404,
+            detail=f"No path found between '{source}' and '{target}' within {max_depth} hops",
+        )
+
+    return _build_graph_data_from_paths(records)
+
+
+@router.get(
     "/search",
     response_model=GraphData,
     summary="Search graph nodes",
