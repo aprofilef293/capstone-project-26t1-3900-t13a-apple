@@ -11,6 +11,8 @@ services:
     environment:
       - MEMGRAPH_USER=memgraph
       - MEMGRAPH_PASSWORD=memgraph
+    networks:
+      - capstone
 
   backend:
     build:
@@ -28,7 +30,14 @@ services:
     volumes:
       - .:/app
       - /app/.venv
+    networks:
+      - capstone
 
 volumes:
   memgraph-data:
   memgraph-log:
+
+networks:
+  capstone:
+    name: capstone
+    driver: bridge
