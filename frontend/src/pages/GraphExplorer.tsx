@@ -3,6 +3,7 @@ import { ZoomIn, ZoomOut, Maximize } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { ExplorerToolbar } from "../components/explorer/ExplorerNavigation";
 import { NodeDetailsPanel } from "../components/explorer/NodeDetailsPanel";
+import MultiSelectNodeSidebar from "../components/explorer/MultiSelectNodeSidebar";
 import { GraphView } from "../components/GraphView";
 import type { GraphViewRef } from "../components/GraphView";
 import { HierarchyView } from "../components/explorer/HierarchyView";
@@ -11,6 +12,8 @@ import { useStore } from "../store/useStore";
 
 export function GraphExplorer() {
     const selectedNodeId = useStore((state) => state.selectedNodeId);
+    const isMultiSelect = useStore((state) => state.isMultiSelect);
+    const selectedNodeIds = useStore((state) => state.selectedNodeIds);
     const fetchGraphData = useStore((state) => state.fetchGraphData);
     const [viewMode, setViewMode] = useState<'graph' | 'hierarchy'>('graph');
     const graphViewRef = useRef<GraphViewRef>(null);
@@ -66,6 +69,9 @@ export function GraphExplorer() {
                 </div>
 
                 {/* Right Details Panel */}
+                {isMultiSelect && selectedNodeIds.length > 0 && !selectedNodeId && (
+                    <MultiSelectNodeSidebar />
+                )}
                 {selectedNodeId && (
                     <NodeDetailsPanel />
                 )}
