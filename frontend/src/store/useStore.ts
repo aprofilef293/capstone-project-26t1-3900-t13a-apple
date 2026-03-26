@@ -392,10 +392,16 @@ export const useStore = create<ExplorerState>((set) => ({
         localStorage.setItem('selectedNodeIds', JSON.stringify([]));
         set({ selectedNodeIds: [], pathNodeIds: [], pathEdgeIds: [] });
     },
-    infoPanelMode: (
-        localStorage.getItem('isMultiSelect') === 'true' &&
-        JSON.parse(localStorage.getItem('selectedNodeIds') || '[]').length > 0
-    ) ? 'multi-select' : 'closed',
+    infoPanelMode: (() => {
+        try {
+            return (
+                localStorage.getItem('isMultiSelect') === 'true' &&
+                JSON.parse(localStorage.getItem('selectedNodeIds') || '[]').length > 0
+            ) ? 'multi-select' : 'closed';
+        } catch {
+            return 'closed';
+        }
+    })(),
     setInfoPanelMode: (mode) => {
         set({ infoPanelMode: mode });
         if (mode === 'closed' || mode === 'search-results') {
