@@ -8,6 +8,15 @@ export async function fetchGraphData(endpoint = '/api/graph/') {
     return response.json();
 }
 
+export async function fetchShortestPath(source: string, target: string) {
+    const response = await fetch(`/api/graph/path?source=${encodeURIComponent(source)}&target=${encodeURIComponent(target)}`);
+    if (response.status === 404) return null; // no path found
+    if (!response.ok) {
+        throw new Error(`Failed to fetch path: ${response.statusText}`);
+    }
+    return response.json();
+}
+
 // Can use to get upload/processing progress from backend
 export function listenToSSE(
     endpoint: string,

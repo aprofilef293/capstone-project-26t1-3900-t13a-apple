@@ -70,6 +70,7 @@ const GraphManager = forwardRef<GraphViewRef, unknown>((_, ref) => {
         nodes, edges, isMultiSelect,
         toggleNodeSelection, selectedNodeId, setSelectedNodeId,
         searchQuery, viewLevel, setIsNodeSelecting, selectedNodeIds,
+        pathNodeIds, pathEdgeIds,
     } = useStore();
     const lastClickedNodeRef = useRef(false);
     const { resolvedTheme } = useTheme();
@@ -170,7 +171,68 @@ const GraphManager = forwardRef<GraphViewRef, unknown>((_, ref) => {
     }, [selectedNodeId, sigma, communityIndex]);
 
 
+    // Multi-select: derive path sets from store (populated by backend API)
+    const multiSelectPathData = useMemo(() => {
+        if (!isMultiSelect || pathNodeIds.length === 0) return null;
+
+        const graph = sigma.getGraph();
+        const pathNodes = new Set<string>(pathNodeIds);
+        const pathEdgeSet = new Set<string>(pathEdgeIds);
+        const neighborNodes = new Set<string>();
+
+        for (const nodeId of pathNodes) {
+            if (!graph.hasNode(nodeId)) continue;
+            for (const nb of graph.neighbors(nodeId)) {
+                if (!pathNodes.has(nb)) neighborNodes.add(nb);
+            }
+        }
+
+        // Match backend path edges to sigma graph edges
+        const sigmaPathEdges = new Set<string>();
+        const pathNodeArr = Array.from(pathNodes);
+        for (let i = 0; i < pathNodeArr.length; i++) {
+            for (let j = i + 1; j < pathNodeArr.length; j++) {
+                const a = pathNodeArr[i], b = pathNodeArr[j];
+                if (!graph.hasNode(a) || !graph.hasNode(b)) continue;
+                for (const e of graph.edges(a, b)) sigmaPathEdges.add(e);
+                for (const e of graph.edges(b, a)) sigmaPathEdges.add(e);
+            }
+        }
+        for (const eId of pathEdgeSet) {
+            if (graph.hasEdge(eId)) sigmaPathEdges.add(eId);
+        }
+
+        return { pathNodes, pathEdgeIds: sigmaPathEdges, neighborNodes };
+    }, [isMultiSelect, pathNodeIds, pathEdgeIds, sigma, nodes]);
+
     const fitToView = useCallback(() => {
+        if (multiSelectPathData && isMultiSelect) {
+            const nodesToFit = [...multiSelectPathData.pathNodes, ...multiSelectPathData.neighborNodes];
+            let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+            let validNodesCount = 0;
+
+            for (const id of nodesToFit) {
+                const displayData = sigma.getNodeDisplayData(id) as { x: number, y: number } | undefined;
+                if (displayData && typeof displayData.x === "number" && !isNaN(displayData.x) &&
+                    typeof displayData.y === "number" && !isNaN(displayData.y)) {
+                    minX = Math.min(minX, displayData.x);
+                    maxX = Math.max(maxX, displayData.x);
+                    minY = Math.min(minY, displayData.y);
+                    maxY = Math.max(maxY, displayData.y);
+                    validNodesCount++;
+                }
+            }
+
+            if (validNodesCount > 0 && minX !== Infinity) {
+                const dx = Math.max(maxX - minX, 0.05);
+                const dy = Math.max(maxY - minY, 0.05);
+                const centerX = (minX + maxX) / 2;
+                const centerY = (minY + maxY) / 2;
+                const ratio = Math.max(0.01, Math.min(Math.max(dx, dy) * GRAPH_CONFIG.PADDING, 1.5));
+                sigma.getCamera().animate({ x: centerX, y: centerY, ratio }, { duration: GRAPH_CONFIG.ANIMATION_DURATION });
+                return;
+            }
+        }
         if (isolationData && selectedNodeId) {
             let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
             let validCount = 0;
@@ -202,7 +264,7 @@ const GraphManager = forwardRef<GraphViewRef, unknown>((_, ref) => {
             }
         }
         camera.reset({ duration: GRAPH_CONFIG.ANIMATION_DURATION });
-    }, [sigma, camera, isolationData, selectedNodeId]);
+    }, [sigma, camera, isolationData, selectedNodeId, multiSelectPathData, isMultiSelect]);
 
     useImperativeHandle(ref, () => ({
         zoomIn: camera.zoomIn,
@@ -293,6 +355,7 @@ const GraphManager = forwardRef<GraphViewRef, unknown>((_, ref) => {
         nodeStyles,
         visibleNodes: new Set<string>(),
         isolationData,
+        multiSelectPathData,
         isDark,
         // Edge endpoint cache to avoid graph.source()/target() per frame
         edgeEndpoints: new Map<string, { source: string; target: string }>(),
@@ -305,8 +368,9 @@ const GraphManager = forwardRef<GraphViewRef, unknown>((_, ref) => {
         stateRef.current.selectedNodeIds = selectedNodeIds;
         stateRef.current.nodeStyles = nodeStyles;
         stateRef.current.isolationData = isolationData;
+        stateRef.current.multiSelectPathData = multiSelectPathData;
         stateRef.current.isDark = isDark;
-    }, [selectedNodeId, isMultiSelect, selectedNodeIds, nodeStyles, isolationData, isDark]);
+    }, [selectedNodeId, isMultiSelect, selectedNodeIds, nodeStyles, isolationData, multiSelectPathData, isDark]);
 
     useEffect(() => {
         const graph = sigma.getGraph();
@@ -336,12 +400,18 @@ const GraphManager = forwardRef<GraphViewRef, unknown>((_, ref) => {
                 );
             }
 
+            // Multi-select path isolation
+            if (isMultiSelect && multiSelectPathData) {
+                isVisible = multiSelectPathData.pathNodes.has(id) ||
+                    (multiSelectPathData.neighborNodes.has(id) && level >= viewLevel);
+            }
+
             if (isVisible) visibleNodes.add(id);
         });
 
         stateRef.current.visibleNodes = visibleNodes;
         sigma.refresh();
-    }, [nodes, edges, deferredSearchQuery, viewLevel, selectedNodeId, isolationData, sigma]);
+    }, [nodes, edges, deferredSearchQuery, viewLevel, selectedNodeId, isolationData, isMultiSelect, multiSelectPathData, sigma]);
 
     useEffect(() => {
         const graph = sigma.getGraph();
@@ -353,7 +423,19 @@ const GraphManager = forwardRef<GraphViewRef, unknown>((_, ref) => {
                 : node === state.selectedNodeId;
 
             const size = Math.max(0.1, Number(data.size) || GRAPH_CONFIG.DEFAULT_NODE_SIZE);
-            const finalSize = isSelected ? size * GRAPH_CONFIG.SELECTED_SCALE : size;
+            let finalSize = isSelected ? size * GRAPH_CONFIG.SELECTED_SCALE : size;
+            let color = data.color;
+            let highlighted = isSelected;
+
+            // Multi-select path styling
+            if (state.isMultiSelect && state.multiSelectPathData) {
+                if (state.multiSelectPathData.pathNodes.has(node)) {
+                    finalSize = size * GRAPH_CONFIG.SELECTED_SCALE;
+                    highlighted = true;
+                } else if (state.multiSelectPathData.neighborNodes.has(node)) {
+                    color = adjustColorBrightness(color || "#888", state.isDark ? -30 : 30);
+                }
+            }
 
             const style = state.nodeStyles.get(node) ?? {};
 
@@ -362,7 +444,8 @@ const GraphManager = forwardRef<GraphViewRef, unknown>((_, ref) => {
                 ...data,
                 ...style,
                 size: finalSize,
-                highlighted: isSelected,
+                color,
+                highlighted,
                 zIndex: finalSize,
                 hidden: !state.visibleNodes.has(node),
             };
@@ -382,6 +465,20 @@ const GraphManager = forwardRef<GraphViewRef, unknown>((_, ref) => {
             }
 
             res.color = state.isDark ? EDGE_OPACITY_DARK : EDGE_OPACITY_LIGHT;
+
+            // Multi-select path edge styling
+            if (state.isMultiSelect && state.multiSelectPathData && graph.hasEdge(edge)) {
+                if (state.multiSelectPathData.pathEdgeIds.has(edge)) {
+                    res.color = "#fbbf24";
+                    res.size = 3;
+                } else if (state.multiSelectPathData.pathNodes.has(source) || state.multiSelectPathData.pathNodes.has(target)) {
+                    res.color = state.isDark ? "rgba(255,255,255,0.3)" : "rgba(0,0,0,0.3)";
+                    res.size = 1;
+                } else {
+                    res.color = state.isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.1)";
+                }
+                return res;
+            }
 
             if (state.selectedNodeId && graph.hasEdge(edge)) {
                 const selId = state.selectedNodeId;
