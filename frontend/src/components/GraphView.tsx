@@ -410,6 +410,7 @@ const GraphManager = forwardRef<GraphViewRef, unknown>((_, ref) => {
         });
 
         stateRef.current.visibleNodes = visibleNodes;
+        // update graph (note: this does not perform a hard refresh on the browser)
         sigma.refresh();
     }, [nodes, edges, deferredSearchQuery, viewLevel, selectedNodeId, isolationData, isMultiSelect, multiSelectPathData, sigma]);
 
