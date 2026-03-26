@@ -22,7 +22,6 @@ export function UploadBox({
     const clearSelectedNodes = useStore((s) => s.clearSelectedNodes);
 
     const handleUpload = () => {
-        navigate({ to: '/manager' });
         inputRef.current?.click()
     };
 

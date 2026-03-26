@@ -410,8 +410,9 @@ const GraphManager = forwardRef<GraphViewRef, unknown>((_, ref) => {
         });
 
         stateRef.current.visibleNodes = visibleNodes;
+        // update graph (note: this does not perform a hard refresh on the browser)
         sigma.refresh();
-    }, [deferredSearchQuery, viewLevel, selectedNodeId, isolationData, isMultiSelect, multiSelectPathData, sigma]);
+    }, [nodes, edges, deferredSearchQuery, viewLevel, selectedNodeId, isolationData, isMultiSelect, multiSelectPathData, sigma]);
 
     useEffect(() => {
         const graph = sigma.getGraph();
@@ -627,14 +628,7 @@ export const GraphView = forwardRef<GraphViewRef, unknown>((_, ref) => {
     return (
         <SigmaContainer
             graph={MultiDirectedGraph}
-            className="absolute inset-0"
-            style={{
-                width: "100%",
-                height: "100%",
-                backgroundColor: isDark ? "#000000" : "#ffffff",
-                backgroundImage: "radial-gradient(var(--color-border) 1px, transparent 1px)",
-                backgroundSize: "24px 24px",
-            }}
+            className={`absolute inset-0 w-full h-full ${isDark ? "!bg-black" : "!bg-white"} bg-[radial-gradient(var(--color-border)_1px,transparent_1px)] bg-[length:24px_24px]`}
             settings={sigmaSettings}
         >
             <GraphManager ref={ref} />
