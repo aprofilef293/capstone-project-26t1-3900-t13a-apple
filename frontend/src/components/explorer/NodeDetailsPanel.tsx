@@ -227,7 +227,7 @@ function AttributesSection({
 
 /* ── Main panel ── */
 export function NodeDetailsPanel() {
-    const { selectedNodeId, nodes, graph, prevNodes, setPrevNodes, setSelectedNodeId, setInfoPanelMode } = useStore();
+    const { selectedNodeId, nodes, graph, prevNodes, setPrevNodes, setSelectedNodeId, setInfoPanelMode, isMultiSelect, selectedNodeIds } = useStore();
     const node = nodes.find((n) => n.id === selectedNodeId);
 
     if (!node || !selectedNodeId) {
@@ -298,7 +298,14 @@ export function NodeDetailsPanel() {
             <div className="p-6 pb-4 border-b border-sidebar-border shadow-sm bg-sidebar/50">
                 <div className="flex items-center justify-between mb-3">
                     <button
-                        onClick={() => returnToPrevNode(prevNodes, setPrevNodes, setSelectedNodeId)}
+                        onClick={() => {
+                            if (isMultiSelect && selectedNodeIds.length > 0) {
+                                setSelectedNodeId(null);
+                                setInfoPanelMode('multi-select');
+                            } else {
+                                returnToPrevNode(prevNodes, setPrevNodes, setSelectedNodeId);
+                            }
+                        }}
                         className="px-2 pb-1 hover:bg-sidebar-accent border border-transparent hover:border-sidebar-border/50 rounded-md transition-all text-sidebar-foreground/50 hover:text-sidebar-foreground flex items-center justify-center cursor-pointer"
                         title="Go back"
                     >
