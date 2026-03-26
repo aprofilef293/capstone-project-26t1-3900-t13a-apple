@@ -100,13 +100,13 @@ const MultiSelectNodeSidebar: React.FC = () => {
               {selectedAttribute || "Select attribute"}
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent className="w-56">
+          <DropdownMenuContent className="w-[var(--radix-dropdown-menu-trigger-width)]">
             <DropdownMenuRadioGroup value={selectedAttribute} onValueChange={setSelectedAttribute}>
-              <DropdownMenuRadioItem value="id">id</DropdownMenuRadioItem>
+              <DropdownMenuRadioItem value="id" className="justify-start">id</DropdownMenuRadioItem>
               {attributeKeys
                 .filter((key) => key !== "id")
                 .map((key) => (
-                  <DropdownMenuRadioItem key={key} value={key}>
+                  <DropdownMenuRadioItem key={key} value={key} className="justify-start">
                     {key}
                   </DropdownMenuRadioItem>
                 ))}
