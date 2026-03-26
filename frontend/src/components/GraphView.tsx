@@ -341,7 +341,7 @@ const GraphManager = forwardRef<GraphViewRef, unknown>((_, ref) => {
 
         stateRef.current.visibleNodes = visibleNodes;
         sigma.refresh();
-    }, [deferredSearchQuery, viewLevel, selectedNodeId, isolationData, sigma]);
+    }, [nodes, edges, deferredSearchQuery, viewLevel, selectedNodeId, isolationData, sigma]);
 
     useEffect(() => {
         const graph = sigma.getGraph();
