@@ -384,7 +384,10 @@ export const useStore = create<ExplorerState>((set) => ({
         localStorage.setItem('selectedNodeIds', JSON.stringify([]));
         set({ selectedNodeIds: [], pathNodeIds: [], pathEdgeIds: [] });
     },
-    infoPanelMode: 'closed',
+    infoPanelMode: (
+        localStorage.getItem('isMultiSelect') === 'true' &&
+        JSON.parse(localStorage.getItem('selectedNodeIds') || '[]').length > 0
+    ) ? 'multi-select' : 'closed',
     setInfoPanelMode: (mode) => {
         set({ infoPanelMode: mode });
         if (mode === 'closed' || mode === 'search-results') {
