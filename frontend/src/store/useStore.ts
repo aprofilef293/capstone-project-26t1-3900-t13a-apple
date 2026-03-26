@@ -155,7 +155,13 @@ export const useStore = create<ExplorerState>((set) => ({
     setSelectedNodeId: (id) => {
         set({ selectedNodeId: id });
         updatePrevNodes(id);
-        if (id) useStore.getState().setInfoPanelMode('node-info');
+        // if (id) useStore.getState().setInfoPanelMode('node-info');
+        if (id) {
+            useStore.getState().clearSelectedNodes();
+            set({ isMultiSelect: false });
+            localStorage.setItem('isMultiSelect', 'false');
+            useStore.getState().setInfoPanelMode('node-info');
+        }
     },
     setGraphData: (nodes, edges) => set({
         nodes,
