@@ -3,22 +3,19 @@ import { ZoomIn, ZoomOut, Maximize } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { ExplorerToolbar } from "../components/explorer/ExplorerNavigation";
 import { NodeDetailsPanel } from "../components/explorer/NodeDetailsPanel";
-import MultiSelectNodeSidebar from "../components/explorer/MultiSelectNodeSidebar";
 import { GraphView } from "../components/GraphView";
 import type { GraphViewRef } from "../components/GraphView";
 import { HierarchyView } from "../components/explorer/HierarchyView";
 import { NodeSizeFilter } from "../components/explorer/NodeSizeFilter";
 import { useStore } from "../store/useStore";
+import { SearchResultsPanel } from "@/components/explorer/SearchResultsPanel";
+import MultiSelectNodeSidebar from "../components/explorer/MultiSelectNodeSidebar";
 
 export function GraphExplorer() {
-    const selectedNodeId = useStore((state) => state.selectedNodeId);
-    const isMultiSelect = useStore((state) => state.isMultiSelect);
-    const selectedNodeIds = useStore((state) => state.selectedNodeIds);
-    const fetchGraphData = useStore((state) => state.fetchGraphData);
+    const { searchQuery, fetchGraphData, isNodeSelecting, selectedNodeIds, infoPanelMode } = useStore();
     const [viewMode, setViewMode] = useState<'graph' | 'hierarchy'>('graph');
     const graphViewRef = useRef<GraphViewRef>(null);
-    const isNodeSelecting = useStore((state) => state.isNodeSelecting);
-    
+
     useEffect(() => {
         fetchGraphData();
     }, [fetchGraphData]);
@@ -68,12 +65,20 @@ export function GraphExplorer() {
                     </div>
                 </div>
 
-                {/* Right Details Panel */}
-                {isMultiSelect && selectedNodeIds.length > 0 && !selectedNodeId && (
+                {infoPanelMode === 'node-info' && (
+                    <NodeDetailsPanel />
+                )}
+
+                {infoPanelMode === 'multi-select'
+                && selectedNodeIds.length > 0
+                && (
                     <MultiSelectNodeSidebar />
                 )}
-                {selectedNodeId && (
-                    <NodeDetailsPanel />
+
+                {infoPanelMode === 'search-results'
+                && searchQuery
+                && (
+                    <SearchResultsPanel />
                 )}
             </div>
         </div>

@@ -38,10 +38,10 @@ def _ingest_terms(
         terms: Parsed ontology terms to insert.
         source_file: Original filename, stored on each node for provenance.
     """
-    mg.execute_write("STORAGE MODE IN_MEMORY_ANALYTICAL;")
-    mg.execute_write("DROP GRAPH;")
-    mg.execute_write("STORAGE MODE IN_MEMORY_TRANSACTIONAL;")
-    mg.execute_write("CREATE INDEX ON :OntologyTerm(id);")
+    mg.execute_write("STORAGE MODE IN_MEMORY_ANALYTICAL")
+    mg.execute_write("DROP GRAPH")
+    mg.execute_write("STORAGE MODE IN_MEMORY_TRANSACTIONAL")
+    mg.execute_write("CREATE INDEX ON :OntologyTerm(id)")
     term_dicts = [{**t.model_dump(), "source_file": source_file} for t in terms if not t.is_obsolete]
     batch_size = 5000
     for i in range(0, len(term_dicts), batch_size):

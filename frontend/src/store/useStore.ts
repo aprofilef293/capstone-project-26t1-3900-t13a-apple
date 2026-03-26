@@ -33,6 +33,9 @@ interface ExplorerState {
     setSelectedNodeId: (id: string | null) => void;
     setGraphData: (nodes: GraphNode[], edges: GraphEdge[]) => void;
     setSearchQuery: (query: string) => void;
+    searchResults: GraphNode[];
+    searchResultsQuery: string;
+    updateSearchResults: () => void;
     setViewLevel: (level: number) => void;
     fetchGraphData: () => Promise<void>;
     isGraphLoading: boolean;
@@ -46,6 +49,8 @@ interface ExplorerState {
     setImportProgress: (progress: number) => void;
     completeImport: () => void;
     failImport: (error: string) => void;
+    searchError: string | null;
+    setSearchError: (error: string | null) => void;
     // loading spinner
     isNodeSelecting: boolean;
     setIsNodeSelecting: (val: boolean) => void;
@@ -56,12 +61,8 @@ interface ExplorerState {
     setSelectedNodeIds: (ids: string[]) => void;
     toggleNodeSelection: (id: string) => void;
     clearSelectedNodes: () => void;
-    // shortest path
-    pathNodeIds: string[];
-    pathEdgeIds: string[];
-    pathLoading: boolean;
-    fetchPath: () => Promise<void>;
-    clearPath: () => void;
+    infoPanelMode: 'node-info' | 'search-results' | 'multi-select' | 'closed';
+    setInfoPanelMode: (mode: 'node-info' | 'search-results' | 'multi-select' | 'closed') => void;
 }
 
 // Convert Graphology JSON format to our store format
@@ -118,6 +119,21 @@ const updatePrevNodes = (id: string | null) => {
     }
 }
 
+// load persisted file info helper
+const getPersistedFileInfo = () => {
+    try {
+        const errorRaw = localStorage.getItem('importError');
+        return {
+            fileName: localStorage.getItem('importFileName') || null,
+            importStatus: (localStorage.getItem('importStatus') as ExplorerState['importStatus']) || 'idle',
+            importDate: localStorage.getItem('importDate') ? new Date(localStorage.getItem('importDate')!) : null,
+            importError: errorRaw ? JSON.parse(errorRaw) : null,
+        };
+    } catch {
+        return { fileName: null, importStatus: 'idle' as const, importDate: null, importError: null };
+    }
+};
+
 export const useStore = create<ExplorerState>((set) => ({
     nodes: [],
     edges: [],
@@ -133,6 +149,7 @@ export const useStore = create<ExplorerState>((set) => ({
     setSelectedNodeId: (id) => {
         set({ selectedNodeId: id });
         updatePrevNodes(id);
+        if (id) useStore.getState().setInfoPanelMode('node-info');
     },
     setGraphData: (nodes, edges) => set({
         nodes,
@@ -140,6 +157,29 @@ export const useStore = create<ExplorerState>((set) => ({
         graph: createGraph(nodes, edges)
     }),
     setSearchQuery: (query) => set({ searchQuery: query }),
+    searchResults: [],
+    searchResultsQuery: '',
+    updateSearchResults: async () => {
+        try {
+            set({searchResultsQuery: useStore.getState().searchQuery});
+            const response = await api.fetchGraphData(`/api/graph/search?q=${useStore.getState().searchQuery}`);
+            const nodes = (response.nodes || []).map((n: { key: string; attributes?: Record<string, unknown> }) => ({
+                id: n.key,
+                label: (n.attributes?.label as string) || n.key,
+                type: (n.attributes?.nodeType as string) || 'Data',
+                x: typeof n.attributes?.x === 'number' ? n.attributes.x : (Math.random() - 0.5) * 10,
+                y: typeof n.attributes?.y === 'number' ? n.attributes.y : (Math.random() - 0.5) * 10,
+                size: (n.attributes?.size as number) || 10,
+                color: (n.attributes?.color as string) || '#3b82f6',
+                attributes: n.attributes || {}
+            }));
+            set({ searchResults: nodes, searchError: null });
+        } catch (error) {
+            console.error('Error getting search results', error);
+            set({ searchError: String(error) });
+            set({ searchResults: [] });
+        }
+    },
     setViewLevel: (level) => set({ viewLevel: level }),
     fetchGraphData: async () => {
         set({ isGraphLoading: true });
@@ -179,14 +219,21 @@ export const useStore = create<ExplorerState>((set) => ({
         }
     },
     // File import
-    fileName: null,
-    importStatus: 'idle',
+    fileName: getPersistedFileInfo().fileName,
+    importStatus: getPersistedFileInfo().importStatus === 'loading' 
+        ? 'error'  // file upload interrupted by refresh
+        : getPersistedFileInfo().importStatus,
     importProgress: 0,
-    importDate: null,
-    importError: null,
+    importDate: getPersistedFileInfo().importDate,
+    importError: getPersistedFileInfo().importError,
     startFileImport: async (file) => {
-        set({ fileName: file.name, importStatus: 'loading', importProgress: 0, importDate: new Date() });
-
+        const now = new Date();
+        localStorage.setItem('importFileName', file.name);
+        localStorage.setItem('importStatus', 'loading');
+        localStorage.setItem('importDate', now.toISOString());
+        localStorage.setItem('importError', JSON.stringify(null)); 
+        set({ fileName: file.name, importStatus: 'loading', importProgress: 0, importDate: now, importError: null }); 
+        
         useStore.getState().setIsMultiSelect(false);
         // simulate progress bar slowly moving toward the ceiling between real events
         let ceiling = 24;
@@ -211,7 +258,6 @@ export const useStore = create<ExplorerState>((set) => ({
                 let errorMsg = response.statusText;
                 let errorCode = response.status;
                 try {
-                    
                     const errorBody = await response.json();
                     // Try to extract a message from the error body
                     if (errorBody.detail) {
@@ -224,6 +270,8 @@ export const useStore = create<ExplorerState>((set) => ({
                 } catch (e) {
                     // fallback to statusText (ie. errorMsg)
                 }
+                localStorage.setItem('importStatus', 'error');
+                localStorage.setItem('importError', JSON.stringify({ message: errorMsg, code: errorCode }));
                 set({ importStatus: 'error', importError: { message: errorMsg, code: errorCode } });
                 clearInterval(ticker);
                 return;
@@ -252,6 +300,8 @@ export const useStore = create<ExplorerState>((set) => ({
                             ? data.error
                             : data.error.message ?? data.error.detail ?? JSON.stringify(data.error);
                         const errorCode = data.error_code ?? undefined;
+                        localStorage.setItem('importStatus', 'error');
+                        localStorage.setItem('importError', JSON.stringify({ message: errorMsg, code: errorCode }));
                         set({ importStatus: 'error', importError: { message: errorMsg, code: errorCode } });
                         return;
                     }
@@ -265,6 +315,7 @@ export const useStore = create<ExplorerState>((set) => ({
                         clearInterval(ticker);
                         set({ importProgress: 99, importStatus: 'loading' });
                         await useStore.getState().fetchGraphData();
+                        localStorage.setItem('importStatus', 'complete');
                         set({ importStatus: 'complete', importProgress: 100 });
                     }
                 }
@@ -272,12 +323,16 @@ export const useStore = create<ExplorerState>((set) => ({
         } catch (error) {
             clearInterval(ticker);
             console.error('Error importing file', error);
+            localStorage.setItem('importStatus', 'error');
+            localStorage.setItem('importError', JSON.stringify({ message: String(error) }));
             set({ importStatus: 'error', importError: { message: String(error) } });
         }
     },
     setImportProgress: (progress) => set({ importProgress: progress }),
     completeImport: () => set({ importStatus: 'complete', importProgress: 100 }),
     failImport: (error) => set({ importStatus: 'error', importError: error }),
+    searchError: null,
+    setSearchError: (error) => set({searchError: error}),
     // loading spinner
     isNodeSelecting: false,
     setIsNodeSelecting: (val) => set({ isNodeSelecting: val }),
@@ -286,78 +341,35 @@ export const useStore = create<ExplorerState>((set) => ({
     setIsMultiSelect: (val: boolean) => {
         localStorage.setItem('isMultiSelect', String(val));
         set({ isMultiSelect: val, ...(val && { selectedNodeId: null }) });
+        if (!val) set({ selectedNodeIds: [] });
     },
-    selectedNodeIds: [],
-    setSelectedNodeIds: (ids: string[]) => set({ selectedNodeIds: ids }),
-    toggleNodeSelection: (id: string) => {
-        const state = useStore.getState();
-        let newIds: string[];
-        if (!state.isMultiSelect) {
-            newIds = [id];
-        } else if (state.selectedNodeIds.includes(id)) {
-            newIds = state.selectedNodeIds.filter(nid => nid !== id);
-        } else if (state.selectedNodeIds.length < 10) {
-            newIds = [...state.selectedNodeIds, id];
-        } else {
-            return;
-        }
-        set({ selectedNodeIds: newIds });
-        // Fetch path from backend when 2+ nodes selected
-        if (newIds.length >= 2) {
-            setTimeout(() => useStore.getState().fetchPath(), 0);
-        } else {
-            set({ pathNodeIds: [], pathEdgeIds: [] });
-        }
+    selectedNodeIds: JSON.parse(localStorage.getItem('selectedNodeIds') || '[]'),
+    setSelectedNodeIds: (ids: string[]) => {
+    localStorage.setItem('selectedNodeIds', JSON.stringify(ids));
+    set({ selectedNodeIds: ids });
     },
-    clearSelectedNodes: () => set({ selectedNodeIds: [], pathNodeIds: [], pathEdgeIds: [] }),
-    // shortest path
-    pathNodeIds: [],
-    pathEdgeIds: [],
-    pathLoading: false,
-    clearPath: () => set({ pathNodeIds: [], pathEdgeIds: [] }),
-    fetchPath: async () => {
-        const { selectedNodeIds } = useStore.getState();
-        if (selectedNodeIds.length < 2) {
-            set({ pathNodeIds: [], pathEdgeIds: [] });
-            return;
-        }
-
-        set({ pathLoading: true });
-        try {
-            const allNodeIds: string[] = [];
-            const allEdgeIds: string[] = [];
-            const seenNodes = new Set<string>();
-            const seenEdges = new Set<string>();
-
-            // Fetch path between each pair
-            for (let i = 0; i < selectedNodeIds.length; i++) {
-                for (let j = i + 1; j < selectedNodeIds.length; j++) {
-                    const data = await api.fetchShortestPath(selectedNodeIds[i], selectedNodeIds[j]);
-                    if (data) {
-                        for (const n of (data.nodes || [])) {
-                            const id = n.key;
-                            if (!seenNodes.has(id)) {
-                                seenNodes.add(id);
-                                allNodeIds.push(id);
-                            }
-                        }
-                        for (const e of (data.edges || [])) {
-                            const id = e.key || e.id;
-                            if (id && !seenEdges.has(id)) {
-                                seenEdges.add(id);
-                                allEdgeIds.push(id);
-                            }
-                        }
-                    }
-                }
-            }
-
-            set({ pathNodeIds: allNodeIds, pathEdgeIds: allEdgeIds });
-        } catch (error) {
-            console.error('Error fetching shortest path:', error);
-            set({ pathNodeIds: [], pathEdgeIds: [] });
-        } finally {
-            set({ pathLoading: false });
-        }
+    toggleNodeSelection: (id: string) => set((state) => {
+    let newIds;
+    if (!state.isMultiSelect) {
+        newIds = [id];
+    } else if (state.selectedNodeIds.includes(id)) {
+        newIds = state.selectedNodeIds.filter(nid => nid !== id);
+    } else if (state.selectedNodeIds.length < 10) {
+        newIds = [...state.selectedNodeIds, id];
+    } else {
+        newIds = state.selectedNodeIds;
+    }
+    localStorage.setItem('selectedNodeIds', JSON.stringify(newIds));
+    return { selectedNodeIds: newIds };
+    }),
+    clearSelectedNodes: () => {
+        localStorage.setItem('selectedNodeIds', JSON.stringify([]));
+        set({ selectedNodeIds: [] });
+    },
+    infoPanelMode: 'closed',
+    setInfoPanelMode: (mode) => {
+        set({ infoPanelMode: mode });
+        if (mode === 'closed' || mode === 'search-results') useStore.getState().setSelectedNodeId(null);
+        set({ isMultiSelect: mode === 'multi-select' });
     },
 }));
