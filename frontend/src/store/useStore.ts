@@ -77,7 +77,7 @@ const mapTestData = () => {
     const rawEdges = data.edges;
     const rawNodes = data.nodes;
 
-    // 2. Map nodes directly from backend payload attributes
+    // Map nodes directly from backend payload attributes
     const nodes = rawNodes.map((n) => {
         const label = (n.attributes?.label as string) || n.key;
 
@@ -144,7 +144,7 @@ export const useStore = create<ExplorerState>((set) => ({
     nodes: [],
     edges: [],
     graph: new MultiDirectedGraph(),
-    selectedNodeId: null, // Removed default selection to avoid missing node errors
+    selectedNodeId: null,
     searchQuery: "",
     viewLevel: 1,
     isGraphLoading: false,
@@ -347,7 +347,7 @@ export const useStore = create<ExplorerState>((set) => ({
     setIsMultiSelect: (val: boolean) => {
         localStorage.setItem('isMultiSelect', String(val));
         set({ isMultiSelect: val, ...(val && { selectedNodeId: null }) });
-        if (!val) set({ selectedNodeIds: [] });
+        // if (!val) set({ selectedNodeIds: [] });
     },
     selectedNodeIds: JSON.parse(localStorage.getItem('selectedNodeIds') || '[]'),
     setSelectedNodeIds: (ids: string[]) => {
