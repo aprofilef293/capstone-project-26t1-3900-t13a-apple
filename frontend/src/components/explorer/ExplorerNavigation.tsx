@@ -78,8 +78,8 @@ export function ExplorerToolbar({
 
     return (
         <div className="absolute top-6 left-6 right-6 z-20 flex items-start justify-between gap-4 pointer-events-none transition-all duration-300">
-            <div className="flex flex-col gap-3">
-            <div className="flex gap-4 w-xl">
+            <div className="flex flex-col gap-3 flex-1">
+                <div className="flex gap-4 w-full">
                     {/* View Toggles */}
                     <div className="flex shrink-0 bg-sidebar/95 backdrop-blur-sm border border-sidebar-border rounded-lg p-1.5 shadow-sm pointer-events-auto">
                         {VIEW_MODES.map(({ mode, label, icon: Icon }) => (
@@ -100,25 +100,25 @@ export function ExplorerToolbar({
                     </div>
 
                     {/* Search Bar */}
-                <div className="flex-1 flex justify-center min-w-0">
-                    <ExplorerSearch />
-                </div>
+                    <div className="flex-1 flex justify-center min-w-0">
+                        <ExplorerSearch />
+                    </div>
                 </div>
 
                 {/* Toggle Switch */}
-                    <div className="flex items-center self-start bg-sidebar/95 backdrop-blur-sm border border-sidebar-border rounded-lg p-3 shadow-sm pointer-events-auto gap-2 mt-1 w-fit">
-                        <span className="text-xs font-medium text-sidebar-foreground/80">Multi-Select</span>
-                        <Switch
-                            checked={isMultiSelect}
-                            onCheckedChange={(val) => {
-                                setIsMultiSelect(val);
-                                setSelectedNodeIds([]);
-                                if (val) setInfoPanelMode('multi-select');
-                                if (!val) setInfoPanelMode('closed');
-                            }}
-                            aria-label="Toggle multi-select mode"
-                        />
-                    </div>
+                <div className="flex items-center self-start bg-sidebar/95 backdrop-blur-sm border border-sidebar-border rounded-lg p-3 shadow-sm pointer-events-auto gap-2 mt-1 w-fit">
+                    <span className="text-xs font-medium text-sidebar-foreground/80">Multi-Select</span>
+                    <Switch
+                        checked={isMultiSelect}
+                        onCheckedChange={(val) => {
+                            setIsMultiSelect(val);
+                            setSelectedNodeIds([]);
+                            if (val) setInfoPanelMode('multi-select');
+                            if (!val) setInfoPanelMode('closed');
+                        }}
+                        aria-label="Toggle multi-select mode"
+                    />
+                </div>
             </div>
 
             {/* Metrics Badge */}
