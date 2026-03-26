@@ -47,7 +47,7 @@ const MultiSelectNodeSidebar: React.FC = () => {
       <div className="flex items-start justify-between mb-4">
         <div className="flex flex-col gap-3">
           <h2 className="text-lg font-semibold">
-            {hasPath ? "Path" : "Selected Nodes"}
+            {hasPath ? "Path between Nodes" : "Selected Nodes"}
           </h2>
           <div className="flex items-center gap-3">
             <Badge
@@ -150,7 +150,7 @@ const MultiSelectNodeSidebar: React.FC = () => {
                         e.stopPropagation();
                         toggleNodeSelection(node.id);
                       }}
-                      className="p-0.5 rounded text-gray-300 hover:text-red-500 hover:bg-red-50 dark:text-zinc-600 dark:hover:text-red-400 dark:hover:bg-red-900/20 transition-colors"
+                      className="p-0.5 rounded text-gray-300 hover:text-red-500 dark:text-zinc-600 dark:hover:text-red-400 transition-colors"
                       title="Remove from selection"
                     >
                       <X className="w-3 h-3" />
