@@ -11,7 +11,8 @@ export function ExplorerSearch() {
         setViewLevel,
         nodes,
         setSelectedNodeId,
-        updateSearchResults,
+        setSearchResultsFuzzyTitle,
+        setSearchResultsDescription,
         setInfoPanelMode
     } = useStore();
 
@@ -43,7 +44,11 @@ export function ExplorerSearch() {
     // Search Method: fuzzy on names, exact substring on descriptions/synonyms
     const { fuzzyResults, descriptionResults } = useMemo(() => {
         const q = searchQuery.trim();
-        if (!q) return { fuzzyResults: [], descriptionResults: [] };
+        if (!q) {
+            setSearchResultsFuzzyTitle([]);
+            setSearchResultsDescription([]);
+            return { fuzzyResults: [], descriptionResults: [] };
+        }
 
         // Fuzzy search on label / id - ie can have typos
         const fuzzyHits = fuse.search(q).slice(0, 50).map(r => r.item);
@@ -64,6 +69,8 @@ export function ExplorerSearch() {
             }).slice(0, 20)
             : [];
 
+        setSearchResultsFuzzyTitle(fuzzyHits);
+        setSearchResultsDescription(descHits);
         return { fuzzyResults: fuzzyHits, descriptionResults: descHits };
     }, [fuse, nodes, searchQuery]);
 
@@ -74,7 +81,6 @@ export function ExplorerSearch() {
 
     const handleSearchTrigger = () => {
         if (searchQuery.trim()) {
-            updateSearchResults();
             setInfoPanelMode('search-results');
             setIsOpen(false);
         }
