@@ -15,12 +15,16 @@ import { FullScreenSpinner } from "@/components/ui/spinner";
 export function GraphExplorer() {
     const { searchQuery, fetchGraphData, isNodeSelecting, selectedNodeIds, infoPanelMode,  isMultiSelect, fetchPath } = useStore();
     const [viewMode, setViewMode] = useState<'graph' | 'hierarchy'>('graph');
-    const isGraphLoading = useStore(state => state.isGraphLoading);
+    // const isGraphLoading = useStore(state => state.isGraphLoading);
     const graphViewRef = useRef<GraphViewRef>(null);
+    const isInitialGraphLoading = useStore(state => state.isInitialGraphLoading);
+    const nodes = useStore(state => state.nodes);
 
     useEffect(() => {
-        fetchGraphData();
-    }, [fetchGraphData]);
+        if (nodes.length === 0) {
+            fetchGraphData(true);
+        }
+    }, [fetchGraphData, nodes.length]);
 
     useEffect(() => {
         if (isMultiSelect && selectedNodeIds.length >= 2) {
@@ -30,7 +34,7 @@ export function GraphExplorer() {
 
     return (
         <div className="flex flex-col h-full w-full relative">
-            {isGraphLoading && <FullScreenSpinner />}
+            {isInitialGraphLoading && <FullScreenSpinner />}
             <div className="flex-1 flex relative overflow-hidden bg-background">
                 {/* Main Content Area */}
                 <div className="flex-1 relative flex flex-col">

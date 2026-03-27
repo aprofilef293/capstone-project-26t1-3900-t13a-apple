@@ -39,8 +39,9 @@ interface ExplorerState {
     setSearchResultsDescription: (results: GraphNode[]) => void,
     searchResults: GraphNode[];
     setViewLevel: (level: number) => void;
-    fetchGraphData: () => Promise<void>;
+    fetchGraphData: (isInitial?: boolean) => Promise<void>;
     isGraphLoading: boolean;
+    isInitialGraphLoading: boolean;
     // File import
     fileName: string | null;
     importStatus: 'idle' | 'waiting' | 'loading' | 'complete' | 'error';
@@ -150,6 +151,7 @@ export const useStore = create<ExplorerState>((set) => ({
     searchQuery: "",
     viewLevel: 1,
     isGraphLoading: false,
+    isInitialGraphLoading: false,
     prevNodes: [],
     setPrevNodes: (prevNodes) => {
         set({ prevNodes });
@@ -176,8 +178,13 @@ export const useStore = create<ExplorerState>((set) => ({
     setSearchResultsDescription: (results) => set({ searchResultsDescription: results }),
     searchResults: [],
     setViewLevel: (level) => set({ viewLevel: level }),
-    fetchGraphData: async () => {
-        set({ isGraphLoading: true });
+    fetchGraphData: async (isInitial = false) => {
+        if (isInitial) {
+            set({ isInitialGraphLoading: true });
+        } else {
+            set({ isGraphLoading: true });
+        }
+
         try {
             const data = await api.fetchGraphData("/api/graph/");
             const nodes = (data.nodes || []).map((n: { key: string; attributes?: Record<string, unknown> }) => ({
@@ -210,7 +217,11 @@ export const useStore = create<ExplorerState>((set) => ({
                 graph: createGraph(nodes, edges)
             });
         } finally {
-            set({ isGraphLoading: false });
+            if (isInitial) {
+                set({ isInitialGraphLoading: false });
+            } else {
+                set({ isGraphLoading: false });
+            }
         }
     },
     // File import
