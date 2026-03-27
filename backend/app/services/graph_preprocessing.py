@@ -4,11 +4,11 @@ import math
 import os
 import random
 import sys
-import tempfile
 
 import networkx as nx
 import numpy as np
-import scipy.io
+import scipy.sparse
+import scipy.spatial
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -33,28 +33,102 @@ except ImportError as e:
 
 class OntologyGraphPreprocessor:
     """
-    A script that applies PageRank, Louvain communities, View Levels, and t-FDP layouts to standard graph data.
+    Applies PageRank, Louvain communities, view levels, and t-FDP layout
+    to standard graph data, then resolves node overlaps.
     """
 
-    def __init__(self, t_fdp_multiplier: float = 150.0, orbit_padding: float = 300.0):
+    def __init__(
+        self,
+        t_fdp_multiplier: float = 150.0,
+        orbit_padding: float = 300.0,
+        gap: float = 5.0,
+        overlap_multiplier: float = 1.2,
+    ):
         self.t_fdp_multiplier = t_fdp_multiplier
         self.orbit_padding = orbit_padding
+        self.gap = gap                          # minimum pixels between node surfaces
+        self.overlap_multiplier = overlap_multiplier
+
+    # ------------------------------------------------------------------
+    # Helpers
+    # ------------------------------------------------------------------
 
     @staticmethod
     def _generate_distinct_colours(n: int) -> list[str]:
         if n == 0:
             return []
         colours = [
-            "#{:02x}{:02x}{:02x}".format(*(int(c * 255) for c in colorsys.hsv_to_rgb(i / n, 0.7, 0.85)))
+            "#{:02x}{:02x}{:02x}".format(
+                *(int(c * 255) for c in colorsys.hsv_to_rgb(i / n, 0.7, 0.85))
+            )
             for i in range(n)
         ]
         random.shuffle(colours)
         return colours
 
-    def preprocess(self, terms: list[OntologyTerm], relations: list[OntologyRelation]) -> list[OntologyTerm]:
-        logger.info("[Preprocessor] Building Graph structures...")
-        G = nx.Graph()
+    @staticmethod
+    def _resolve_overlaps(
+        pos: np.ndarray,
+        sizes: np.ndarray,
+        gap: float,
+        overlap_multiplier: float,
+        max_iter: int = 50,
+    ) -> np.ndarray:
+       
+        radii = sizes * overlap_multiplier
 
+        # Upper bound on largest possible pair interaction distance
+        max_search = float(np.max(radii) * 2 + gap + 1.0)
+
+        for _ in range(max_iter):
+            tree = scipy.spatial.KDTree(pos)
+            pairs = tree.query_pairs(r=max_search, output_type="ndarray")
+            if len(pairs) == 0:
+                break
+
+            i_idx = pairs[:, 0]
+            j_idx = pairs[:, 1]
+
+            vec = pos[i_idx] - pos[j_idx]          # shape (P, 2)
+            dist = np.linalg.norm(vec, axis=1)      # shape (P,)
+
+            min_dist = radii[i_idx] + radii[j_idx] + gap
+            mask = dist < min_dist
+            if not np.any(mask):
+                break
+
+            # Keep only truly overlapping pairs
+            i_idx, j_idx = i_idx[mask], j_idx[mask]
+            vec, dist, min_dist = vec[mask], dist[mask], min_dist[mask]
+            ri, rj = radii[i_idx], radii[j_idx]
+
+            zero = dist == 0
+            if np.any(zero):
+                vec[zero] = np.random.uniform(-0.1, 0.1, (zero.sum(), 2))
+                dist[zero] = np.linalg.norm(vec[zero], axis=1)
+                dist[dist == 0] = 1e-6
+
+            overlap = min_dist - dist
+            total_r = ri + rj
+            total_r[total_r == 0] = 1.0
+
+            # Larger nodes move less (weighted by the partner's radius)
+            unit = vec / dist[:, None]
+            push_i = unit * (overlap * rj / total_r * 0.9)[:, None]
+            push_j = -unit * (overlap * ri / total_r * 0.9)[:, None]
+
+            disp = np.zeros_like(pos)
+            np.add.at(disp, i_idx, push_i)
+            np.add.at(disp, j_idx, push_j)
+            pos += disp
+
+        return pos
+
+    def preprocess(
+        self, terms: list[OntologyTerm], relations: list[OntologyRelation]
+    ) -> list[OntologyTerm]:
+        logger.info("[Preprocessor] Building graph structures...")
+        G = nx.Graph()
         term_map = {term.id: term for term in terms}
 
         G.add_edges_from((rel.subject_id, rel.object_id) for rel in relations)
@@ -62,22 +136,21 @@ class OntologyGraphPreprocessor:
 
         # PageRank & Sizes
         logger.info("[Preprocessor] Calculating PageRank sizes...")
-        pr = nx.pagerank(G)
+        pr = nx.pagerank(G, tol=1e-4)
         pr_values = list(pr.values())
         min_pr, max_pr = min(pr_values), max(pr_values)
         pr_range = max_pr - min_pr + 1e-9
 
         sorted_pr = sorted(pr.items(), key=lambda x: x[1])
         num_nodes = len(sorted_pr)
-        num_nodes_minus_1 = max(1, num_nodes - 1)
+        denom = max(1, num_nodes - 1)
 
-        global_pr_ranks = {}
+        global_pr_ranks: dict[int, float] = {}
         for rank, (node_id, score) in enumerate(sorted_pr):
             term = term_map[node_id]
             term.size = round(1.0 + 14.0 * (score - min_pr) / pr_range, 2)
-            term.percentile_rank = round(rank / num_nodes_minus_1, 4)
+            term.percentile_rank = round(rank / denom, 4)
             term.pagerank_score = score
-
             global_pr_ranks[node_id] = (num_nodes - 1 - rank) / num_nodes
 
         # Louvain & View Levels
@@ -87,39 +160,35 @@ class OntologyGraphPreprocessor:
         degrees = dict(G.degree)
 
         for i, community_nodes in enumerate(communities):
-            community_colour = palette[i]
-            # Sort community nodes by PR descending
-            comm_nodes_pr = sorted(((n, pr[n]) for n in community_nodes), key=lambda x: x[1], reverse=True)
-            n_comm_nodes = len(comm_nodes_pr)
-
-            for local_rank, (node_id, _) in enumerate(comm_nodes_pr):
+            colour = palette[i]
+            comm_sorted = sorted(
+                ((n, pr[n]) for n in community_nodes), key=lambda x: x[1], reverse=True
+            )
+            n_comm = len(comm_sorted)
+            for local_rank, (node_id, _) in enumerate(comm_sorted):
                 term = term_map[node_id]
-                term.colour = community_colour
+                term.colour = colour
 
-                rank_pct = local_rank / n_comm_nodes if n_comm_nodes > 1 else 0
+                rank_pct = local_rank / n_comm if n_comm > 1 else 0
                 global_pct = global_pr_ranks[node_id]
                 degree = degrees.get(node_id, 0)
 
-                # View Level Logic
                 if degree <= 1:
-                    view_level = 1
-                elif global_pct <= 0.01 or (local_rank == 0 and n_comm_nodes > 10):
-                    view_level = 5
-                elif global_pct <= 0.05 or (rank_pct <= 0.05 and n_comm_nodes > 5):
-                    view_level = 4
+                    term.viewLevel = 1
+                elif global_pct <= 0.01 or (local_rank == 0 and n_comm > 10):
+                    term.viewLevel = 5
+                elif global_pct <= 0.05 or (rank_pct <= 0.05 and n_comm > 5):
+                    term.viewLevel = 4
                 elif global_pct <= 0.15 or rank_pct <= 0.20:
-                    view_level = 3
+                    term.viewLevel = 3
                 else:
-                    view_level = 2
-
-                term.viewLevel = view_level
+                    term.viewLevel = 2
 
         # t-FDP Layout
         logger.info("[Preprocessor] Executing t-FDP Layout...")
         isolates = list(nx.isolates(G))
         connected_nodes = [n for n in G.nodes() if n not in isolates]
 
-        # Early return if no edges exist at all
         if not connected_nodes:
             logger.info("[Preprocessor] No connected nodes found. Randomizing isolated positions.")
             for node_id in isolates:
@@ -128,70 +197,56 @@ class OntologyGraphPreprocessor:
                 term.y = round(random.uniform(-50, 50), 2)
             return terms
 
-        adj = nx.to_scipy_sparse_array(G, nodelist=connected_nodes, dtype=float)
-
-        fd, temp_mtx = tempfile.mkstemp(suffix=".mtx")
-        os.close(fd)
+        adj = nx.to_scipy_sparse_array(
+            G, nodelist=connected_nodes, format="csr", dtype=float
+        )
 
         try:
-            scipy.io.mmwrite(temp_mtx, adj)
             solver = tFDP(algo="ibFFT_CPU")
-            solver.readgraph(temp_mtx)
+            solver.graph = scipy.sparse.tril(adj).tocsr()
+            solver.edgesrc = adj.indptr
+            solver.edgetgt = adj.indices
             pos, _ = solver.optimization()
             final_pos = pos * self.t_fdp_multiplier
-
-            for idx, node_id in enumerate(connected_nodes):
-                term = term_map[node_id]
-                term.x = round(float(final_pos[idx, 0]), 2)
-                term.y = round(float(final_pos[idx, 1]), 2)
-
         except Exception as e:
-            logger.error(f"[Preprocessor] t-FDP execution failed: {e}. Falling back to spring layout.")
-            fallback_pos = nx.spring_layout(G.subgraph(connected_nodes), scale=self.t_fdp_multiplier)
-            for node_id, coords in fallback_pos.items():
-                term = term_map[node_id]
-                term.x = round(float(coords[0]), 2)
-                term.y = round(float(coords[1]), 2)
+            logger.error(f"[Preprocessor] t-FDP execution failed: {e}")
+            raise RuntimeError(f"t-FDP execution failed: {e}") from e
 
-            final_pos = np.array([[term_map[n].x, term_map[n].y] for n in connected_nodes])
+        # Overlap Resolution
+        logger.info("[Preprocessor] Resolving node overlaps...")
+        sizes = np.array([term_map[n].size for n in connected_nodes], dtype=float)
+        final_pos = self._resolve_overlaps(
+            final_pos, sizes, self.gap, self.overlap_multiplier
+        )
 
-        finally:
-            if os.path.exists(temp_mtx):
-                os.remove(temp_mtx)
+        for idx, node_id in enumerate(connected_nodes):
+            term = term_map[node_id]
+            term.x = round(float(final_pos[idx, 0]), 2)
+            term.y = round(float(final_pos[idx, 1]), 2)
 
-        # Isolated Nodes Orbit
+        # Isolated Nodes – concentric orbit rings
         if isolates:
-            logger.info(f"[Preprocessor] Positioning {len(isolates)} isolated nodes into orbit...")
-            center_x = float(np.mean(final_pos[:, 0]))
-            center_y = float(np.mean(final_pos[:, 1]))
-
-            distances = np.linalg.norm(final_pos - [center_x, center_y], axis=1)
-            orbit_radius = float(np.max(distances)) + self.orbit_padding
-
+            logger.info(f"[Preprocessor] Placing {len(isolates)} isolated nodes in orbit...")
+            cx = float(np.mean(final_pos[:, 0]))
+            cy = float(np.mean(final_pos[:, 1]))
+            orbit_r = float(np.max(np.linalg.norm(final_pos - [cx, cy], axis=1))) + self.orbit_padding
             spacing = 150
-            nodes_placed = 0
-            n_isolates = len(isolates)
+            placed = 0
+            n_iso = len(isolates)
 
-            while nodes_placed < n_isolates:
-                circumference = 2 * math.pi * orbit_radius
-                nodes_in_this_ring = max(1, int(circumference / spacing))
-                nodes_to_place = min(nodes_in_this_ring, n_isolates - nodes_placed)
-
-                angle_step = 2 * math.pi / nodes_to_place if nodes_to_place > 1 else 0
-
-                # angle/coordinate calculations
-                angles = np.arange(nodes_to_place) * angle_step
-                xs = center_x + orbit_radius * np.cos(angles)
-                ys = center_y + orbit_radius * np.sin(angles)
-
-                for i in range(nodes_to_place):
-                    node_id = isolates[nodes_placed]
-                    term = term_map[node_id]
-                    term.x = round(float(xs[i]), 2)
-                    term.y = round(float(ys[i]), 2)
-                    nodes_placed += 1
-
-                orbit_radius += spacing
+            while placed < n_iso:
+                slots = max(1, int(2 * math.pi * orbit_r / spacing))
+                batch = min(slots, n_iso - placed)
+                angles = np.arange(batch) * (2 * math.pi / batch if batch > 1 else 0)
+                xs = cx + orbit_r * np.cos(angles)
+                ys = cy + orbit_r * np.sin(angles)
+                for k in range(batch):
+                    term = term_map[isolates[placed]]
+                    term.x = round(float(xs[k]), 2)
+                    term.y = round(float(ys[k]), 2)
+                    placed += 1
+                orbit_r += spacing
 
         logger.info("[Preprocessor] Graph preprocessing complete.")
+        terms.sort(key=lambda t: t.size, reverse=True)
         return terms
