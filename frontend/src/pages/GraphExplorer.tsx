@@ -10,10 +10,12 @@ import { NodeSizeFilter } from "../components/explorer/NodeSizeFilter";
 import { useStore } from "../store/useStore";
 import { SearchResultsPanel } from "@/components/explorer/SearchResultsPanel";
 import MultiSelectNodeSidebar from "../components/explorer/MultiSelectNodeSidebar";
+import { FullScreenSpinner } from "@/components/ui/spinner";
 
 export function GraphExplorer() {
     const { searchQuery, fetchGraphData, isNodeSelecting, selectedNodeIds, infoPanelMode,  isMultiSelect, fetchPath } = useStore();
     const [viewMode, setViewMode] = useState<'graph' | 'hierarchy'>('graph');
+    const isGraphLoading = useStore(state => state.isGraphLoading);
     const graphViewRef = useRef<GraphViewRef>(null);
 
     useEffect(() => {
@@ -28,6 +30,7 @@ export function GraphExplorer() {
 
     return (
         <div className="flex flex-col h-full w-full relative">
+            {isGraphLoading && <FullScreenSpinner />}
             <div className="flex-1 flex relative overflow-hidden bg-background">
                 {/* Main Content Area */}
                 <div className="flex-1 relative flex flex-col">
