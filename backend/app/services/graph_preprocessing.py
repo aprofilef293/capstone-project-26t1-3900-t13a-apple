@@ -46,7 +46,7 @@ class OntologyGraphPreprocessor:
     ):
         self.t_fdp_multiplier = t_fdp_multiplier
         self.orbit_padding = orbit_padding
-        self.gap = gap                          # minimum pixels between node surfaces
+        self.gap = gap  # minimum pixels between node surfaces
         self.overlap_multiplier = overlap_multiplier
 
     # ------------------------------------------------------------------
@@ -58,9 +58,7 @@ class OntologyGraphPreprocessor:
         if n == 0:
             return []
         colours = [
-            "#{:02x}{:02x}{:02x}".format(
-                *(int(c * 255) for c in colorsys.hsv_to_rgb(i / n, 0.7, 0.85))
-            )
+            "#{:02x}{:02x}{:02x}".format(*(int(c * 255) for c in colorsys.hsv_to_rgb(i / n, 0.7, 0.85)))
             for i in range(n)
         ]
         random.shuffle(colours)
@@ -74,7 +72,7 @@ class OntologyGraphPreprocessor:
         overlap_multiplier: float,
         max_iter: int = 50,
     ) -> np.ndarray:
-       
+
         radii = sizes * overlap_multiplier
 
         # Upper bound on largest possible pair interaction distance
@@ -89,8 +87,8 @@ class OntologyGraphPreprocessor:
             i_idx = pairs[:, 0]
             j_idx = pairs[:, 1]
 
-            vec = pos[i_idx] - pos[j_idx]          # shape (P, 2)
-            dist = np.linalg.norm(vec, axis=1)      # shape (P,)
+            vec = pos[i_idx] - pos[j_idx]  # shape (P, 2)
+            dist = np.linalg.norm(vec, axis=1)  # shape (P,)
 
             min_dist = radii[i_idx] + radii[j_idx] + gap
             mask = dist < min_dist
@@ -124,9 +122,7 @@ class OntologyGraphPreprocessor:
 
         return pos
 
-    def preprocess(
-        self, terms: list[OntologyTerm], relations: list[OntologyRelation]
-    ) -> list[OntologyTerm]:
+    def preprocess(self, terms: list[OntologyTerm], relations: list[OntologyRelation]) -> list[OntologyTerm]:
         logger.info("[Preprocessor] Building graph structures...")
         G = nx.Graph()
         term_map = {term.id: term for term in terms}
@@ -161,9 +157,7 @@ class OntologyGraphPreprocessor:
 
         for i, community_nodes in enumerate(communities):
             colour = palette[i]
-            comm_sorted = sorted(
-                ((n, pr[n]) for n in community_nodes), key=lambda x: x[1], reverse=True
-            )
+            comm_sorted = sorted(((n, pr[n]) for n in community_nodes), key=lambda x: x[1], reverse=True)
             n_comm = len(comm_sorted)
             for local_rank, (node_id, _) in enumerate(comm_sorted):
                 term = term_map[node_id]
@@ -197,9 +191,7 @@ class OntologyGraphPreprocessor:
                 term.y = round(random.uniform(-50, 50), 2)
             return terms
 
-        adj = nx.to_scipy_sparse_array(
-            G, nodelist=connected_nodes, format="csr", dtype=float
-        )
+        adj = nx.to_scipy_sparse_array(G, nodelist=connected_nodes, format="csr", dtype=float)
 
         try:
             solver = tFDP(algo="ibFFT_CPU")
@@ -215,9 +207,7 @@ class OntologyGraphPreprocessor:
         # Overlap Resolution
         logger.info("[Preprocessor] Resolving node overlaps...")
         sizes = np.array([term_map[n].size for n in connected_nodes], dtype=float)
-        final_pos = self._resolve_overlaps(
-            final_pos, sizes, self.gap, self.overlap_multiplier
-        )
+        final_pos = self._resolve_overlaps(final_pos, sizes, self.gap, self.overlap_multiplier)
 
         for idx, node_id in enumerate(connected_nodes):
             term = term_map[node_id]
