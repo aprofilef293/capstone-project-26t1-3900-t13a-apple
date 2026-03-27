@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { useStore } from "../../store/useStore";
 import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
-import { Trash, X, ChevronRight, Loader2, ChevronDown } from "lucide-react";
+import { RefreshCcw, X, ChevronRight, Loader2, ChevronDown } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -203,17 +203,17 @@ const MultiSelectNodeSidebar: React.FC = () => {
       </div>
 
       {/* Footer */}
-      <div className="mt-auto flex justify-start pt-4">
-        <button
-          className="flex items-center gap-1 text-xs p-1.5 rounded text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:text-zinc-500 dark:hover:text-zinc-300 dark:hover:bg-zinc-800 transition-colors"
+      <div className="mt-auto flex justify-center pt-4">
+        <Button
+          variant="secondary"
+          className="w-full text-s p-5"
           onClick={() => {
             clearSelectedNodes();
-            setInfoPanelMode("closed");
           }}
           title="Clear selection"
         >
-          <Trash className="w-4 h-4" />
-        </button>
+          <RefreshCcw className="w-4 h-4" /> Clear Selection
+        </Button>
       </div>
     </aside>
   );
