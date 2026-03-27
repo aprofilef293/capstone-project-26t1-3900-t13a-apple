@@ -1,0 +1,13 @@
+services:
+  llm-server:
+    build: .
+    ports:
+      - "11434:11434"
+    environment:
+      - LLM_MODEL=${LLM_MODEL:-gemma3}
+    volumes:
+      - ollama-data:/root/.ollama
+    restart: unless-stopped
+
+volumes:
+  ollama-data:

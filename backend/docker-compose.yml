@@ -14,13 +14,6 @@ services:
     networks:
       - capstone
 
-  ollama:
-    image: ollama/ollama:latest
-    ports:
-      - "11434:11434"
-    volumes:
-      - ollama-data:/root/.ollama
-
   backend:
     build:
       context: .
@@ -31,13 +24,12 @@ services:
       - MEMGRAPH_URI=bolt://memgraph:7687
       - MEMGRAPH_USER=memgraph
       - MEMGRAPH_PASSWORD=memgraph
-      - LLM_API_URL=http://ollama:11434/v1
-      - LLM_API_KEY=ollama
-      - LLM_MODEL=gemma3
+      - LLM_API_URL=${LLM_API_URL:-http://host.docker.internal:11434/v1}
+      - LLM_API_KEY=${LLM_API_KEY:-ollama}
+      - LLM_MODEL=${LLM_MODEL:-gemma3}
       - CORS_ORIGINS=["http://localhost:5173"]
     depends_on:
       - memgraph
-      - ollama
     volumes:
       - .:/app
       - /app/.venv
@@ -46,7 +38,6 @@ services:
 
 volumes:
   memgraph-data:
-  ollama-data:
   memgraph-log:
 
 networks:
