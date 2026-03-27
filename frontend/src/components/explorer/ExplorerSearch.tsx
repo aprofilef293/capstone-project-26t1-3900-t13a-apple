@@ -1,32 +1,190 @@
+import { useState, useMemo, useRef, useEffect } from "react";
 import { Search, X } from "lucide-react";
+import Fuse from "fuse.js";
 import { useStore } from "../../store/useStore";
+import { Button } from "../ui/button";
 
 export function ExplorerSearch() {
-    const { searchQuery, setSearchQuery, setViewLevel } = useStore();
+    const {
+        searchQuery,
+        setSearchQuery,
+        setViewLevel,
+        nodes,
+        setSelectedNodeId,
+        setSearchResultsFuzzyTitle,
+        setSearchResultsDescription,
+        setInfoPanelMode
+    } = useStore();
+
+    const [isOpen, setIsOpen] = useState(false);
+    const wrapperRef = useRef<HTMLDivElement>(null);
+
+    // Handle outside clicks to close the dropdown
+    useEffect(() => {
+        function handleClickOutside(event: MouseEvent) {
+            if (wrapperRef.current && !wrapperRef.current.contains(event.target as Node)) {
+                setIsOpen(false);
+            }
+        }
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => document.removeEventListener("mousedown", handleClickOutside);
+    }, []);
+
+    const fuse = useMemo(() => new Fuse(nodes, {
+        keys: [
+            { name: "label", weight: 0.7 },
+            { name: "id", weight: 0.3 },
+        ],
+        threshold: 0.4,       // 0 = exact, 1 = match anything; 0.4 is inbetween
+        includeScore: true,
+        minMatchCharLength: 1,
+        ignoreLocation: true,
+    }), [nodes]);
+
+    // Search Method: fuzzy on names, exact substring on descriptions/synonyms
+    const { fuzzyResults, descriptionResults } = useMemo(() => {
+        const q = searchQuery.trim();
+        if (!q) {
+            setSearchResultsFuzzyTitle([]);
+            setSearchResultsDescription([]);
+            return { fuzzyResults: [], descriptionResults: [] };
+        }
+
+        // Fuzzy search on label / id - ie can have typos
+        const fuzzyHits = fuse.search(q).slice(0, 50).map(r => r.item);
+        const fuzzyIds = new Set(fuzzyHits.map(n => n.id));
+
+        // Exact substring search on definition + synonyms
+        // Only runs if query is at least 3 chars to reduce matches
+        const descHits = q.length >= 3
+            ? nodes.filter(node => {
+                if (fuzzyIds.has(node.id)) return false; // already in fuzzy results
+                const ql = q.toLowerCase();
+                const def = ((node.attributes.definition as string) ?? "").toLowerCase();
+                const syns: string[] = (node.attributes.synonyms as string[]) ?? [];
+                return (
+                    def.includes(ql) ||
+                    syns.some(s => s.toLowerCase().includes(ql))
+                );
+            }).slice(0, 20)
+            : [];
+
+        setSearchResultsFuzzyTitle(fuzzyHits);
+        setSearchResultsDescription(descHits);
+        return { fuzzyResults: fuzzyHits, descriptionResults: descHits };
+    }, [fuse, nodes, searchQuery]);
+
+    const searchResults = useMemo(
+        () => [...fuzzyResults, ...descriptionResults],
+        [fuzzyResults, descriptionResults]
+    );
+
+    const handleSearchTrigger = () => {
+        if (searchQuery.trim()) {
+            setInfoPanelMode('search-results');
+            setIsOpen(false);
+        }
+    };
 
     return (
-        <div className="flex-1 w-full max-w-xl bg-sidebar/95 backdrop-blur-sm border border-sidebar-border rounded-lg p-1.5 flex items-center gap-2 pointer-events-auto shadow-sm transition-colors mx-auto">
-            <div className="flex-1 flex items-center gap-2 px-3 h-8">
-                <Search className="w-4 h-4 text-sidebar-foreground/70" />
-                <input
-                    type="text"
-                    value={searchQuery}
-                    onChange={(e) => {
-                        setSearchQuery(e.target.value);
-                        if (e.target.value) setViewLevel(1);
-                    }}
-                    placeholder="Search nodes..."
-                    className="w-full bg-transparent border-none text-sm text-sidebar-foreground placeholder:text-sidebar-foreground/50 focus:outline-none focus:ring-0"
-                />
+        <div ref={wrapperRef} className="relative w-full max-w-lg pointer-events-auto mx-auto group">
+            <div className="w-full bg-sidebar/95 backdrop-blur-sm border border-sidebar-border rounded-lg p-1.5 flex items-center gap-2 shadow-sm transition-colors">
+                <div className="flex-1 flex items-center gap-2 px-3 h-8">
+                    <input
+                        type="text"
+                        value={searchQuery}
+                        onFocus={() => setIsOpen(true)}
+                        onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                                handleSearchTrigger();
+                            }
+                        }}
+                        onChange={(e) => {
+                            setSearchQuery(e.target.value);
+                            setIsOpen(true);
+                            if (e.target.value) setViewLevel(1);
+                        }}
+                        placeholder="Search nodes..."
+                        className="w-full bg-transparent border-none text-sm text-sidebar-foreground placeholder:text-sidebar-foreground/50 focus:outline-none focus:ring-0"
+                    />
+                </div>
                 {searchQuery && (
-                    <button onClick={() => {
-                        setSearchQuery("");
-                        setViewLevel(1);
-                    }} className="focus:outline-none">
+                    <Button
+                        onClick={() => {
+                            setSearchQuery("");
+                            setIsOpen(false);
+                            setViewLevel(1);
+                            setInfoPanelMode('closed');
+                        }}
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 w-6 p-0 hover:bg-sidebar-accent"
+                    >
                         <X className="w-4 h-4 text-sidebar-foreground/70 hover:text-sidebar-foreground transition-colors" />
-                    </button>
+                    </Button>
                 )}
+                <Button
+                    onClick={handleSearchTrigger}
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 hover:bg-blue-500/10"
+                >
+                    <Search className="w-4 h-4 text-sidebar-foreground/70" />
+                </Button>
             </div>
+
+            {/* Render dropdown if open and query is not empty */}
+            {isOpen && searchQuery.trim() && (
+                <div className="absolute top-full left-0 right-0 mt-2 bg-sidebar border border-sidebar-border rounded-lg shadow-lg overflow-hidden z-[100] max-h-[400px] flex flex-col pointer-events-auto">
+                    {searchResults.length === 0 ? (
+                        <div className="p-4 text-center text-sm text-sidebar-foreground/70">
+                            No quick matches for "{searchQuery}". Press Enter for deep search.
+                        </div>
+                    ) : (
+                        <div className="overflow-y-auto py-2 custom-scrollbar">
+                            {searchResults.map((node) => {
+                                const isDescMatch = !fuzzyResults.some(r => r.id === node.id);
+                                return (
+                                    <button
+                                        key={node.id}
+                                        onClick={() => {
+                                            setSelectedNodeId(node.id);
+                                            setIsOpen(false);
+                                        }}
+                                        className="w-full text-left px-4 py-2 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors text-sm flex items-center gap-3"
+                                    >
+                                        <div
+                                            className="w-2.5 h-2.5 rounded-full shrink-0 shadow-sm"
+                                            style={{ backgroundColor: node.color }}
+                                        />
+                                        <div className="min-w-0 flex-1">
+                                            <div className="font-medium text-sidebar-foreground truncate" title={node.label}>
+                                                {node.label || node.id}
+                                            </div>
+                                            {node.label && node.id !== node.label && (
+                                                <div className="text-xs text-sidebar-foreground/50 truncate max-w-full" title={node.id}>
+                                                    ID: {node.id}
+                                                </div>
+                                            )}
+                                        </div>
+                                        <div className="flex items-center gap-1.5 shrink-0">
+                                            {isDescMatch && (
+                                                <div className="px-1.5 py-0.5 rounded bg-amber-500/20 text-[10px] uppercase font-semibold text-amber-600 dark:text-amber-400">
+                                                    desc
+                                                </div>
+                                            )}
+                                            <div className="px-1.5 py-0.5 rounded bg-sidebar-accent/50 text-[10px] uppercase font-semibold text-sidebar-foreground/60">
+                                                {node.type || 'Node'}
+                                            </div>
+                                        </div>
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    )}
+                </div>
+            )}
         </div>
     );
 }
+

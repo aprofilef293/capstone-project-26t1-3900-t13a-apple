@@ -8,20 +8,23 @@ import type { GraphViewRef } from "../components/GraphView";
 import { HierarchyView } from "../components/explorer/HierarchyView";
 import { NodeSizeFilter } from "../components/explorer/NodeSizeFilter";
 import { useStore } from "../store/useStore";
+import { SearchResultsPanel } from "@/components/explorer/SearchResultsPanel";
 import MultiSelectNodeSidebar from "../components/explorer/MultiSelectNodeSidebar";
 
 export function GraphExplorer() {
-    const selectedNodeId = useStore((state) => state.selectedNodeId);
-    const fetchGraphData = useStore((state) => state.fetchGraphData);
+    const { searchQuery, fetchGraphData, isNodeSelecting, selectedNodeIds, infoPanelMode,  isMultiSelect, fetchPath } = useStore();
     const [viewMode, setViewMode] = useState<'graph' | 'hierarchy'>('graph');
     const graphViewRef = useRef<GraphViewRef>(null);
-    const isNodeSelecting = useStore((state) => state.isNodeSelecting);
-    const isMultiSelect = useStore((state) => state.isMultiSelect);
-    const selectedNodeIds = useStore((state) => state.selectedNodeIds);
-    
+
     useEffect(() => {
         fetchGraphData();
     }, [fetchGraphData]);
+
+    useEffect(() => {
+        if (isMultiSelect && selectedNodeIds.length >= 2) {
+            fetchPath();
+        }
+    }, [isMultiSelect, selectedNodeIds, fetchPath]);
 
     return (
         <div className="flex flex-col h-full w-full relative">
@@ -68,12 +71,21 @@ export function GraphExplorer() {
                     </div>
                 </div>
 
-                {/* Multi-select sidebar + Right details panel */}
-                {isMultiSelect && selectedNodeIds.length > 0 ? (
-                    <MultiSelectNodeSidebar />
-                ) : selectedNodeId ? (
+                {infoPanelMode === 'node-info' && (
                     <NodeDetailsPanel />
-                ) : null}
+                )}
+
+                {infoPanelMode === 'multi-select'
+                && selectedNodeIds.length > 0
+                && (
+                    <MultiSelectNodeSidebar />
+                )}
+
+                {infoPanelMode === 'search-results'
+                && searchQuery
+                && (
+                    <SearchResultsPanel />
+                )}
             </div>
         </div>
     );

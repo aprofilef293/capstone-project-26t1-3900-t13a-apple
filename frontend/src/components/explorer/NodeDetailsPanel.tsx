@@ -32,15 +32,15 @@ const computedAttributeKeys = [
 ]
 
 function returnToPrevNode(prevNodes: string[], setPrevNodes: (prevNodes: string[]) => void, setSelectedNodeId: (id: string | null) => void): void {
-    // list will include current node
-    prevNodes.pop();
-    const prevNode = prevNodes.pop();
+    const updatedPrevNodes = [...prevNodes];
+    updatedPrevNodes.pop();
+    const prevNode = updatedPrevNodes.pop();
     if (prevNode === undefined) {
-        // close info panel if no nodes previously selected
+        setPrevNodes([]);
         setSelectedNodeId(null);
     } else {
         setSelectedNodeId(prevNode);
-        setPrevNodes(prevNodes);
+        setPrevNodes(updatedPrevNodes);
     }
 }
 
@@ -209,7 +209,7 @@ function AttributesSection({
                                 <div key={key} className="group">
                                     <div className="flex justify-between text-xs items-start gap-4">
                                         <span className="text-sidebar-foreground/70 font-medium shrink-0 pt-0.5">{key}</span>
-                                        <span className="font-mono text-sidebar-foreground text-right break-words select-all">{String(value)}</span>
+                                        <span className="font-mono text-sidebar-foreground text-right break-words select-all max-w-[200px]">{String(value)}</span>
                                     </div>
                                     {index < array.length - 1 && <Separator className="bg-sidebar-border/30 mt-3" />}
                                 </div>
@@ -227,14 +227,26 @@ function AttributesSection({
 
 /* ── Main panel ── */
 export function NodeDetailsPanel() {
-    const { selectedNodeId, nodes, graph, prevNodes, setPrevNodes, setSelectedNodeId } = useStore();
+    const { selectedNodeId, nodes, graph, prevNodes, setPrevNodes, setSelectedNodeId, setInfoPanelMode, isMultiSelect, selectedNodeIds } = useStore();
     const node = nodes.find((n) => n.id === selectedNodeId);
 
     if (!node || !selectedNodeId) {
         return (
-            <div className="w-96 border-l border-sidebar-border bg-sidebar flex flex-col items-center justify-center p-6 text-center text-sidebar-foreground/70 transition-colors">
-                <Box className="w-12 h-12 mb-4 opacity-20" />
-                <p>Select a node to view its details</p>
+            <div className="w-96 border-l border-sidebar-border bg-sidebar p-6 text-sidebar-foreground/70 transition-colors">
+                <div className="flex justify-end">
+
+                <button
+                    onClick={() => setInfoPanelMode('closed')}
+                    className="p-1 hover:bg-sidebar-accent border border-transparent hover:border-sidebar-border/50 rounded-md transition-all text-sidebar-foreground/50 hover:text-sidebar-foreground flex items-center justify-center cursor-pointer"
+                    title="Close details"
+                >
+                    <X className="w-5 h-5" />
+                </button>
+                </div>
+                <div className="flex flex-col items-center justify-center text-center mt-10">
+                    <Box className="w-12 h-12 mb-4 opacity-20" />
+                    <p>Select a node to view its details</p>
+                </div>
             </div>
         );
     }
@@ -281,19 +293,26 @@ export function NodeDetailsPanel() {
     const hasAttributes = Object.keys(node.attributes ?? {}).length > 0;
 
     return (
-        <div className="w-[400px] border-l border-sidebar-border bg-sidebar flex flex-col h-full shadow-xl z-20 transition-colors">
+        <div className="w-[400px] border-l border-sidebar-border bg-sidebar flex flex-col h-full shadow-xl z-20 transition-colors overflow-x-hidden min-w-0">
             {/* Header */}
             <div className="p-6 pb-4 border-b border-sidebar-border shadow-sm bg-sidebar/50">
                 <div className="flex items-center justify-between mb-3">
                     <button
-                        onClick={() => returnToPrevNode(prevNodes, setPrevNodes, setSelectedNodeId)}
+                        onClick={() => {
+                            if (isMultiSelect && selectedNodeIds.length > 0) {
+                                setSelectedNodeId(null);
+                                setInfoPanelMode('multi-select');
+                            } else {
+                                returnToPrevNode(prevNodes, setPrevNodes, setSelectedNodeId);
+                            }
+                        }}
                         className="px-2 pb-1 hover:bg-sidebar-accent border border-transparent hover:border-sidebar-border/50 rounded-md transition-all text-sidebar-foreground/50 hover:text-sidebar-foreground flex items-center justify-center cursor-pointer"
                         title="Go back"
                     >
                         <CircleChevronLeft className="w-4 h-5 mt-0.5"/>&nbsp;&nbsp;BACK
                     </button>
                     <button
-                        onClick={() => setSelectedNodeId(null)}
+                        onClick={() => setInfoPanelMode('closed')}
                         className="p-1 hover:bg-sidebar-accent border border-transparent hover:border-sidebar-border/50 rounded-md transition-all text-sidebar-foreground/50 hover:text-sidebar-foreground flex items-center justify-center cursor-pointer"
                         title="Close details"
                     >
@@ -307,8 +326,8 @@ export function NodeDetailsPanel() {
                 <span className="text-[10px] text-sidebar-foreground/70 font-mono tracking-wider mr-auto">ID: {node.id.toUpperCase()}</span>
             </div>
 
-            <ScrollArea className="flex-1 min-h-0 pb-6 px-6 pt-4">
-                <Accordion type="multiple" className="max-w-lg" defaultValue={["node-data"]}>
+            <ScrollArea className="flex-1 min-h-0 pb-6 px-6 pt-4 min-w-0">
+                <Accordion type="multiple" className="max-w-lg min-w-0" defaultValue={["node-data"]}>
                     {/* Main Data */}
                     <AccordionItem value="node-data">
                         <AttributesSection node={node} sectionTitle="Node Data" icon={Box} hasAttributes={hasAttributes} includeComputed={false} />

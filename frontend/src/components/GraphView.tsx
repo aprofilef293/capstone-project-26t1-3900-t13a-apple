@@ -4,7 +4,7 @@ import "@react-sigma/core/lib/style.css";
 import { useStore } from "../store/useStore";
 import { useTheme } from "./theme-provider";
 import { NodeBorderProgram } from "@sigma/node-border";
-import { EdgeLineProgram, NodeCircleProgram } from "sigma/rendering";
+import { EdgeLineProgram, NodePointProgram } from "sigma/rendering";
 import { adjustColorBrightness } from "../lib/utils";
 import { MultiDirectedGraph } from "graphology";
 
@@ -13,17 +13,11 @@ const GRAPH_CONFIG = {
     SELECTED_SCALE: 1.25,
     DEFAULT_NODE_SIZE: 10,
     ANIMATION_DURATION: 500,
-    MIN_BBOX_SIZE: 0.05,
     PADDING: 1.1,
-    ISOLATION_OPACITY: {
-        DARK: "rgba(255,255,255,0.15)",
-        LIGHT: "rgba(0,0,0,0.15)"
-    },
-    EDGE_OPACITY: {
-        DARK: "rgba(255,255,255,0.6)",
-        LIGHT: "rgba(0,0,0,0.6)"
-    }
 } as const;
+
+const EDGE_OPACITY_DARK = "rgba(255,255,255,0.6)";
+const EDGE_OPACITY_LIGHT = "rgba(0,0,0,0.6)";
 
 /** Attributes stored on Sigma nodes. */
 interface NodeAttributes {
@@ -72,54 +66,52 @@ const GraphManager = forwardRef<GraphViewRef, unknown>((_, ref) => {
     const sigma = useSigma();
     const camera = useCamera({ duration: 250 });
     const registerEvents = useRegisterEvents();
-    const { nodes, edges, isMultiSelect, toggleNodeSelection, selectedNodeId, setSelectedNodeId, searchQuery, viewLevel, setIsNodeSelecting, selectedNodeIds } = useStore();
+    const {
+        nodes, edges, isMultiSelect,
+        toggleNodeSelection, selectedNodeId, setSelectedNodeId,
+        searchQuery, viewLevel, setIsNodeSelecting, selectedNodeIds,
+        pathNodeIds, pathEdgeIds,
+        infoPanelMode,
+    } = useStore();
     const lastClickedNodeRef = useRef(false);
     const { resolvedTheme } = useTheme();
     const isDark = resolvedTheme === "dark";
-    
-    // Defer the search query to prevent input lag on heavy graphs
+
+    // Defer search query to prevent input lag on heavy graphs
     const deferredSearchQuery = useDeferredValue(searchQuery);
 
+    // -----------------------------------------------------------------------
+    // 1. Node style computation (prominent border nodes)
+    // -----------------------------------------------------------------------
     const nodeStyles = useMemo(() => {
         const styles = new Map<string, { borderColor?: string; borderSize?: number; color?: string; type?: string }>();
         if (!nodes || nodes.length === 0) return styles;
 
-        // Calculate Global Size Percentiles & Average
         const sizes = nodes.map(n => Number(n.size ?? GRAPH_CONFIG.DEFAULT_NODE_SIZE)).sort((a, b) => a - b);
-        const sum = sizes.reduce((acc, val) => acc + val, 0);
-        const mean = sum / sizes.length;
-
-        // Find the top 5% threshold
-        const p95Index = Math.floor(sizes.length * 0.95);
-        const top5PercentSize = sizes[p95Index] || 0;
+        const mean = sizes.reduce((acc, val) => acc + val, 0) / sizes.length;
+        const top5PercentSize = sizes[Math.floor(sizes.length * 0.95)] || 0;
 
         const prominentIds = new Set<string>();
         const communityMaxNodes = new Map<string | number, { id: string; size: number }>();
         const communityCounts = new Map<string | number, number>();
 
-        nodes.forEach(node => {
+        for (const node of nodes) {
             const id = node.id as string;
             const attrs = node.attributes as Record<string, unknown>;
             const size = Number(node.size ?? GRAPH_CONFIG.DEFAULT_NODE_SIZE);
-            const isHub = attrs?.viewLevel === 5;
+
+            if (attrs?.viewLevel === 5) prominentIds.add(id);
+            if (size >= top5PercentSize && size > mean) prominentIds.add(id);
+
             const louvain = attrs?.louvain as string | number | undefined;
-            if (isHub) {
-                prominentIds.add(id);
-            }
-
-            if (size >= top5PercentSize && size > mean) {
-                prominentIds.add(id);
-            }
-
             if (louvain !== undefined) {
                 communityCounts.set(louvain, (communityCounts.get(louvain) || 0) + 1);
-
                 const currentMax = communityMaxNodes.get(louvain);
                 if (!currentMax || size > currentMax.size) {
                     communityMaxNodes.set(louvain, { id, size });
                 }
             }
-        });
+        }
 
         communityMaxNodes.forEach((maxNode, louvainKey) => {
             const count = communityCounts.get(louvainKey) || 0;
@@ -128,28 +120,39 @@ const GraphManager = forwardRef<GraphViewRef, unknown>((_, ref) => {
             }
         });
 
-        // Pre-calculate style for each node
-        nodes.forEach(node => {
+        for (const node of nodes) {
             const id = node.id;
             if (prominentIds.has(id)) {
                 const attrs = node.attributes as Record<string, unknown>;
                 const color = (node.color || attrs.color) as string | undefined;
-
                 styles.set(id, {
                     type: "border",
                     borderColor: color ? adjustColorBrightness(color, -20) : (isDark ? "#ffffff" : "#000000"),
                     borderSize: 0.15,
-                    color: color ? adjustColorBrightness(color, isDark ? 25 : -20) : undefined
+                    color: color ? adjustColorBrightness(color, isDark ? 25 : -20) : undefined,
                 });
             } else {
                 styles.set(id, {});
             }
-        });
+        }
 
         return styles;
     }, [nodes, isDark]);
 
-    // Calculate community and neighbor isolation sets
+    const communityIndex = useMemo(() => {
+        const index = new Map<string | number, Set<string>>();
+        for (const node of nodes) {
+            const louvain = ((node.attributes as Record<string, unknown>)?.louvain) as string | number | undefined;
+            if (louvain !== undefined) {
+                let bucket = index.get(louvain);
+                if (!bucket) { bucket = new Set<string>(); index.set(louvain, bucket); }
+                bucket.add(node.id as string);
+            }
+        }
+        return index;
+    }, [nodes]);
+
+    // Isolation data
     const isolationData = useMemo(() => {
         if (!selectedNodeId) return null;
 
@@ -157,34 +160,64 @@ const GraphManager = forwardRef<GraphViewRef, unknown>((_, ref) => {
         if (!graph.hasNode(selectedNodeId)) return null;
 
         const selectedAttrs = graph.getNodeAttribute(selectedNodeId, "attributes") as Record<string, unknown> | undefined;
-        const selectedLouvain = selectedAttrs?.louvain;
+        const selectedLouvain = selectedAttrs?.louvain as string | number | undefined;
 
-        const communityNodes = new Set<string>();
+        const communityNodes: Set<string> = selectedLouvain !== undefined
+            ? (communityIndex.get(selectedLouvain) ?? new Set<string>())
+            : new Set<string>();
+
         const neighborNodes = new Set<string>(graph.neighbors(selectedNodeId));
 
-        if (selectedLouvain !== undefined) {
-            graph.forEachNode((node: string, attrs: unknown) => {
-                const nodeAttrs = (attrs as NodeAttributes).attributes as Record<string, unknown> | undefined;
-                if (nodeAttrs?.louvain === selectedLouvain) {
-                    communityNodes.add(node);
-                }
-            });
+        return { communityNodes, neighborNodes, selectedLouvain };
+    }, [selectedNodeId, sigma, communityIndex]);
+
+
+    // Multi-select: derive path sets from store (populated by backend API)
+    const multiSelectPathData = useMemo(() => {
+        if (!isMultiSelect || pathNodeIds.length === 0) return null;
+
+        // const graph = sigma.getGraph();
+        const pathNodes = new Set<string>(pathNodeIds);
+        const pathEdgeSet = new Set<string>(pathEdgeIds);
+        const neighborNodes = new Set<string>();
+
+        // for (const nodeId of pathNodes) {
+        //     if (!graph.hasNode(nodeId)) continue;
+        //     for (const nb of graph.neighbors(nodeId)) {
+        //         if (!pathNodes.has(nb)) neighborNodes.add(nb);
+        //     }
+        // }
+        for (const edge of edges) {
+            if (pathNodes.has(edge.source) && !pathNodes.has(edge.target)) {
+                neighborNodes.add(edge.target);
+            }
+            if (pathNodes.has(edge.target) && !pathNodes.has(edge.source)) {
+                neighborNodes.add(edge.source);
+            }
         }
 
-        return {
-            communityNodes,
-            neighborNodes,
-            selectedLouvain
-        };
-    }, [selectedNodeId, sigma]);
-    const fitToView = useCallback(() => {
-        if (isolationData && selectedNodeId) {
-            const nodesToFit = Array.from(new Set([
-                selectedNodeId,
-                ...isolationData.communityNodes,
-                ...isolationData.neighborNodes
-            ]));
+        // Match backend path edges to sigma graph edges
+        const graph = sigma.getGraph();
+        const sigmaPathEdges = new Set<string>();
+        const pathNodeArr = Array.from(pathNodes);
+        for (let i = 0; i < pathNodeArr.length; i++) {
+            for (let j = i + 1; j < pathNodeArr.length; j++) {
+                const a = pathNodeArr[i], b = pathNodeArr[j];
+                if (!graph.hasNode(a) || !graph.hasNode(b)) continue;
+                for (const e of graph.edges(a, b)) sigmaPathEdges.add(e);
+                for (const e of graph.edges(b, a)) sigmaPathEdges.add(e);
+            }
+        }
+        for (const eId of pathEdgeSet) {
+            if (graph.hasEdge(eId)) sigmaPathEdges.add(eId);
+        }
 
+        return { pathNodes, pathEdgeIds: sigmaPathEdges, neighborNodes };
+    }, [isMultiSelect, pathNodeIds, pathEdgeIds, sigma, edges]);
+
+    const fitToView = useCallback(() => {
+        if (multiSelectPathData && isMultiSelect) {
+            const nodesToFit = [...multiSelectPathData.pathNodes, ...multiSelectPathData.neighborNodes];
             let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
             let validNodesCount = 0;
 
@@ -201,28 +234,47 @@ const GraphManager = forwardRef<GraphViewRef, unknown>((_, ref) => {
             }
 
             if (validNodesCount > 0 && minX !== Infinity) {
-                let dx = maxX - minX;
-                let dy = maxY - minY;
-
-                dx = Math.max(dx, 0.05);
-                dy = Math.max(dy, 0.05);
-
+                const dx = Math.max(maxX - minX, 0.05);
+                const dy = Math.max(maxY - minY, 0.05);
                 const centerX = (minX + maxX) / 2;
                 const centerY = (minY + maxY) / 2;
-                let ratio = Math.max(dx, dy) * GRAPH_CONFIG.PADDING;
-
-                ratio = Math.max(0.01, Math.min(ratio, 1.5));
-
-                sigma.getCamera().animate(
-                    { x: centerX, y: centerY, ratio },
-                    { duration: GRAPH_CONFIG.ANIMATION_DURATION }
-                );
+                const ratio = Math.max(0.01, Math.min(Math.max(dx, dy) * GRAPH_CONFIG.PADDING, 1.5));
+                sigma.getCamera().animate({ x: centerX, y: centerY, ratio }, { duration: GRAPH_CONFIG.ANIMATION_DURATION });
                 return;
             }
         }
-        // Fallback or default reset
+        if (isolationData && selectedNodeId) {
+            let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+            let validCount = 0;
+
+            const nodesToFit = [
+                selectedNodeId,
+                ...isolationData.communityNodes,
+                ...isolationData.neighborNodes,
+            ];
+
+            for (const id of nodesToFit) {
+                const d = sigma.getNodeDisplayData(id) as { x: number; y: number } | undefined;
+                if (d && typeof d.x === "number" && !isNaN(d.x) && typeof d.y === "number" && !isNaN(d.y)) {
+                    minX = Math.min(minX, d.x); maxX = Math.max(maxX, d.x);
+                    minY = Math.min(minY, d.y); maxY = Math.max(maxY, d.y);
+                    validCount++;
+                }
+            }
+
+            if (validCount > 0 && minX !== Infinity) {
+                const dx = Math.max(maxX - minX, 0.05);
+                const dy = Math.max(maxY - minY, 0.05);
+                const centerX = (minX + maxX) / 2;
+                const centerY = (minY + maxY) / 2;
+                const ratio = Math.max(0.01, Math.min(Math.max(dx, dy) * GRAPH_CONFIG.PADDING, 1.5));
+
+                sigma.getCamera().animate({ x: centerX, y: centerY, ratio }, { duration: GRAPH_CONFIG.ANIMATION_DURATION });
+                return;
+            }
+        }
         camera.reset({ duration: GRAPH_CONFIG.ANIMATION_DURATION });
-    }, [sigma, camera, isolationData, selectedNodeId]);
+    }, [sigma, camera, isolationData, selectedNodeId, multiSelectPathData, isMultiSelect]);
 
     useImperativeHandle(ref, () => ({
         zoomIn: camera.zoomIn,
@@ -230,39 +282,53 @@ const GraphManager = forwardRef<GraphViewRef, unknown>((_, ref) => {
         resetCamera: fitToView,
     }), [camera, fitToView]);
 
-    // Automatically fit to view when a node is selected
     useEffect(() => {
-        if (selectedNodeId) {
-            fitToView();
-        }
+        if (selectedNodeId) fitToView();
     }, [selectedNodeId, fitToView]);
+
+    const prevNodeIds = useRef<Set<string>>(new Set());
+    const prevEdgeIds = useRef<Set<string>>(new Set());
 
     useEffect(() => {
         const graph = sigma.getGraph();
+        const newNodeIds = new Set<string>();
+        const newEdgeIds = new Set<string>();
 
-        graph.clear();
-
-        // Add or update nodes - only if data changed
-        nodes.forEach((nodeItem) => {
-            const id = nodeItem.id;
+        // Merge nodes
+        for (const nodeItem of nodes) {
+            const id = nodeItem.id as string;
+            newNodeIds.add(id);
             // eslint-disable-next-line @typescript-eslint/no-unused-vars
-            const { type, ...node } = nodeItem;
+            const { type, ...rest } = nodeItem;
             if (!graph.hasNode(id)) {
-                graph.addNode(id, { ...node });
+                graph.addNode(id, { ...rest });
             } else {
-                graph.mergeNodeAttributes(id, { ...node });
+                graph.mergeNodeAttributes(id, rest);
             }
-        });
+        }
 
-        // Add or update edges
-        edges.forEach((edge) => {
-            const edgeId = edge.id;
+        // Remove stale nodes
+        for (const id of prevNodeIds.current) {
+            if (!newNodeIds.has(id) && graph.hasNode(id)) graph.dropNode(id);
+        }
+        prevNodeIds.current = newNodeIds;
+
+        // Merge edges
+        for (const edge of edges) {
+            const edgeId = edge.id as string;
+            newEdgeIds.add(edgeId);
             if (!graph.hasEdge(edgeId)) {
                 graph.addEdgeWithKey(edgeId, edge.source, edge.target, { ...edge });
             } else {
-                graph.mergeEdgeAttributes(edgeId, { ...edge });
+                graph.mergeEdgeAttributes(edgeId, edge);
             }
-        });
+        }
+
+        // Remove stale edges
+        for (const id of prevEdgeIds.current) {
+            if (!newEdgeIds.has(id) && graph.hasEdge(id)) graph.dropEdge(id);
+        }
+        prevEdgeIds.current = newEdgeIds;
     }, [nodes, edges, sigma]);
 
     // Click interactions
@@ -275,17 +341,13 @@ const GraphManager = forwardRef<GraphViewRef, unknown>((_, ref) => {
                         toggleNodeSelection(node);
                     } else {
                         setIsNodeSelecting(true);
-                        const newId = node === selectedNodeId ? null : node;
-                        setSelectedNodeId(newId);
+                        setSelectedNodeId(node === selectedNodeId ? null : node);
                     }
                 }, 0);
             },
             doubleClickNode: () => setSelectedNodeId(null),
             clickStage: () => {
-                if (lastClickedNodeRef.current) {
-                    lastClickedNodeRef.current = false;
-                    return;
-                }
+                if (lastClickedNodeRef.current) { lastClickedNodeRef.current = false; return; }
                 setSelectedNodeId(null);
             },
             doubleClickStage: () => setSelectedNodeId(null),
@@ -296,73 +358,57 @@ const GraphManager = forwardRef<GraphViewRef, unknown>((_, ref) => {
         setIsNodeSelecting(false);
     }, [selectedNodeId, selectedNodeIds, setIsNodeSelecting]);
 
-    // Node & Edge Styling (Reducers)
     useEffect(() => {
-        const graph = sigma.getGraph();
+        let frameOne = 0;
+        let frameTwo = 0;
 
-        sigma.setSetting("nodeReducer", (node: string, data: NodeAttributes) => {
-            const attrs = data as NodeAttributes;
-            const isSelected = isMultiSelect 
-                ? selectedNodeIds.includes(node) 
-                : node === selectedNodeId;
-            const size = attrs.size ?? GRAPH_CONFIG.DEFAULT_NODE_SIZE;
-            const finalSize = isSelected ? size * GRAPH_CONFIG.SELECTED_SCALE : size;
-
-            const style = nodeStyles.get(node);
-            const newData: NodeAttributes = {
-                ...attrs,
-                ...style,
-                size: finalSize,
-                highlighted: isSelected,
-                zIndex: finalSize,
-            };
-
-            return newData;
-        });
-
-        sigma.setSetting("edgeReducer", (edge: string, data: EdgeAttributes) => {
-            const res = { ...data };
-            res.color = isDark ? GRAPH_CONFIG.EDGE_OPACITY.DARK : GRAPH_CONFIG.EDGE_OPACITY.LIGHT;
-            res.size = data.size || 1;
-
-            if (selectedNodeId && graph.hasEdge(edge)) {
-                const source = graph.source(edge);
-                const target = graph.target(edge);
-                const isConnected = source === selectedNodeId || target === selectedNodeId;
-
-                if (isConnected) {
-                    const neighborId = source === selectedNodeId ? target : source;
-                    const sAttrs = graph.getNodeAttribute(selectedNodeId, "attributes") as Record<string, unknown>;
-                    const nAttrs = graph.getNodeAttribute(neighborId, "attributes") as Record<string, unknown>;
-
-                    if (sAttrs?.louvain !== undefined && sAttrs.louvain === nAttrs?.louvain) {
-                        res.color = (graph.getNodeAttribute(selectedNodeId, "color") as string) || (isDark ? "#ffffff" : "#000000");
-                        res.size = 2;
-                    } else {
-                        res.color = "#fbbf24";
-                        res.size = 3;
-                    }
-                } else if (isolationData) {
-                    if (isolationData.communityNodes.has(source) && isolationData.communityNodes.has(target)) {
-                        res.color = isDark ? "rgba(255,255,255,0.4)" : "rgba(0,0,0,0.4)";
-                        res.size = 1;
-                    } else {
-                        res.hidden = true;
-                    }
-                } else {
-                    res.color = isDark ? "rgba(255,255,255,0.15)" : "rgba(0,0,0,0.15)";
-                }
-            }
-            return res;
+        frameOne = requestAnimationFrame(() => {
+            frameTwo = requestAnimationFrame(() => {
+                sigma.resize(true);
+                sigma.refresh();
+            });
         });
 
         return () => {
-            sigma.setSetting("nodeReducer", null);
-            sigma.setSetting("edgeReducer", null);
+            cancelAnimationFrame(frameOne);
+            cancelAnimationFrame(frameTwo);
         };
-    }, [selectedNodeId, isMultiSelect, selectedNodeIds, nodeStyles, isolationData, isDark, sigma]);
+    }, [sigma, infoPanelMode]);
 
-    // Visibility Filtering
+    const stateRef = useRef({
+        selectedNodeId,
+        isMultiSelect,
+        selectedNodeIds,
+        nodeStyles,
+        visibleNodes: new Set<string>(),
+        isolationData,
+        multiSelectPathData,
+        isDark,
+        // Edge endpoint cache to avoid graph.source()/target() per frame
+        edgeEndpoints: new Map<string, { source: string; target: string }>(),
+    });
+
+    // Keep ref in sync
+    useEffect(() => {
+        stateRef.current.selectedNodeId = selectedNodeId;
+        stateRef.current.isMultiSelect = isMultiSelect;
+        stateRef.current.selectedNodeIds = selectedNodeIds;
+        stateRef.current.nodeStyles = nodeStyles;
+        stateRef.current.isolationData = isolationData;
+        stateRef.current.multiSelectPathData = multiSelectPathData;
+        stateRef.current.isDark = isDark;
+    }, [selectedNodeId, isMultiSelect, selectedNodeIds, nodeStyles, isolationData, multiSelectPathData, isDark]);
+
+    useEffect(() => {
+        const graph = sigma.getGraph();
+        const cache = new Map<string, { source: string; target: string }>();
+        graph.forEachEdge((edge: string) => {
+            cache.set(edge, { source: graph.source(edge), target: graph.target(edge) });
+        });
+        stateRef.current.edgeEndpoints = cache;
+    }, [edges, sigma]);
+
+    // Visibility filter – runs on search/viewLevel/selection changes
     useEffect(() => {
         const graph = sigma.getGraph();
         const query = deferredSearchQuery.toLowerCase();
@@ -373,22 +419,133 @@ const GraphManager = forwardRef<GraphViewRef, unknown>((_, ref) => {
             const level = ((attrs.attributes as Record<string, unknown>)?.viewLevel as number) ?? 1;
             let isVisible = matchesSearch && level >= viewLevel;
 
-            // Apply node community Isolation if a node is selected
             if (selectedNodeId && isolationData) {
-                const isRelated = id === selectedNodeId ||
+                isVisible = isVisible && (
+                    id === selectedNodeId ||
                     isolationData.communityNodes.has(id) ||
-                    isolationData.neighborNodes.has(id);
-                isVisible = isVisible && isRelated;
+                    isolationData.neighborNodes.has(id)
+                );
             }
 
-            graph.setNodeAttribute(id, "hidden", !isVisible);
+            // Multi-select path isolation
+            if (isMultiSelect && multiSelectPathData) {
+                isVisible = multiSelectPathData.pathNodes.has(id) ||
+                    (multiSelectPathData.neighborNodes.has(id) && level >= viewLevel);
+            }
+
             if (isVisible) visibleNodes.add(id);
         });
 
-        graph.forEachEdge((edge: string, _: EdgeAttributes, source: string, target: string) => {
-            graph.setEdgeAttribute(edge, "hidden", !visibleNodes.has(source) || !visibleNodes.has(target));
+        stateRef.current.visibleNodes = visibleNodes;
+        // update graph (note: this does not perform a hard refresh on the browser)
+        sigma.refresh();
+    }, [nodes, edges, deferredSearchQuery, viewLevel, selectedNodeId, isolationData, isMultiSelect, multiSelectPathData, selectedNodeIds, sigma]);
+
+    useEffect(() => {
+        const graph = sigma.getGraph();
+
+        sigma.setSetting("nodeReducer", (node: string, data: NodeAttributes) => {
+            const state = stateRef.current;
+            const isSelected = state.isMultiSelect
+                ? state.selectedNodeIds.includes(node)
+                : node === state.selectedNodeId;
+
+            const size = Math.max(0.1, Number(data.size) || GRAPH_CONFIG.DEFAULT_NODE_SIZE);
+            let finalSize = isSelected ? size * GRAPH_CONFIG.SELECTED_SCALE : size;
+            let color = data.color;
+            let highlighted = isSelected;
+
+            // Multi-select path styling
+            if (state.isMultiSelect && state.multiSelectPathData) {
+                if (state.multiSelectPathData.pathNodes.has(node)) {
+                    finalSize = size * GRAPH_CONFIG.SELECTED_SCALE;
+                    highlighted = true;
+                } else if (state.multiSelectPathData.neighborNodes.has(node)) {
+                    color = adjustColorBrightness(color || "#888", state.isDark ? -30 : 30);
+                }
+            }
+
+            const style = state.nodeStyles.get(node) ?? {};
+
+            return {
+                type: "circle",
+                ...data,
+                ...style,
+                size: finalSize,
+                color,
+                highlighted,
+                zIndex: finalSize,
+                hidden: !state.visibleNodes.has(node),
+            };
         });
-    }, [deferredSearchQuery, viewLevel, selectedNodeId, sigma, isolationData]);
+
+        sigma.setSetting("edgeReducer", (edge: string, data: EdgeAttributes) => {
+            const state = stateRef.current;
+            // Use cached endpoints – avoids per-frame graph lookups
+            const ep = state.edgeEndpoints.get(edge);
+            if (!ep) return { ...data, hidden: true };
+            const { source, target } = ep;
+
+            const res = { ...data, size: Math.max(0.1, Number(data.size) || 1) };
+
+            if (!state.visibleNodes.has(source) || !state.visibleNodes.has(target)) {
+                return { ...res, hidden: true };
+            }
+
+            res.color = state.isDark ? EDGE_OPACITY_DARK : EDGE_OPACITY_LIGHT;
+
+            // Multi-select path edge styling
+            if (state.isMultiSelect && state.multiSelectPathData && graph.hasEdge(edge)) {
+                if (state.multiSelectPathData.pathEdgeIds.has(edge)) {
+                    res.color = "#fbbf24";
+                    res.size = 3;
+                } else if (state.multiSelectPathData.pathNodes.has(source) || state.multiSelectPathData.pathNodes.has(target)) {
+                    res.color = state.isDark ? "rgba(255,255,255,0.3)" : "rgba(0,0,0,0.3)";
+                    res.size = 1;
+                } else {
+                    res.color = state.isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.1)";
+                }
+                return res;
+            }
+
+            if (state.selectedNodeId && graph.hasEdge(edge)) {
+                const selId = state.selectedNodeId;
+                const isConnected = source === selId || target === selId;
+
+                if (isConnected) {
+                    const neighborId = source === selId ? target : source;
+                    const sLouvain = (graph.getNodeAttribute(selId, "attributes") as Record<string, unknown>)?.louvain;
+                    const nLouvain = (graph.getNodeAttribute(neighborId, "attributes") as Record<string, unknown>)?.louvain;
+
+                    if (sLouvain !== undefined && sLouvain === nLouvain) {
+                        res.color = (graph.getNodeAttribute(selId, "color") as string) || (state.isDark ? "#ffffff" : "#000000");
+                        res.size = 2;
+                    } else {
+                        res.color = "#fbbf24";
+                        res.size = 3;
+                    }
+                } else if (state.isolationData) {
+                    const { communityNodes } = state.isolationData;
+                    if (communityNodes.has(source) && communityNodes.has(target)) {
+                        res.color = state.isDark ? "rgba(255,255,255,0.4)" : "rgba(0,0,0,0.4)";
+                        res.size = 1;
+                    } else {
+                        return { ...res, hidden: true };
+                    }
+                } else {
+                    res.color = state.isDark ? "rgba(255,255,255,0.15)" : "rgba(0,0,0,0.15)";
+                }
+            }
+            return res;
+        });
+        
+        sigma.refresh();
+
+        return () => {
+            sigma.setSetting("nodeReducer", null);
+            sigma.setSetting("edgeReducer", null);
+        };
+    }, [sigma]);
 
     return null;
 });
@@ -410,6 +567,8 @@ export const GraphView = forwardRef<GraphViewRef, unknown>((_, ref) => {
         [isDark],
     );
 
+    const lastFontRef = useRef<string>("");
+
     const drawOverlay = useCallback(
         (ctx: CanvasRenderingContext2D, data: NodeAttributes, settings: SigmaDrawingSettings) => {
             const { label, x, y, size } = data;
@@ -417,8 +576,9 @@ export const GraphView = forwardRef<GraphViewRef, unknown>((_, ref) => {
 
             const { labelSize, labelFont, labelWeight } = settings;
             const pad = 4;
+            const font = `${labelWeight} ${labelSize}px ${labelFont}`;
 
-            ctx.font = `${labelWeight} ${labelSize}px ${labelFont}`;
+            if (lastFontRef.current !== font) { ctx.font = font; lastFontRef.current = font; }
             const textW = ctx.measureText(label).width;
 
             // Highlight ring
@@ -450,58 +610,54 @@ export const GraphView = forwardRef<GraphViewRef, unknown>((_, ref) => {
         [colours],
     );
 
+    const defaultDrawNodeLabel = useCallback(
+        (ctx: CanvasRenderingContext2D, data: NodeAttributes, settings: SigmaDrawingSettings) => {
+            const { label, x, y, size, highlighted } = data;
+            if (!label || x === undefined || y === undefined || size === undefined) return;
+            if (highlighted) return drawOverlay(ctx, data, settings);
+
+            const font = `${settings.labelWeight} ${settings.labelSize}px ${settings.labelFont}`;
+            if (lastFontRef.current !== font) { ctx.font = font; lastFontRef.current = font; }
+            ctx.fillStyle = colours.label;
+            ctx.fillText(label, x + size + 4, y + settings.labelSize / 3);
+        },
+        [colours, drawOverlay],
+    );
+
     const sigmaSettings = useMemo(
         () => ({
             allowInvalidContainer: true,
             zIndex: true,
             renderLabels: true,
-            renderEdgeLabels: false, // Don't render text on edges
-            labelDensity: 0.5, // Only show labels for prominent nodes when zoomed out
-            labelGridCellSize: 100, // Increase grid size to cull overlapping labels
+            renderEdgeLabels: false,
+            labelDensity: 0.5,
+            labelGridCellSize: 100,
             zoomToSizeRatioFunction: (ratio: number) => ratio,
             labelFont: "Inter, system-ui, sans-serif",
             labelSize: 11,
             labelWeight: "500",
             labelColor: { color: colours.label },
             defaultNodeColor: colours.label,
-            defaultEdgeColor: isDark ? "rgba(255,255,255,0.6)" : "rgba(0,0,0,0.6)",
+            defaultEdgeColor: isDark ? EDGE_OPACITY_DARK : EDGE_OPACITY_LIGHT,
             defaultDrawNodeHover: drawOverlay,
-            defaultDrawNodeLabel: (
-                ctx: CanvasRenderingContext2D,
-                data: NodeAttributes,
-                settings: SigmaDrawingSettings,
-            ) => {
-                const { label, x, y, size, highlighted } = data;
-                if (!label || x === undefined || y === undefined || size === undefined) return;
-                if (highlighted) return drawOverlay(ctx, data, settings);
-
-                ctx.font = `${settings.labelWeight} ${settings.labelSize}px ${settings.labelFont}`;
-                ctx.fillStyle = colours.label;
-                ctx.fillText(label, x + size + 4, y + settings.labelSize / 3);
-            },
+            defaultDrawNodeLabel: defaultDrawNodeLabel,
             nodeProgramClasses: {
-                circle: NodeCircleProgram,
+                circle: NodePointProgram,
                 border: NodeBorderProgram,
             },
+            defaultNodeType: "circle",
             edgeProgramClasses: {
                 line: EdgeLineProgram,
             },
             defaultEdgeType: "line",
         }),
-        [colours, drawOverlay, isDark],
+        [colours, drawOverlay, defaultDrawNodeLabel, isDark],
     );
 
     return (
         <SigmaContainer
             graph={MultiDirectedGraph}
-            className="absolute inset-0"
-            style={{
-                width: "100%",
-                height: "100%",
-                backgroundColor: isDark ? "#000000" : "#ffffff",
-                backgroundImage: "radial-gradient(var(--color-border) 1px, transparent 1px)",
-                backgroundSize: "24px 24px",
-            }}
+            className={`absolute inset-0 w-full h-full ${isDark ? "!bg-black" : "!bg-white"} bg-[radial-gradient(var(--color-border)_1px,transparent_1px)] bg-[length:24px_24px]`}
             settings={sigmaSettings}
         >
             <GraphManager ref={ref} />
