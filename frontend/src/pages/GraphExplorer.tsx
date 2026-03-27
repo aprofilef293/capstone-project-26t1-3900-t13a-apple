@@ -15,7 +15,6 @@ import { FullScreenSpinner } from "@/components/ui/spinner";
 export function GraphExplorer() {
     const { searchQuery, fetchGraphData, isNodeSelecting, selectedNodeIds, infoPanelMode,  isMultiSelect, fetchPath } = useStore();
     const [viewMode, setViewMode] = useState<'graph' | 'hierarchy'>('graph');
-    // const isGraphLoading = useStore(state => state.isGraphLoading);
     const graphViewRef = useRef<GraphViewRef>(null);
     const isInitialGraphLoading = useStore(state => state.isInitialGraphLoading);
     const nodes = useStore(state => state.nodes);
