@@ -29,7 +29,6 @@ export function ExplorerSearch() {
         return () => document.removeEventListener("mousedown", handleClickOutside);
     }, []);
 
-    // Build the Fuse index whenever nodes change
     const fuse = useMemo(() => new Fuse(nodes, {
         keys: [
             { name: "label", weight: 0.7 },
@@ -41,11 +40,37 @@ export function ExplorerSearch() {
         ignoreLocation: true,
     }), [nodes]);
 
-    // Run the fuzzy search on every query change
-    const searchResults = useMemo(() => {
-        if (!searchQuery.trim()) return [];
-        return fuse.search(searchQuery).slice(0, 50).map(r => r.item);
-    }, [fuse, searchQuery]);
+    // Search Method: fuzzy on names, exact substring on descriptions/synonyms
+    const { fuzzyResults, descriptionResults } = useMemo(() => {
+        const q = searchQuery.trim();
+        if (!q) return { fuzzyResults: [], descriptionResults: [] };
+
+        // Fuzzy search on label / id - ie can have typos
+        const fuzzyHits = fuse.search(q).slice(0, 50).map(r => r.item);
+        const fuzzyIds = new Set(fuzzyHits.map(n => n.id));
+
+        // Exact substring search on definition + synonyms
+        // Only runs if query is at least 3 chars to reduce matches
+        const descHits = q.length >= 3
+            ? nodes.filter(node => {
+                if (fuzzyIds.has(node.id)) return false; // already in fuzzy results
+                const ql = q.toLowerCase();
+                const def = ((node.attributes.definition as string) ?? "").toLowerCase();
+                const syns: string[] = (node.attributes.synonyms as string[]) ?? [];
+                return (
+                    def.includes(ql) ||
+                    syns.some(s => s.toLowerCase().includes(ql))
+                );
+            }).slice(0, 20)
+            : [];
+
+        return { fuzzyResults: fuzzyHits, descriptionResults: descHits };
+    }, [fuse, nodes, searchQuery]);
+
+    const searchResults = useMemo(
+        () => [...fuzzyResults, ...descriptionResults],
+        [fuzzyResults, descriptionResults]
+    );
 
     const handleSearchTrigger = () => {
         if (searchQuery.trim()) {
@@ -112,34 +137,44 @@ export function ExplorerSearch() {
                         </div>
                     ) : (
                         <div className="overflow-y-auto py-2 custom-scrollbar">
-                            {searchResults.map((node) => (
-                                <button
-                                    key={node.id}
-                                    onClick={() => {
-                                        setSelectedNodeId(node.id);
-                                        setIsOpen(false);
-                                    }}
-                                    className="w-full text-left px-4 py-2 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors text-sm flex items-center gap-3"
-                                >
-                                    <div
-                                        className="w-2.5 h-2.5 rounded-full shrink-0 shadow-sm"
-                                        style={{ backgroundColor: node.color }}
-                                    />
-                                    <div className="min-w-0 flex-1">
-                                        <div className="font-medium text-sidebar-foreground truncate" title={node.label}>
-                                            {node.label || node.id}
-                                        </div>
-                                        {node.label && node.id !== node.label && (
-                                            <div className="text-xs text-sidebar-foreground/50 truncate max-w-full" title={node.id}>
-                                                ID: {node.id}
+                            {searchResults.map((node) => {
+                                const isDescMatch = !fuzzyResults.some(r => r.id === node.id);
+                                return (
+                                    <button
+                                        key={node.id}
+                                        onClick={() => {
+                                            setSelectedNodeId(node.id);
+                                            setIsOpen(false);
+                                        }}
+                                        className="w-full text-left px-4 py-2 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors text-sm flex items-center gap-3"
+                                    >
+                                        <div
+                                            className="w-2.5 h-2.5 rounded-full shrink-0 shadow-sm"
+                                            style={{ backgroundColor: node.color }}
+                                        />
+                                        <div className="min-w-0 flex-1">
+                                            <div className="font-medium text-sidebar-foreground truncate" title={node.label}>
+                                                {node.label || node.id}
                                             </div>
-                                        )}
-                                    </div>
-                                    <div className="ml-2 px-1.5 py-0.5 rounded bg-sidebar-accent/50 text-[10px] uppercase font-semibold text-sidebar-foreground/60 shrink-0">
-                                        {node.type || 'Node'}
-                                    </div>
-                                </button>
-                            ))}
+                                            {node.label && node.id !== node.label && (
+                                                <div className="text-xs text-sidebar-foreground/50 truncate max-w-full" title={node.id}>
+                                                    ID: {node.id}
+                                                </div>
+                                            )}
+                                        </div>
+                                        <div className="flex items-center gap-1.5 shrink-0">
+                                            {isDescMatch && (
+                                                <div className="px-1.5 py-0.5 rounded bg-amber-500/20 text-[10px] uppercase font-semibold text-amber-600 dark:text-amber-400">
+                                                    desc
+                                                </div>
+                                            )}
+                                            <div className="px-1.5 py-0.5 rounded bg-sidebar-accent/50 text-[10px] uppercase font-semibold text-sidebar-foreground/60">
+                                                {node.type || 'Node'}
+                                            </div>
+                                        </div>
+                                    </button>
+                                );
+                            })}
                         </div>
                     )}
                 </div>
