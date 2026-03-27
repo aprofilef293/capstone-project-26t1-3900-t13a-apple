@@ -65,7 +65,7 @@ export function SearchResultsPanel() {
                 <h3 className="text-xs font-bold text-sidebar-foreground mb-4 uppercase tracking-wider flex items-center gap-2">Most Relevant</h3>
                 <SearchResults items={searchResultsFuzzyTitle} icon={ArrowRight} onSelect={setSelectedNodeId} />
                 {searchResultsDescription.length != 0 && (
-                    <h3 className="text-xs font-bold text-sidebar-foreground mt-4 mb-4 uppercase tracking-wider flex items-center gap-2">Other</h3>
+                    <h3 className="text-xs font-bold text-sidebar-foreground mt-4 mb-4 uppercase tracking-wider flex items-center gap-2">Suggested</h3>
                 )}
                 <SearchResults items={searchResultsDescription} icon={ArrowRight} onSelect={setSelectedNodeId} />
                 {searchResultsFuzzyTitle.length == 0 && searchResultsDescription.length == 0 && (
