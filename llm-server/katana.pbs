@@ -1,0 +1,67 @@
+#!/bin/bash
+#PBS -N llm-server
+#PBS -l select=1:ncpus=8:mem=32gb:ngpus=1
+#PBS -l walltime=12:00:00
+#PBS -j oe
+#PBS -o llm-server.log
+
+# ── Configuration ──────────────────────────────────────────────
+# Change these as needed:
+LLM_MODEL="${LLM_MODEL:-gemma3}"
+OLLAMA_PORT="${OLLAMA_PORT:-11434}"
+
+# Store models on scratch so they persist between jobs
+OLLAMA_MODELS="/srv/scratch/${USER}/ollama-models"
+SIF_PATH="/srv/scratch/${USER}/ollama.sif"
+
+# ── Setup ──────────────────────────────────────────────────────
+cd "$PBS_O_WORKDIR" || exit 1
+
+mkdir -p "$OLLAMA_MODELS"
+
+# Build the .sif if it doesn't exist yet
+if [ ! -f "$SIF_PATH" ]; then
+    echo "Building Singularity image..."
+    singularity pull "$SIF_PATH" docker://ollama/ollama:latest
+fi
+
+# Print connection info for SSH tunnel
+HOSTNAME=$(hostname)
+echo "============================================="
+echo "  LLM server starting on: ${HOSTNAME}:${OLLAMA_PORT}"
+echo ""
+echo "  To connect from your machine, run:"
+echo "    ssh -N -L ${OLLAMA_PORT}:${HOSTNAME}:${OLLAMA_PORT} ${USER}@katana.restech.unsw.edu.au"
+echo ""
+echo "  Then set in your backend .env:"
+echo "    LLM_API_URL=http://localhost:${OLLAMA_PORT}/v1"
+echo "    LLM_API_KEY=ollama"
+echo "    LLM_MODEL=${LLM_MODEL}"
+echo "============================================="
+
+# ── Run ────────────────────────────────────────────────────────
+export OLLAMA_HOST="0.0.0.0:${OLLAMA_PORT}"
+export OLLAMA_MODELS
+export LLM_MODEL
+
+singularity exec \
+    --nv \
+    --bind "${OLLAMA_MODELS}:/root/.ollama/models" \
+    "$SIF_PATH" \
+    bash -c '
+        ollama serve &
+        OLLAMA_PID=$!
+
+        # Wait for ready
+        until curl -sf "http://localhost:'"${OLLAMA_PORT}"'/api/tags" > /dev/null 2>&1; do
+            sleep 1
+        done
+        echo "Ollama server is ready."
+
+        # Pull model
+        echo "Pulling model: '"${LLM_MODEL}"'..."
+        ollama pull "'"${LLM_MODEL}"'"
+        echo "Model ready. Server running."
+
+        wait $OLLAMA_PID
+    '
