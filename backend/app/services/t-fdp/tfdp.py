@@ -93,7 +93,14 @@ class tFDP:
         combine=True,
         randseed=None,
     ):
-        numba.set_num_threads(8)
+        try:
+            # Respect the configuration but limit use to 8 core/threads
+            num_threads = min(8, numba.config.NUMBA_NUM_THREADS)
+            numba.set_num_threads(num_threads)
+        except (ValueError, RuntimeError):
+            # If set_num_threads has already been called or there's an environment constraint, fallback
+            pass
+
         self.init = init
         self.max_iter = max_iter
         self.alpha = alpha
