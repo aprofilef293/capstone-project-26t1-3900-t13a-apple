@@ -112,7 +112,6 @@ export function ExplorerToolbar({
                         checked={isMultiSelect}
                         onCheckedChange={(val) => {
                             setIsMultiSelect(val);
-                            setSelectedNodeIds([]);
                             if (val) setInfoPanelMode('multi-select');
                             if (!val) setInfoPanelMode('closed');
                         }}

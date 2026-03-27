@@ -71,6 +71,7 @@ const GraphManager = forwardRef<GraphViewRef, unknown>((_, ref) => {
         toggleNodeSelection, selectedNodeId, setSelectedNodeId,
         searchQuery, viewLevel, setIsNodeSelecting, selectedNodeIds,
         pathNodeIds, pathEdgeIds,
+        infoPanelMode,
     } = useStore();
     const lastClickedNodeRef = useRef(false);
     const { resolvedTheme } = useTheme();
@@ -175,19 +176,28 @@ const GraphManager = forwardRef<GraphViewRef, unknown>((_, ref) => {
     const multiSelectPathData = useMemo(() => {
         if (!isMultiSelect || pathNodeIds.length === 0) return null;
 
-        const graph = sigma.getGraph();
+        // const graph = sigma.getGraph();
         const pathNodes = new Set<string>(pathNodeIds);
         const pathEdgeSet = new Set<string>(pathEdgeIds);
         const neighborNodes = new Set<string>();
 
-        for (const nodeId of pathNodes) {
-            if (!graph.hasNode(nodeId)) continue;
-            for (const nb of graph.neighbors(nodeId)) {
-                if (!pathNodes.has(nb)) neighborNodes.add(nb);
+        // for (const nodeId of pathNodes) {
+        //     if (!graph.hasNode(nodeId)) continue;
+        //     for (const nb of graph.neighbors(nodeId)) {
+        //         if (!pathNodes.has(nb)) neighborNodes.add(nb);
+        //     }
+        // }
+        for (const edge of edges) {
+            if (pathNodes.has(edge.source) && !pathNodes.has(edge.target)) {
+                neighborNodes.add(edge.target);
+            }
+            if (pathNodes.has(edge.target) && !pathNodes.has(edge.source)) {
+                neighborNodes.add(edge.source);
             }
         }
 
         // Match backend path edges to sigma graph edges
+        const graph = sigma.getGraph();
         const sigmaPathEdges = new Set<string>();
         const pathNodeArr = Array.from(pathNodes);
         for (let i = 0; i < pathNodeArr.length; i++) {
@@ -203,7 +213,7 @@ const GraphManager = forwardRef<GraphViewRef, unknown>((_, ref) => {
         }
 
         return { pathNodes, pathEdgeIds: sigmaPathEdges, neighborNodes };
-    }, [isMultiSelect, pathNodeIds, pathEdgeIds, sigma, nodes]);
+    }, [isMultiSelect, pathNodeIds, pathEdgeIds, sigma, edges]);
 
     const fitToView = useCallback(() => {
         if (multiSelectPathData && isMultiSelect) {
@@ -348,6 +358,23 @@ const GraphManager = forwardRef<GraphViewRef, unknown>((_, ref) => {
         setIsNodeSelecting(false);
     }, [selectedNodeId, selectedNodeIds, setIsNodeSelecting]);
 
+    useEffect(() => {
+        let frameOne = 0;
+        let frameTwo = 0;
+
+        frameOne = requestAnimationFrame(() => {
+            frameTwo = requestAnimationFrame(() => {
+                sigma.resize(true);
+                sigma.refresh();
+            });
+        });
+
+        return () => {
+            cancelAnimationFrame(frameOne);
+            cancelAnimationFrame(frameTwo);
+        };
+    }, [sigma, infoPanelMode]);
+
     const stateRef = useRef({
         selectedNodeId,
         isMultiSelect,
@@ -412,7 +439,7 @@ const GraphManager = forwardRef<GraphViewRef, unknown>((_, ref) => {
         stateRef.current.visibleNodes = visibleNodes;
         // update graph (note: this does not perform a hard refresh on the browser)
         sigma.refresh();
-    }, [nodes, edges, deferredSearchQuery, viewLevel, selectedNodeId, isolationData, isMultiSelect, multiSelectPathData, sigma]);
+    }, [nodes, edges, deferredSearchQuery, viewLevel, selectedNodeId, isolationData, isMultiSelect, multiSelectPathData, selectedNodeIds, sigma]);
 
     useEffect(() => {
         const graph = sigma.getGraph();
@@ -511,6 +538,8 @@ const GraphManager = forwardRef<GraphViewRef, unknown>((_, ref) => {
             }
             return res;
         });
+        
+        sigma.refresh();
 
         return () => {
             sigma.setSetting("nodeReducer", null);

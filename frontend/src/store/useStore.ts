@@ -77,7 +77,7 @@ const mapTestData = () => {
     const rawEdges = data.edges;
     const rawNodes = data.nodes;
 
-    // 2. Map nodes directly from backend payload attributes
+    // Map nodes directly from backend payload attributes
     const nodes = rawNodes.map((n) => {
         const label = (n.attributes?.label as string) || n.key;
 
@@ -144,7 +144,7 @@ export const useStore = create<ExplorerState>((set) => ({
     nodes: [],
     edges: [],
     graph: new MultiDirectedGraph(),
-    selectedNodeId: null, // Removed default selection to avoid missing node errors
+    selectedNodeId: localStorage.getItem('selectedNodeId') || null,
     searchQuery: "",
     viewLevel: 1,
     isGraphLoading: false,
@@ -154,8 +154,15 @@ export const useStore = create<ExplorerState>((set) => ({
     },
     setSelectedNodeId: (id) => {
         set({ selectedNodeId: id });
+        localStorage.setItem('selectedNodeId', id ?? '');
         updatePrevNodes(id);
-        if (id) useStore.getState().setInfoPanelMode('node-info');
+        // if (id) useStore.getState().setInfoPanelMode('node-info');
+        if (id) {
+            useStore.getState().clearSelectedNodes();
+            set({ isMultiSelect: false });
+            localStorage.setItem('isMultiSelect', 'false');
+            useStore.getState().setInfoPanelMode('node-info');
+        }
     },
     setGraphData: (nodes, edges) => set({
         nodes,
@@ -347,7 +354,7 @@ export const useStore = create<ExplorerState>((set) => ({
     setIsMultiSelect: (val: boolean) => {
         localStorage.setItem('isMultiSelect', String(val));
         set({ isMultiSelect: val, ...(val && { selectedNodeId: null }) });
-        if (!val) set({ selectedNodeIds: [] });
+        // if (!val) set({ selectedNodeIds: [] });
     },
     selectedNodeIds: JSON.parse(localStorage.getItem('selectedNodeIds') || '[]'),
     setSelectedNodeIds: (ids: string[]) => {
@@ -368,6 +375,14 @@ export const useStore = create<ExplorerState>((set) => ({
         }
         localStorage.setItem('selectedNodeIds', JSON.stringify(newIds));
         set({ selectedNodeIds: newIds });
+        // Re-open the panel if it was closed (e.g. after a page refresh)
+        if (newIds.length > 0 && useStore.getState().infoPanelMode === 'closed') {
+            set({ infoPanelMode: 'multi-select' });
+        }
+        // Close panel if all nodes deselected
+        if (newIds.length === 0) {
+            set({ infoPanelMode: 'closed' });
+        }
         if (newIds.length >= 2) {
             setTimeout(() => useStore.getState().fetchPath(), 0);
         } else {
@@ -378,15 +393,30 @@ export const useStore = create<ExplorerState>((set) => ({
         localStorage.setItem('selectedNodeIds', JSON.stringify([]));
         set({ selectedNodeIds: [], pathNodeIds: [], pathEdgeIds: [] });
     },
-    infoPanelMode: 'closed',
+    infoPanelMode: (() => {
+        try {
+            const stored = localStorage.getItem('infoPanelMode');
+            if (stored === 'node-info' || stored === 'search-results' || stored === 'multi-select' || stored === 'closed') {
+                return stored;
+            }
+            // fallback to previous logic if not set
+            return (
+                localStorage.getItem('isMultiSelect') === 'true' &&
+                JSON.parse(localStorage.getItem('selectedNodeIds') || '[]').length > 0
+            ) ? 'multi-select' : 'closed';
+        } catch {
+            return 'closed';
+        }
+    })(),
     setInfoPanelMode: (mode) => {
+        localStorage.setItem('infoPanelMode', mode);
         set({ infoPanelMode: mode });
         if (mode === 'closed' || mode === 'search-results') {
             useStore.getState().setSelectedNodeId(null);
-            set({ isMultiSelect: false });
+            useStore.getState().setIsMultiSelect(false);
         }
         if (mode === 'multi-select') {
-            set({ isMultiSelect: true });
+            useStore.getState().setIsMultiSelect(true);
         }
         // 'node-info' preserves isMultiSelect so back button can return to multi-select sidebar
     },
