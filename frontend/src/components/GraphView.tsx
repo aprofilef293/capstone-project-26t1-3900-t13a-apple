@@ -71,6 +71,7 @@ const GraphManager = forwardRef<GraphViewRef, unknown>((_, ref) => {
         toggleNodeSelection, selectedNodeId, setSelectedNodeId,
         searchQuery, viewLevel, setIsNodeSelecting, selectedNodeIds,
         pathNodeIds, pathEdgeIds,
+        infoPanelMode,
     } = useStore();
     const lastClickedNodeRef = useRef(false);
     const { resolvedTheme } = useTheme();
@@ -356,6 +357,23 @@ const GraphManager = forwardRef<GraphViewRef, unknown>((_, ref) => {
     useEffect(() => {
         setIsNodeSelecting(false);
     }, [selectedNodeId, selectedNodeIds, setIsNodeSelecting]);
+
+    useEffect(() => {
+        let frameOne = 0;
+        let frameTwo = 0;
+
+        frameOne = requestAnimationFrame(() => {
+            frameTwo = requestAnimationFrame(() => {
+                sigma.resize(true);
+                sigma.refresh();
+            });
+        });
+
+        return () => {
+            cancelAnimationFrame(frameOne);
+            cancelAnimationFrame(frameTwo);
+        };
+    }, [sigma, infoPanelMode]);
 
     const stateRef = useRef({
         selectedNodeId,

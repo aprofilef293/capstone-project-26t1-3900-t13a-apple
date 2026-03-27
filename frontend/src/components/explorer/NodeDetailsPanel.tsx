@@ -32,15 +32,15 @@ const computedAttributeKeys = [
 ]
 
 function returnToPrevNode(prevNodes: string[], setPrevNodes: (prevNodes: string[]) => void, setSelectedNodeId: (id: string | null) => void): void {
-    // list will include current node
-    prevNodes.pop();
-    const prevNode = prevNodes.pop();
+    const updatedPrevNodes = [...prevNodes];
+    updatedPrevNodes.pop();
+    const prevNode = updatedPrevNodes.pop();
     if (prevNode === undefined) {
-        // close info panel if no nodes previously selected
+        setPrevNodes([]);
         setSelectedNodeId(null);
     } else {
         setSelectedNodeId(prevNode);
-        setPrevNodes(prevNodes);
+        setPrevNodes(updatedPrevNodes);
     }
 }
 
