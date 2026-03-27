@@ -144,7 +144,7 @@ export const useStore = create<ExplorerState>((set) => ({
     nodes: [],
     edges: [],
     graph: new MultiDirectedGraph(),
-    selectedNodeId: null,
+    selectedNodeId: localStorage.getItem('selectedNodeId') || null,
     searchQuery: "",
     viewLevel: 1,
     isGraphLoading: false,
@@ -154,6 +154,7 @@ export const useStore = create<ExplorerState>((set) => ({
     },
     setSelectedNodeId: (id) => {
         set({ selectedNodeId: id });
+        localStorage.setItem('selectedNodeId', id ?? '');
         updatePrevNodes(id);
         // if (id) useStore.getState().setInfoPanelMode('node-info');
         if (id) {
@@ -394,6 +395,11 @@ export const useStore = create<ExplorerState>((set) => ({
     },
     infoPanelMode: (() => {
         try {
+            const stored = localStorage.getItem('infoPanelMode');
+            if (stored === 'node-info' || stored === 'search-results' || stored === 'multi-select' || stored === 'closed') {
+                return stored;
+            }
+            // fallback to previous logic if not set
             return (
                 localStorage.getItem('isMultiSelect') === 'true' &&
                 JSON.parse(localStorage.getItem('selectedNodeIds') || '[]').length > 0
@@ -403,6 +409,7 @@ export const useStore = create<ExplorerState>((set) => ({
         }
     })(),
     setInfoPanelMode: (mode) => {
+        localStorage.setItem('infoPanelMode', mode);
         set({ infoPanelMode: mode });
         if (mode === 'closed' || mode === 'search-results') {
             useStore.getState().setSelectedNodeId(null);
