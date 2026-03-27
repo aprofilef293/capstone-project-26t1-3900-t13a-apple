@@ -406,10 +406,10 @@ export const useStore = create<ExplorerState>((set) => ({
         set({ infoPanelMode: mode });
         if (mode === 'closed' || mode === 'search-results') {
             useStore.getState().setSelectedNodeId(null);
-            set({ isMultiSelect: false });
+            useStore.getState().setIsMultiSelect(false);
         }
         if (mode === 'multi-select') {
-            set({ isMultiSelect: true });
+            useStore.getState().setIsMultiSelect(true);
         }
         // 'node-info' preserves isMultiSelect so back button can return to multi-select sidebar
     },
