@@ -156,10 +156,8 @@ export const useStore = create<ExplorerState>((set) => ({
         set({ selectedNodeId: id });
         localStorage.setItem('selectedNodeId', id ?? '');
         updatePrevNodes(id);
-        // if (id) useStore.getState().setInfoPanelMode('node-info');
         if (id) {
-            useStore.getState().clearSelectedNodes();
-            set({ isMultiSelect: false });
+            useStore.getState().setIsMultiSelect(false);
             localStorage.setItem('isMultiSelect', 'false');
             useStore.getState().setInfoPanelMode('node-info');
         }
@@ -354,12 +352,11 @@ export const useStore = create<ExplorerState>((set) => ({
     setIsMultiSelect: (val: boolean) => {
         localStorage.setItem('isMultiSelect', String(val));
         set({ isMultiSelect: val, ...(val && { selectedNodeId: null }) });
-        // if (!val) set({ selectedNodeIds: [] });
     },
     selectedNodeIds: JSON.parse(localStorage.getItem('selectedNodeIds') || '[]'),
     setSelectedNodeIds: (ids: string[]) => {
-    localStorage.setItem('selectedNodeIds', JSON.stringify(ids));
-    set({ selectedNodeIds: ids });
+        localStorage.setItem('selectedNodeIds', JSON.stringify(ids));
+        set({ selectedNodeIds: ids });
     },
     toggleNodeSelection: (id: string) => {
         const state = useStore.getState();
@@ -374,14 +371,14 @@ export const useStore = create<ExplorerState>((set) => ({
             return;
         }
         localStorage.setItem('selectedNodeIds', JSON.stringify(newIds));
-        set({ selectedNodeIds: newIds });
+        useStore.getState().setSelectedNodeIds(newIds);
         // Re-open the panel if it was closed (e.g. after a page refresh)
         if (newIds.length > 0 && useStore.getState().infoPanelMode === 'closed') {
-            set({ infoPanelMode: 'multi-select' });
+            useStore.getState().setInfoPanelMode('multi-select');
         }
         // Close panel if all nodes deselected
         if (newIds.length === 0) {
-            set({ infoPanelMode: 'closed' });
+            useStore.getState().setInfoPanelMode('closed');
         }
         if (newIds.length >= 2) {
             setTimeout(() => useStore.getState().fetchPath(), 0);
@@ -413,12 +410,9 @@ export const useStore = create<ExplorerState>((set) => ({
         set({ infoPanelMode: mode });
         if (mode === 'closed' || mode === 'search-results') {
             useStore.getState().setSelectedNodeId(null);
-            useStore.getState().setIsMultiSelect(false);
         }
-        if (mode === 'multi-select') {
-            useStore.getState().setIsMultiSelect(true);
-        }
-        // 'node-info' preserves isMultiSelect so back button can return to multi-select sidebar
+        // keeping isMultiSelect aligned with infoPanelMode (should always match)
+        useStore.getState().setIsMultiSelect(mode === 'multi-select');
     },
     // shortest path
     pathNodeIds: [],

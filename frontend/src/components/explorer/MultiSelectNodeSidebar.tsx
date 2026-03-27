@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { useStore } from "../../store/useStore";
 import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
-import { Trash, X, ChevronRight, Loader2, ChevronDown } from "lucide-react";
+import { RefreshCcw, X, ChevronRight, Loader2, ChevronDown } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -133,7 +133,7 @@ const MultiSelectNodeSidebar: React.FC = () => {
           return (
             <div
               key={node.id}
-              className={`rounded-lg p-4 shadow-sm flex items-center cursor-pointer group transition-all ${
+              className={`rounded-lg p-4 shadow-sm flex items-center cursor-pointer group transition-all pl-3 ${
                 isEndpoint
                   ? "bg-blue-50 border-2 border-blue-400 dark:bg-blue-900/20 dark:border-blue-500"
                   : "bg-white border border-gray-200 dark:bg-zinc-900 dark:border-zinc-700/60"
@@ -141,20 +141,22 @@ const MultiSelectNodeSidebar: React.FC = () => {
               onClick={() => setSelectedNodeId(node.id)}
             >
               {/* left side of mini-tab */}
-              <div className="flex flex-col flex-1 min-w-0">
+              <div className="flex flex-1 min-w-0 justify-start gap-3">
                 {/* x btn + badge */}
-                <div className="flex items-center gap-1.5 mb-1">
+                <div className="flex items-center gap-1.5">
                   {isEndpoint && (
-                    <button
+                    <Button
+                      variant="ghost"
+                      size="icon-xs"
                       onClick={(e) => {
                         e.stopPropagation();
                         toggleNodeSelection(node.id);
                       }}
-                      className="p-0.5 rounded text-gray-300 hover:text-red-500 dark:text-zinc-600 dark:hover:text-red-400 transition-colors"
+                      className="dark:text-zinc-500"
                       title="Remove from selection"
                     >
-                      <X className="w-3 h-3" />
-                    </button>
+                      <X className="w-4 h-4" />
+                    </Button>
                   )}
                   {hasPath && (
                     <Badge
@@ -170,28 +172,30 @@ const MultiSelectNodeSidebar: React.FC = () => {
                   )}
                 </div>
 
-                {/* node name */}
-                <span className="font-medium text-base text-gray-900 dark:text-zinc-100 mb-1">
-                  {node.label}
-                </span>
+                <div className="flex flex-col">
+                  {/* node name */}
+                  <span className="font-medium text-base text-gray-900 dark:text-zinc-100 mb-1">
+                    {node.label}
+                  </span>
 
-                {/* node id (by default) - changes to other attributes if selected in dropdown*/}
-                <div className="text-xs text-gray-500 dark:text-zinc-400">
-                  {selectedAttribute ? (
-                    <>
-                      {selectedAttribute}:{" "}
-                      <span className="font-mono text-gray-400 dark:text-zinc-500">
-                        {String(node.attributes[selectedAttribute] ?? "N/A")}
-                      </span>
-                    </>
-                  ) : (
-                    <>
-                      id:{" "}
-                      <span className="font-mono text-gray-400 dark:text-zinc-500">
-                        {node.id}
-                      </span>
-                    </>
-                  )}
+                  {/* node id (by default) - changes to other attributes if selected in dropdown*/}
+                  <div className="text-xs text-gray-500 dark:text-zinc-400">
+                    {selectedAttribute ? (
+                      <>
+                        {selectedAttribute}:{" "}
+                        <span className="font-mono text-gray-400 dark:text-zinc-500">
+                          {String(node.attributes[selectedAttribute] ?? "N/A")}
+                        </span>
+                      </>
+                    ) : (
+                      <>
+                        id:{" "}
+                        <span className="font-mono text-gray-400 dark:text-zinc-500">
+                          {node.id}
+                        </span>
+                      </>
+                    )}
+                  </div>
                 </div>
               </div>
 
@@ -203,17 +207,17 @@ const MultiSelectNodeSidebar: React.FC = () => {
       </div>
 
       {/* Footer */}
-      <div className="mt-auto flex justify-start pt-4">
-        <button
-          className="flex items-center gap-1 text-xs p-1.5 rounded text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:text-zinc-500 dark:hover:text-zinc-300 dark:hover:bg-zinc-800 transition-colors"
+      <div className="mt-auto flex justify-center pt-4">
+        <Button
+          variant="secondary"
+          className="w-full text-s p-5"
           onClick={() => {
             clearSelectedNodes();
-            setInfoPanelMode("closed");
           }}
           title="Clear selection"
         >
-          <Trash className="w-4 h-4" />
-        </button>
+          <RefreshCcw className="w-4 h-4" /> Clear Selection
+        </Button>
       </div>
     </aside>
   );
