@@ -1,7 +1,7 @@
 import { useEffect, useCallback, useMemo, useRef, forwardRef, useImperativeHandle, useDeferredValue } from "react";
 import { SigmaContainer, useSigma, useRegisterEvents, useCamera } from "@react-sigma/core";
 import "@react-sigma/core/lib/style.css";
-import { useStore } from "../store/useStore";
+import { useStore, DEFAULT_FILTERS } from "../store/useStore";
 import { useTheme } from "./theme-provider";
 import { NodeBorderProgram } from "@sigma/node-border";
 import { EdgeLineProgram, NodePointProgram } from "sigma/rendering";
@@ -71,8 +71,9 @@ const GraphManager = forwardRef<GraphViewRef, unknown>((_, ref) => {
         toggleNodeSelection, selectedNodeId, setSelectedNodeId,
         searchQuery, viewLevel, setIsNodeSelecting, selectedNodeIds,
         pathNodeIds, pathEdgeIds,
-        infoPanelMode,
+        infoPanelMode, graphFilters: rawFilters,
     } = useStore();
+    const graphFilters = rawFilters ?? DEFAULT_FILTERS;
     const lastClickedNodeRef = useRef(false);
     const { resolvedTheme } = useTheme();
     const isDark = resolvedTheme === "dark";
@@ -408,16 +409,31 @@ const GraphManager = forwardRef<GraphViewRef, unknown>((_, ref) => {
         stateRef.current.edgeEndpoints = cache;
     }, [edges, sigma]);
 
-    // Visibility filter – runs on search/viewLevel/selection changes
+    // Visibility filter – runs on search/viewLevel/selection/filter changes
     useEffect(() => {
         const graph = sigma.getGraph();
         const query = deferredSearchQuery.toLowerCase();
+        const labelKw = graphFilters.labelKeyword.trim().toLowerCase();
+        const descKw = graphFilters.descriptionKeyword.trim().toLowerCase();
         const visibleNodes = new Set<string>();
 
         graph.forEachNode((id: string, attrs: NodeAttributes) => {
-            const matchesSearch = !!selectedNodeId || !query || String(attrs.label ?? "").toLowerCase().includes(query);
+            const label = String(attrs.label ?? "");
+            const matchesSearch = !!selectedNodeId || !query || label.toLowerCase().includes(query);
             const level = ((attrs.attributes as Record<string, unknown>)?.viewLevel as number) ?? 1;
-            let isVisible = matchesSearch && level >= viewLevel;
+
+            // Apply graph filters
+            const matchesLabel = !labelKw || label.toLowerCase().includes(labelKw);
+            const nodeAttrs = attrs.attributes as Record<string, unknown>;
+            const matchesDesc = !descKw || (
+                ((nodeAttrs?.definition as string) ?? '').toLowerCase().includes(descKw) ||
+                ((nodeAttrs?.synonyms as string[]) ?? []).some(s => s.toLowerCase().includes(descKw))
+            );
+            const rank = (nodeAttrs?.percentile_rank as number) ?? 0;
+            const matchesImportance = rank >= graphFilters.minImportance;
+            const matchesColor = !graphFilters.excludedColors.has(attrs.color as string);
+
+            let isVisible = matchesSearch && level >= viewLevel && matchesLabel && matchesDesc && matchesImportance && matchesColor;
 
             if (selectedNodeId && isolationData) {
                 isVisible = isVisible && (
@@ -439,7 +455,7 @@ const GraphManager = forwardRef<GraphViewRef, unknown>((_, ref) => {
         stateRef.current.visibleNodes = visibleNodes;
         // update graph (note: this does not perform a hard refresh on the browser)
         sigma.refresh();
-    }, [nodes, edges, deferredSearchQuery, viewLevel, selectedNodeId, isolationData, isMultiSelect, multiSelectPathData, selectedNodeIds, sigma]);
+    }, [nodes, edges, deferredSearchQuery, viewLevel, selectedNodeId, isolationData, isMultiSelect, multiSelectPathData, selectedNodeIds, sigma, graphFilters]);
 
     useEffect(() => {
         const graph = sigma.getGraph();
