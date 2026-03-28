@@ -3,7 +3,6 @@ import { Filter, X, RotateCcw } from "lucide-react";
 import { useStore, DEFAULT_FILTERS } from "../../store/useStore";
 import { cn } from "../../lib/utils";
 
-// ── helpers ─────────────────────────────────────────────────────────────────
 
 function countActiveFilters(filters: {
     labelKeyword: string;
@@ -17,7 +16,6 @@ function countActiveFilters(filters: {
     return n;
 }
 
-// ── sub-components ───────────────────────────────────────────────────────────
 
 function SectionLabel({ children }: { children: React.ReactNode }) {
     return (
@@ -27,7 +25,6 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
     );
 }
 
-// ── main component ───────────────────────────────────────────────────────────
 
 export function GraphFilterPanel() {
     const { graphFilters: rawFilters, setGraphFilters, resetGraphFilters } = useStore();
@@ -50,7 +47,6 @@ export function GraphFilterPanel() {
 
     return (
         <div ref={panelRef} className="relative pointer-events-auto">
-            {/* Toggle button — same padding/height as the Multi-Select container */}
             <button
                 id="graph-filter-toggle"
                 onClick={() => setIsOpen((v) => !v)}
@@ -71,7 +67,7 @@ export function GraphFilterPanel() {
                 )}
             </button>
 
-            {/* Dropdown panel — opens UPWARD to stay on screen */}
+            {/* Dropdown panel */}
             {isOpen && (
                 <div
                     id="graph-filter-panel"
@@ -87,7 +83,7 @@ export function GraphFilterPanel() {
                             <Filter className="w-3.5 h-3.5 text-sidebar-foreground/70" />
                             <span className="text-xs font-semibold text-sidebar-foreground">Graph Filters</span>
                         </div>
-                        <div className="flex items-center gap-1">
+                        <div className="flex items-center gap-1.5">
                             {activeCount > 0 && (
                                 <button
                                     onClick={resetGraphFilters}
@@ -107,10 +103,11 @@ export function GraphFilterPanel() {
                         </div>
                     </div>
 
-                    <div className="p-3.5 space-y-4">
-                        {/* Keyword Filter */}
+                    <div className="p-4 space-y-5">
+
+                        {/* Label keyword */}
                         <div>
-                            <SectionLabel>Filter by Keyword</SectionLabel>
+                            <SectionLabel>Node name contains</SectionLabel>
                             <div className="relative">
                                 <input
                                     id="filter-label-keyword"
@@ -131,13 +128,39 @@ export function GraphFilterPanel() {
                             </div>
                         </div>
 
+                        {/* Description / definition keyword */}
+                        <div>
+                            <SectionLabel>Description contains</SectionLabel>
+                            <div className="relative">
+                                <input
+                                    id="filter-description-keyword"
+                                    type="text"
+                                    value={graphFilters.descriptionKeyword}
+                                    onChange={(e) => setGraphFilters({ descriptionKeyword: e.target.value })}
+                                    placeholder="e.g. chronic, viral…"
+                                    className="w-full bg-sidebar-accent/40 border border-sidebar-border rounded-lg px-3 py-2 text-xs text-sidebar-foreground placeholder:text-sidebar-foreground/40 focus:outline-none focus:ring-1 focus:ring-blue-500/50 focus:border-blue-500/50 transition-all"
+                                />
+                                {graphFilters.descriptionKeyword && (
+                                    <button
+                                        onClick={() => setGraphFilters({ descriptionKeyword: '' })}
+                                        className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                                    >
+                                        <X className="w-3 h-3" />
+                                    </button>
+                                )}
+                            </div>
+                            <p className="text-[10px] text-muted-foreground mt-1 leading-tight">
+                                Searches definition &amp; synonyms fields (OBO data)
+                            </p>
+                        </div>
+
                         {/* Min importance slider */}
                         <div>
                             <div className="flex items-center justify-between mb-1.5">
-                                <SectionLabel>Minimum importance</SectionLabel>
+                                <SectionLabel>Min. importance</SectionLabel>
                                 <span className="text-[10px] font-mono text-sidebar-foreground/70 tabular-nums">
                                     {graphFilters.minImportance > 0
-                                        ? `${Math.round(graphFilters.minImportance * 100)}%`
+                                        ? `≥ ${Math.round(graphFilters.minImportance * 100)}%`
                                         : "All"}
                                 </span>
                             </div>
@@ -145,23 +168,18 @@ export function GraphFilterPanel() {
                                 id="filter-min-importance"
                                 type="range"
                                 min="0"
-                                max="0.95"
-                                step="0.05"
+                                max="0.99"
+                                step="0.01"
                                 value={graphFilters.minImportance}
                                 onChange={(e) => setGraphFilters({ minImportance: Number(e.target.value) })}
-                                className="w-full h-1 bg-border rounded-full appearance-none cursor-pointer focus:outline-none [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-blue-500 [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-background [&::-webkit-slider-thumb]:shadow-sm hover:[&::-webkit-slider-thumb]:scale-110 transition-all"
+                                className="w-full h-1 bg-border rounded-full appearance-none cursor-pointer focus:outline-none [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3.5 [&::-webkit-slider-thumb]:h-3.5 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-foreground [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-background [&::-webkit-slider-thumb]:shadow-sm hover:[&::-webkit-slider-thumb]:scale-125 transition-all"
                             />
+                            <div className="flex justify-between text-[9px] text-muted-foreground mt-1">
+                                <span>All nodes</span>
+                                <span>High importance only</span>
+                            </div>
                         </div>
 
-                        {/* Active filter summary */}
-                        {activeCount > 0 && (
-                            <div className="pt-2 border-t border-sidebar-border/30">
-                                <div className="text-[10px] text-muted-foreground flex items-center gap-1.5">
-                                    <div className="w-1 h-1 rounded-full bg-blue-500" />
-                                    <span>{activeCount} filter{activeCount !== 1 ? "s" : ""} active</span>
-                                </div>
-                            </div>
-                        )}
                     </div>
                 </div>
             )}
