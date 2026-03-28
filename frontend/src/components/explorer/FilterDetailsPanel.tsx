@@ -5,13 +5,13 @@ import { cn } from "../../lib/utils";
 
 
 function countActiveFilters(filters: {
-    labelKeyword: string;
-    descriptionKeyword: string;
+    labelKeywords: string[];
+    descriptionKeywords: string[];
     minImportance: number;
 }) {
     let n = 0;
-    if (filters.labelKeyword.trim()) n++;
-    if (filters.descriptionKeyword.trim()) n++;
+    if (filters.labelKeywords.length > 0) n++;
+    if (filters.descriptionKeywords.length > 0) n++;
     if (filters.minImportance > 0) n++;
     return n;
 }
@@ -21,6 +21,79 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
     return (
         <div className="text-[9px] font-semibold uppercase tracking-widest text-muted-foreground mb-1.5">
             {children}
+        </div>
+    );
+}
+
+
+function TagInput({
+    tags,
+    onAdd,
+    onRemove,
+    placeholder,
+    id
+}: {
+    tags: string[];
+    onAdd: (tag: string) => void;
+    onRemove: (tag: string) => void;
+    placeholder: string;
+    id: string;
+}) {
+    const [inputValue, setInputValue] = useState("");
+
+    const handleKeyDown = (e: React.KeyboardEvent) => {
+        if (e.key === 'Enter' || e.key === ',') {
+            e.preventDefault();
+            const val = inputValue.trim().replace(/,$/, "");
+            if (val && !tags.includes(val)) {
+                onAdd(val);
+                setInputValue("");
+            }
+        } else if (e.key === 'Backspace' && !inputValue && tags.length > 0) {
+            onRemove(tags[tags.length - 1]);
+        }
+    };
+
+    const handleBlur = () => {
+        const val = inputValue.trim();
+        if (val && !tags.includes(val)) {
+            onAdd(val);
+            setInputValue("");
+        }
+    };
+
+    return (
+        <div className={cn(
+            "flex flex-wrap gap-1.5 p-2 min-h-[38px] bg-sidebar-accent/40 border border-sidebar-border rounded-lg focus-within:ring-1 focus-within:ring-blue-500/50 focus-within:border-blue-500/50 transition-all cursor-text",
+            tags.length > 0 ? "pb-2" : ""
+        )} onClick={() => document.getElementById(id)?.focus()}>
+            {tags.map((tag) => (
+                <span
+                    key={tag}
+                    className="inline-flex items-center gap-1.5 pl-2 pr-1.5 py-1 bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20 rounded-md text-[10px] font-medium group animate-in zoom-in-95 duration-150"
+                >
+                    {tag}
+                    <button
+                        onClick={(e) => { e.stopPropagation(); onRemove(tag); }}
+                        className="p-0.5 rounded-sm hover:bg-blue-500/20 text-blue-500/70 hover:text-blue-600 dark:text-blue-400/70 dark:hover:text-blue-300 transition-all"
+                    >
+                        <X className="w-2.5 h-2.5" />
+                    </button>
+                </span>
+            ))}
+            <input
+                id={id}
+                type="text"
+                value={inputValue}
+                onChange={(e) => setInputValue(e.target.value)}
+                onKeyDown={handleKeyDown}
+                onBlur={handleBlur}
+                placeholder={tags.length === 0 ? placeholder : "Add..."}
+                className={cn(
+                    "flex-1 bg-transparent border-none outline-none text-xs text-sidebar-foreground placeholder:text-sidebar-foreground/40 min-w-[40px] py-1",
+                    tags.length > 0 ? "placeholder:text-sidebar-foreground/20" : ""
+                )}
+            />
         </div>
     );
 }
@@ -108,48 +181,26 @@ export function GraphFilterPanel() {
                         {/* Label keyword */}
                         <div>
                             <SectionLabel>Node name contains</SectionLabel>
-                            <div className="relative">
-                                <input
-                                    id="filter-label-keyword"
-                                    type="text"
-                                    value={graphFilters.labelKeyword}
-                                    onChange={(e) => setGraphFilters({ labelKeyword: e.target.value })}
-                                    placeholder="e.g. cancer, allergy…"
-                                    className="w-full bg-sidebar-accent/40 border border-sidebar-border rounded-lg px-3 py-2 text-xs text-sidebar-foreground placeholder:text-sidebar-foreground/40 focus:outline-none focus:ring-1 focus:ring-blue-500/50 focus:border-blue-500/50 transition-all"
-                                />
-                                {graphFilters.labelKeyword && (
-                                    <button
-                                        onClick={() => setGraphFilters({ labelKeyword: '' })}
-                                        className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                                    >
-                                        <X className="w-3 h-3" />
-                                    </button>
-                                )}
-                            </div>
+                            <TagInput
+                                id="filter-label-keyword"
+                                tags={graphFilters.labelKeywords}
+                                onAdd={(tag) => setGraphFilters({ labelKeywords: [...graphFilters.labelKeywords, tag] })}
+                                onRemove={(tag) => setGraphFilters({ labelKeywords: graphFilters.labelKeywords.filter(t => t !== tag) })}
+                                placeholder="e.g. cancer, allergy…"
+                            />
                         </div>
 
                         {/* Description / definition keyword */}
                         <div>
                             <SectionLabel>Description contains</SectionLabel>
-                            <div className="relative">
-                                <input
-                                    id="filter-description-keyword"
-                                    type="text"
-                                    value={graphFilters.descriptionKeyword}
-                                    onChange={(e) => setGraphFilters({ descriptionKeyword: e.target.value })}
-                                    placeholder="e.g. chronic, viral…"
-                                    className="w-full bg-sidebar-accent/40 border border-sidebar-border rounded-lg px-3 py-2 text-xs text-sidebar-foreground placeholder:text-sidebar-foreground/40 focus:outline-none focus:ring-1 focus:ring-blue-500/50 focus:border-blue-500/50 transition-all"
-                                />
-                                {graphFilters.descriptionKeyword && (
-                                    <button
-                                        onClick={() => setGraphFilters({ descriptionKeyword: '' })}
-                                        className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                                    >
-                                        <X className="w-3 h-3" />
-                                    </button>
-                                )}
-                            </div>
-                            <p className="text-[10px] text-muted-foreground mt-1 leading-tight">
+                            <TagInput
+                                id="filter-description-keyword"
+                                tags={graphFilters.descriptionKeywords}
+                                onAdd={(tag) => setGraphFilters({ descriptionKeywords: [...graphFilters.descriptionKeywords, tag] })}
+                                onRemove={(tag) => setGraphFilters({ descriptionKeywords: graphFilters.descriptionKeywords.filter(t => t !== tag) })}
+                                placeholder="e.g. chronic, viral…"
+                            />
+                            <p className="text-[10px] text-muted-foreground mt-1.5 leading-tight px-1.5">
                                 Searches definition &amp; synonyms fields (OBO data)
                             </p>
                         </div>
