@@ -413,8 +413,8 @@ const GraphManager = forwardRef<GraphViewRef, unknown>((_, ref) => {
     useEffect(() => {
         const graph = sigma.getGraph();
         const query = deferredSearchQuery.toLowerCase();
-        const labelKw = graphFilters.labelKeyword.trim().toLowerCase();
-        const descKw = graphFilters.descriptionKeyword.trim().toLowerCase();
+        const labelKws = (graphFilters.labelKeywords || []).map(k => k.toLowerCase().trim()).filter(Boolean);
+        const descKws = (graphFilters.descriptionKeywords || []).map(k => k.toLowerCase().trim()).filter(Boolean);
         const visibleNodes = new Set<string>();
 
         graph.forEachNode((id: string, attrs: NodeAttributes) => {
@@ -423,12 +423,12 @@ const GraphManager = forwardRef<GraphViewRef, unknown>((_, ref) => {
             const level = ((attrs.attributes as Record<string, unknown>)?.viewLevel as number) ?? 1;
 
             // Apply graph filters
-            const matchesLabel = !labelKw || label.toLowerCase().includes(labelKw);
+            const matchesLabel = labelKws.length === 0 || labelKws.some(kw => label.toLowerCase().includes(kw));
             const nodeAttrs = attrs.attributes as Record<string, unknown>;
-            const matchesDesc = !descKw || (
-                ((nodeAttrs?.definition as string) ?? '').toLowerCase().includes(descKw) ||
-                ((nodeAttrs?.synonyms as string[]) ?? []).some(s => s.toLowerCase().includes(descKw))
-            );
+            const matchesDesc = descKws.length === 0 || descKws.some(kw => (
+                ((nodeAttrs?.definition as string) ?? '').toLowerCase().includes(kw) ||
+                ((nodeAttrs?.synonyms as string[]) ?? []).some(s => s.toLowerCase().includes(kw))
+            ));
             const rank = (nodeAttrs?.percentile_rank as number) ?? 0;
             const matchesImportance = rank >= graphFilters.minImportance;
             const matchesColor = !graphFilters.excludedColors.has(attrs.color as string);
