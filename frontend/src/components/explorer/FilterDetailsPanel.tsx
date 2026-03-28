@@ -1,12 +1,13 @@
 import { useState, useRef, useEffect } from "react";
-import { Filter, X, RotateCcw } from "lucide-react";
+import { Filter, X, RotateCcw, Check, Asterisk, Ban } from "lucide-react";
 import { useStore, DEFAULT_FILTERS } from "../../store/useStore";
+import type { TagKeyword, TagMode } from "../../store/useStore";
 import { cn } from "../../lib/utils";
 
 
 function countActiveFilters(filters: {
-    labelKeywords: string[];
-    descriptionKeywords: string[];
+    labelKeywords: TagKeyword[];
+    descriptionKeywords: TagKeyword[];
     minImportance: number;
 }) {
     let n = 0;
@@ -30,12 +31,14 @@ function TagInput({
     tags,
     onAdd,
     onRemove,
+    onToggleMode,
     placeholder,
     id
 }: {
-    tags: string[];
-    onAdd: (tag: string) => void;
-    onRemove: (tag: string) => void;
+    tags: TagKeyword[];
+    onAdd: (text: string) => void;
+    onRemove: (text: string) => void;
+    onToggleMode: (text: string) => void;
     placeholder: string;
     id: string;
 }) {
@@ -45,20 +48,43 @@ function TagInput({
         if (e.key === 'Enter' || e.key === ',') {
             e.preventDefault();
             const val = inputValue.trim().replace(/,$/, "");
-            if (val && !tags.includes(val)) {
+            if (val && !tags.some(t => t.text === val)) {
                 onAdd(val);
                 setInputValue("");
             }
         } else if (e.key === 'Backspace' && !inputValue && tags.length > 0) {
-            onRemove(tags[tags.length - 1]);
+            onRemove(tags[tags.length - 1].text);
         }
     };
 
     const handleBlur = () => {
         const val = inputValue.trim();
-        if (val && !tags.includes(val)) {
+        if (val && !tags.some(t => t.text === val)) {
             onAdd(val);
             setInputValue("");
+        }
+    };
+
+    const getModeStyles = (mode: TagMode) => {
+        switch (mode) {
+            case 'mandatory':
+                return {
+                    bg: "bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20",
+                    hover: "hover:bg-purple-500/20",
+                    icon: <Asterisk className="w-2.5 h-2.5" />
+                };
+            case 'exclude':
+                return {
+                    bg: "bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/20",
+                    hover: "hover:bg-red-500/20",
+                    icon: <Ban className="w-2.5 h-2.5" />
+                };
+            default:
+                return {
+                    bg: "bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20",
+                    hover: "hover:bg-blue-500/20",
+                    icon: <Check className="w-2.5 h-2.5" />
+                };
         }
     };
 
@@ -67,20 +93,30 @@ function TagInput({
             "flex flex-wrap gap-1.5 p-2 min-h-[38px] bg-sidebar-accent/40 border border-sidebar-border rounded-lg focus-within:ring-1 focus-within:ring-blue-500/50 focus-within:border-blue-500/50 transition-all cursor-text",
             tags.length > 0 ? "pb-2" : ""
         )} onClick={() => document.getElementById(id)?.focus()}>
-            {tags.map((tag) => (
-                <span
-                    key={tag}
-                    className="inline-flex items-center gap-1.5 pl-2 pr-1.5 py-1 bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20 rounded-md text-[10px] font-medium group animate-in zoom-in-95 duration-150"
-                >
-                    {tag}
-                    <button
-                        onClick={(e) => { e.stopPropagation(); onRemove(tag); }}
-                        className="p-0.5 rounded-sm hover:bg-blue-500/20 text-blue-500/70 hover:text-blue-600 dark:text-blue-400/70 dark:hover:text-blue-300 transition-all"
+            {tags.map((tag) => {
+                const styles = getModeStyles(tag.mode);
+                return (
+                    <span
+                        key={tag.text}
+                        className={cn(
+                            "inline-flex items-center gap-1.5 pl-1.5 pr-1 py-1 border rounded-md text-[10px] font-medium transition-all animate-in zoom-in-95 duration-150 cursor-pointer select-none",
+                            styles.bg,
+                            styles.hover
+                        )}
+                        onClick={(e) => { e.stopPropagation(); onToggleMode(tag.text); }}
+                        title={`Mode: ${tag.mode}. Click to cycle.`}
                     >
-                        <X className="w-2.5 h-2.5" />
-                    </button>
-                </span>
-            ))}
+                        {styles.icon}
+                        {tag.text}
+                        <button
+                            onClick={(e) => { e.stopPropagation(); onRemove(tag.text); }}
+                            className="p-0.5 rounded-sm hover:bg-black/5 dark:hover:bg-white/5 transition-all ml-0.5"
+                        >
+                            <X className="w-2.5 h-2.5" />
+                        </button>
+                    </span>
+                );
+            })}
             <input
                 id={id}
                 type="text"
@@ -184,8 +220,15 @@ export function GraphFilterPanel() {
                             <TagInput
                                 id="filter-label-keyword"
                                 tags={graphFilters.labelKeywords}
-                                onAdd={(tag) => setGraphFilters({ labelKeywords: [...graphFilters.labelKeywords, tag] })}
-                                onRemove={(tag) => setGraphFilters({ labelKeywords: graphFilters.labelKeywords.filter(t => t !== tag) })}
+                                onAdd={(text) => setGraphFilters({ labelKeywords: [...graphFilters.labelKeywords, { text, mode: 'include' }] })}
+                                onRemove={(text) => setGraphFilters({ labelKeywords: graphFilters.labelKeywords.filter(t => t.text !== text) })}
+                                onToggleMode={(text) => setGraphFilters({
+                                    labelKeywords: graphFilters.labelKeywords.map(t =>
+                                        t.text === text
+                                            ? { ...t, mode: t.mode === 'include' ? 'mandatory' : t.mode === 'mandatory' ? 'exclude' : 'include' }
+                                            : t
+                                    )
+                                })}
                                 placeholder="e.g. cancer, allergy…"
                             />
                         </div>
@@ -196,13 +239,31 @@ export function GraphFilterPanel() {
                             <TagInput
                                 id="filter-description-keyword"
                                 tags={graphFilters.descriptionKeywords}
-                                onAdd={(tag) => setGraphFilters({ descriptionKeywords: [...graphFilters.descriptionKeywords, tag] })}
-                                onRemove={(tag) => setGraphFilters({ descriptionKeywords: graphFilters.descriptionKeywords.filter(t => t !== tag) })}
+                                onAdd={(text) => setGraphFilters({ descriptionKeywords: [...graphFilters.descriptionKeywords, { text, mode: 'include' }] })}
+                                onRemove={(text) => setGraphFilters({ descriptionKeywords: graphFilters.descriptionKeywords.filter(t => t.text !== text) })}
+                                onToggleMode={(text) => setGraphFilters({
+                                    descriptionKeywords: graphFilters.descriptionKeywords.map(t =>
+                                        t.text === text
+                                            ? { ...t, mode: t.mode === 'include' ? 'mandatory' : t.mode === 'mandatory' ? 'exclude' : 'include' }
+                                            : t
+                                    )
+                                })}
                                 placeholder="e.g. chronic, viral…"
                             />
                             <p className="text-[10px] text-muted-foreground mt-1.5 leading-tight px-1.5">
-                                Searches definition &amp; synonyms fields (OBO data)
+                                Searches definition fields (OBO data)
                             </p>
+                            <div className="mt-3 flex flex-wrap gap-x-3 gap-y-1.5 px-1.5">
+                                <div className="flex items-center gap-1 text-[9px] text-blue-500/80">
+                                    <Check className="w-2.5 h-2.5" /> <span>Include (OR)</span>
+                                </div>
+                                <div className="flex items-center gap-1 text-[9px] text-purple-500/80">
+                                    <Asterisk className="w-2.5 h-2.5" /> <span>Mandatory (AND)</span>
+                                </div>
+                                <div className="flex items-center gap-1 text-[9px] text-red-500/80">
+                                    <Ban className="w-2.5 h-2.5" /> <span>Exclude (NOT)</span>
+                                </div>
+                            </div>
                         </div>
 
                         {/* Min importance slider */}

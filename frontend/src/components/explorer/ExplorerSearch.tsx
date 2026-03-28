@@ -45,8 +45,6 @@ export function ExplorerSearch() {
     const { fuzzyResults, descriptionResults } = useMemo(() => {
         const q = searchQuery.trim();
         if (!q) {
-            setSearchResultsFuzzyTitle([]);
-            setSearchResultsDescription([]);
             return { fuzzyResults: [], descriptionResults: [] };
         }
 
@@ -69,10 +67,14 @@ export function ExplorerSearch() {
             }).slice(0, 20)
             : [];
 
-        setSearchResultsFuzzyTitle(fuzzyHits);
-        setSearchResultsDescription(descHits);
         return { fuzzyResults: fuzzyHits, descriptionResults: descHits };
     }, [fuse, nodes, searchQuery]);
+
+    // Sync results to store in an effect (not during render)
+    useEffect(() => {
+        setSearchResultsFuzzyTitle(fuzzyResults);
+        setSearchResultsDescription(descriptionResults);
+    }, [fuzzyResults, descriptionResults, setSearchResultsFuzzyTitle, setSearchResultsDescription]);
 
     const searchResults = useMemo(
         () => [...fuzzyResults, ...descriptionResults],
