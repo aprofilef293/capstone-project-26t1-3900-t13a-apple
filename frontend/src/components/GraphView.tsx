@@ -6,6 +6,7 @@ import { useTheme } from "./theme-provider";
 import { NodeBorderProgram } from "@sigma/node-border";
 import { EdgeLineProgram, NodePointProgram } from "sigma/rendering";
 import { adjustColorBrightness } from "../lib/utils";
+import { getGroups, checkMatch } from "../lib/filterUtils";
 import { MultiDirectedGraph } from "graphology";
 
 /** UI Configuration */
@@ -413,8 +414,9 @@ const GraphManager = forwardRef<GraphViewRef, unknown>((_, ref) => {
     useEffect(() => {
         const graph = sigma.getGraph();
         const query = deferredSearchQuery.toLowerCase();
-        const labelKw = graphFilters.labelKeyword.trim().toLowerCase();
-        const descKw = graphFilters.descriptionKeyword.trim().toLowerCase();
+        const labelGroups = getGroups(graphFilters.labelKeywords || []);
+        const descGroups = getGroups(graphFilters.descriptionKeywords || []);
+
         const visibleNodes = new Set<string>();
 
         graph.forEachNode((id: string, attrs: NodeAttributes) => {
@@ -422,12 +424,12 @@ const GraphManager = forwardRef<GraphViewRef, unknown>((_, ref) => {
             const matchesSearch = !!selectedNodeId || !query || label.toLowerCase().includes(query);
             const level = ((attrs.attributes as Record<string, unknown>)?.viewLevel as number) ?? 1;
 
-            // Apply graph filters
-            const matchesLabel = !labelKw || label.toLowerCase().includes(labelKw);
             const nodeAttrs = attrs.attributes as Record<string, unknown>;
-            const matchesDesc = !descKw || (
-                ((nodeAttrs?.definition as string) ?? '').toLowerCase().includes(descKw) ||
-                ((nodeAttrs?.synonyms as string[]) ?? []).some(s => s.toLowerCase().includes(descKw))
+            const matchesLabel = checkMatch(label, labelGroups);
+            const matchesDesc = checkMatch(
+                ((nodeAttrs?.definition as string) ?? '') +
+                ((nodeAttrs?.synonyms as string[]) ?? []).join(' '),
+                descGroups
             );
             const rank = (nodeAttrs?.percentile_rank as number) ?? 0;
             const matchesImportance = rank >= graphFilters.minImportance;

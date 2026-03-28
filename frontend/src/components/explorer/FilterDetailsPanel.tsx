@@ -1,0 +1,300 @@
+import { useState, useRef, useEffect } from "react";
+import { Filter, X, RotateCcw, Check, Asterisk, Ban } from "lucide-react";
+import { useStore, DEFAULT_FILTERS } from "../../store/useStore";
+import type { TagKeyword, TagMode } from "../../store/useStore";
+import { cn } from "../../lib/utils";
+
+
+function countActiveFilters(filters: {
+    labelKeywords: TagKeyword[];
+    descriptionKeywords: TagKeyword[];
+    minImportance: number;
+}) {
+    let n = 0;
+    if (filters.labelKeywords.length > 0) n++;
+    if (filters.descriptionKeywords.length > 0) n++;
+    if (filters.minImportance > 0) n++;
+    return n;
+}
+
+
+function SectionLabel({ children }: { children: React.ReactNode }) {
+    return (
+        <div className="text-[9px] font-semibold uppercase tracking-widest text-muted-foreground mb-1.5">
+            {children}
+        </div>
+    );
+}
+
+
+function TagInput({
+    tags,
+    onAdd,
+    onRemove,
+    onToggleMode,
+    placeholder,
+    id
+}: {
+    tags: TagKeyword[];
+    onAdd: (text: string) => void;
+    onRemove: (text: string) => void;
+    onToggleMode: (text: string) => void;
+    placeholder: string;
+    id: string;
+}) {
+    const [inputValue, setInputValue] = useState("");
+
+    const handleKeyDown = (e: React.KeyboardEvent) => {
+        if (e.key === 'Enter' || e.key === ',') {
+            e.preventDefault();
+            const val = inputValue.trim().replace(/,$/, "");
+            if (val && !tags.some(t => t.text === val)) {
+                onAdd(val);
+                setInputValue("");
+            }
+        } else if (e.key === 'Backspace' && !inputValue && tags.length > 0) {
+            onRemove(tags[tags.length - 1].text);
+        }
+    };
+
+    const handleBlur = () => {
+        const val = inputValue.trim();
+        if (val && !tags.some(t => t.text === val)) {
+            onAdd(val);
+            setInputValue("");
+        }
+    };
+
+    const getModeStyles = (mode: TagMode) => {
+        switch (mode) {
+            case 'mandatory':
+                return {
+                    bg: "bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20",
+                    hover: "hover:bg-purple-500/20",
+                    icon: <Asterisk className="w-2.5 h-2.5" />
+                };
+            case 'exclude':
+                return {
+                    bg: "bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/20",
+                    hover: "hover:bg-red-500/20",
+                    icon: <Ban className="w-2.5 h-2.5" />
+                };
+            default:
+                return {
+                    bg: "bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20",
+                    hover: "hover:bg-blue-500/20",
+                    icon: <Check className="w-2.5 h-2.5" />
+                };
+        }
+    };
+
+    return (
+        <div className={cn(
+            "flex flex-wrap gap-1.5 p-2 min-h-[38px] bg-sidebar-accent/40 border border-sidebar-border rounded-lg focus-within:ring-1 focus-within:ring-blue-500/50 focus-within:border-blue-500/50 transition-all cursor-text",
+            tags.length > 0 ? "pb-2" : ""
+        )} onClick={() => document.getElementById(id)?.focus()}>
+            {tags.map((tag) => {
+                const styles = getModeStyles(tag.mode);
+                return (
+                    <span
+                        key={tag.text}
+                        className={cn(
+                            "inline-flex items-center gap-1.5 pl-1.5 pr-1 py-1 border rounded-md text-[10px] font-medium transition-all animate-in zoom-in-95 duration-150 cursor-pointer select-none",
+                            styles.bg,
+                            styles.hover
+                        )}
+                        onClick={(e) => { e.stopPropagation(); onToggleMode(tag.text); }}
+                        title={`Mode: ${tag.mode}. Click to cycle.`}
+                    >
+                        {styles.icon}
+                        {tag.text}
+                        <button
+                            onClick={(e) => { e.stopPropagation(); onRemove(tag.text); }}
+                            className="p-0.5 rounded-sm hover:bg-black/5 dark:hover:bg-white/5 transition-all ml-0.5"
+                        >
+                            <X className="w-2.5 h-2.5" />
+                        </button>
+                    </span>
+                );
+            })}
+            <input
+                id={id}
+                type="text"
+                value={inputValue}
+                onChange={(e) => setInputValue(e.target.value)}
+                onKeyDown={handleKeyDown}
+                onBlur={handleBlur}
+                placeholder={tags.length === 0 ? placeholder : "Add..."}
+                className={cn(
+                    "flex-1 bg-transparent border-none outline-none text-xs text-sidebar-foreground placeholder:text-sidebar-foreground/40 min-w-[40px] py-1",
+                    tags.length > 0 ? "placeholder:text-sidebar-foreground/20" : ""
+                )}
+            />
+        </div>
+    );
+}
+
+
+export function GraphFilterPanel() {
+    const { graphFilters: rawFilters, setGraphFilters, resetGraphFilters } = useStore();
+    const graphFilters = rawFilters ?? DEFAULT_FILTERS;
+    const [isOpen, setIsOpen] = useState(false);
+    const panelRef = useRef<HTMLDivElement>(null);
+
+    // Close on outside click
+    useEffect(() => {
+        function handleClickOutside(e: MouseEvent) {
+            if (panelRef.current && !panelRef.current.contains(e.target as Node)) {
+                setIsOpen(false);
+            }
+        }
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => document.removeEventListener("mousedown", handleClickOutside);
+    }, []);
+
+    const activeCount = countActiveFilters(graphFilters);
+
+    return (
+        <div ref={panelRef} className="relative pointer-events-auto">
+            <button
+                id="graph-filter-toggle"
+                onClick={() => setIsOpen((v) => !v)}
+                className={cn(
+                    "relative flex items-center justify-center w-[46px] h-[46px] rounded-lg border shadow-sm backdrop-blur-sm transition-all duration-200",
+                    activeCount > 0
+                        ? "bg-blue-500/15 border-blue-500/40 text-blue-600 dark:text-blue-400 hover:bg-blue-500/20"
+                        : "bg-sidebar/95 border-sidebar-border text-sidebar-foreground/80 hover:text-sidebar-foreground hover:bg-sidebar-accent"
+                )}
+                title="Graph filters"
+                aria-expanded={isOpen}
+            >
+                <Filter className="w-[18px] h-[18px] flex-shrink-0" />
+                {activeCount > 0 && (
+                    <span className="absolute -top-1.5 -right-1.5 flex items-center justify-center w-5 h-5 rounded-full bg-blue-500 text-white text-[10px] font-bold border-2 border-background shadow-sm animate-in zoom-in duration-200">
+                        {activeCount}
+                    </span>
+                )}
+            </button>
+
+            {/* Dropdown panel */}
+            {isOpen && (
+                <div
+                    id="graph-filter-panel"
+                    className={cn(
+                        "absolute top-full left-0 mt-2 z-50",
+                        "w-72 bg-sidebar/95 backdrop-blur-md border border-sidebar-border rounded-xl shadow-xl",
+                        "animate-in fade-in slide-in-from-top-2 duration-150"
+                    )}
+                >
+                    {/* Header */}
+                    <div className="flex items-center justify-between px-4 py-3 border-b border-sidebar-border">
+                        <div className="flex items-center gap-2">
+                            <Filter className="w-3.5 h-3.5 text-sidebar-foreground/70" />
+                            <span className="text-xs font-semibold text-sidebar-foreground">Graph Filters</span>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                            {activeCount > 0 && (
+                                <button
+                                    onClick={resetGraphFilters}
+                                    className="flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-medium text-muted-foreground hover:text-foreground hover:bg-sidebar-accent transition-colors"
+                                    title="Reset all filters"
+                                >
+                                    <RotateCcw className="w-3 h-3" />
+                                    Reset
+                                </button>
+                            )}
+                            <button
+                                onClick={() => setIsOpen(false)}
+                                className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-sidebar-accent transition-colors"
+                            >
+                                <X className="w-3.5 h-3.5" />
+                            </button>
+                        </div>
+                    </div>
+
+                    <div className="p-4 space-y-5">
+
+                        {/* Label keyword */}
+                        <div>
+                            <SectionLabel>Node name contains</SectionLabel>
+                            <TagInput
+                                id="filter-label-keyword"
+                                tags={graphFilters.labelKeywords}
+                                onAdd={(text) => setGraphFilters({ labelKeywords: [...graphFilters.labelKeywords, { text, mode: 'include' }] })}
+                                onRemove={(text) => setGraphFilters({ labelKeywords: graphFilters.labelKeywords.filter(t => t.text !== text) })}
+                                onToggleMode={(text) => setGraphFilters({
+                                    labelKeywords: graphFilters.labelKeywords.map(t =>
+                                        t.text === text
+                                            ? { ...t, mode: t.mode === 'include' ? 'mandatory' : t.mode === 'mandatory' ? 'exclude' : 'include' }
+                                            : t
+                                    )
+                                })}
+                                placeholder="e.g. cancer, allergy…"
+                            />
+                        </div>
+
+                        {/* Description / definition keyword */}
+                        <div>
+                            <SectionLabel>Description contains</SectionLabel>
+                            <TagInput
+                                id="filter-description-keyword"
+                                tags={graphFilters.descriptionKeywords}
+                                onAdd={(text) => setGraphFilters({ descriptionKeywords: [...graphFilters.descriptionKeywords, { text, mode: 'include' }] })}
+                                onRemove={(text) => setGraphFilters({ descriptionKeywords: graphFilters.descriptionKeywords.filter(t => t.text !== text) })}
+                                onToggleMode={(text) => setGraphFilters({
+                                    descriptionKeywords: graphFilters.descriptionKeywords.map(t =>
+                                        t.text === text
+                                            ? { ...t, mode: t.mode === 'include' ? 'mandatory' : t.mode === 'mandatory' ? 'exclude' : 'include' }
+                                            : t
+                                    )
+                                })}
+                                placeholder="e.g. chronic, viral…"
+                            />
+                            <p className="text-[10px] text-muted-foreground mt-1.5 leading-tight px-1.5">
+                                Searches definition fields (OBO data)
+                            </p>
+                            <div className="mt-3 flex flex-wrap gap-x-3 gap-y-1.5 px-1.5">
+                                <div className="flex items-center gap-1 text-[9px] text-blue-500/80">
+                                    <Check className="w-2.5 h-2.5" /> <span>Include (OR)</span>
+                                </div>
+                                <div className="flex items-center gap-1 text-[9px] text-purple-500/80">
+                                    <Asterisk className="w-2.5 h-2.5" /> <span>Mandatory (AND)</span>
+                                </div>
+                                <div className="flex items-center gap-1 text-[9px] text-red-500/80">
+                                    <Ban className="w-2.5 h-2.5" /> <span>Exclude (NOT)</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Min importance slider */}
+                        <div>
+                            <div className="flex items-center justify-between mb-1.5">
+                                <SectionLabel>Min. importance</SectionLabel>
+                                <span className="text-[10px] font-mono text-sidebar-foreground/70 tabular-nums">
+                                    {graphFilters.minImportance > 0
+                                        ? `≥ ${Math.round(graphFilters.minImportance * 100)}%`
+                                        : "All"}
+                                </span>
+                            </div>
+                            <input
+                                id="filter-min-importance"
+                                type="range"
+                                min="0"
+                                max="0.99"
+                                step="0.01"
+                                value={graphFilters.minImportance}
+                                onChange={(e) => setGraphFilters({ minImportance: Number(e.target.value) })}
+                                className="w-full h-1 bg-border rounded-full appearance-none cursor-pointer focus:outline-none [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3.5 [&::-webkit-slider-thumb]:h-3.5 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-foreground [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-background [&::-webkit-slider-thumb]:shadow-sm hover:[&::-webkit-slider-thumb]:scale-125 transition-all"
+                            />
+                            <div className="flex justify-between text-[9px] text-muted-foreground mt-1">
+                                <span>All nodes</span>
+                                <span>High importance only</span>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+}

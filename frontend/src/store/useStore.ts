@@ -21,16 +21,23 @@ export interface GraphEdge {
     color: string;
 }
 
+export type TagMode = 'include' | 'exclude' | 'mandatory';
+
+export interface TagKeyword {
+    text: string;
+    mode: TagMode;
+}
+
 export interface GraphFilters {
-    labelKeyword: string;
-    descriptionKeyword: string;
+    labelKeywords: TagKeyword[];
+    descriptionKeywords: TagKeyword[];
     minImportance: number;       // 0–1 percentile_rank threshold
     excludedColors: Set<string>; // hex colours of community clusters to hide
 }
 
 export const DEFAULT_FILTERS: GraphFilters = {
-    labelKeyword: '',
-    descriptionKeyword: '',
+    labelKeywords: [],
+    descriptionKeywords: [],
     minImportance: 0,
     excludedColors: new Set(),
 };

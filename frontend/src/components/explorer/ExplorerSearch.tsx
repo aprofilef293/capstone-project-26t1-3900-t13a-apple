@@ -3,6 +3,7 @@ import { Search, X } from "lucide-react";
 import Fuse from "fuse.js";
 import { useStore } from "../../store/useStore";
 import { Button } from "../ui/button";
+import { matchesGraphFilters } from "../../lib/filterUtils";
 
 export function ExplorerSearch() {
     const {
@@ -13,7 +14,8 @@ export function ExplorerSearch() {
         setSelectedNodeId,
         setSearchResultsFuzzyTitle,
         setSearchResultsDescription,
-        setInfoPanelMode
+        setInfoPanelMode,
+        graphFilters
     } = useStore();
 
     const [isOpen, setIsOpen] = useState(false);
@@ -30,23 +32,26 @@ export function ExplorerSearch() {
         return () => document.removeEventListener("mousedown", handleClickOutside);
     }, []);
 
-    const fuse = useMemo(() => new Fuse(nodes, {
+    const filteredNodes = useMemo(
+        () => nodes.filter(node => matchesGraphFilters(node, graphFilters)),
+        [nodes, graphFilters]
+    );
+
+    const fuse = useMemo(() => new Fuse(filteredNodes, {
         keys: [
             { name: "label", weight: 0.7 },
             { name: "id", weight: 0.3 },
         ],
-        threshold: 0.4,       // 0 = exact, 1 = match anything; 0.4 is inbetween
+        threshold: 0.4,
         includeScore: true,
         minMatchCharLength: 1,
         ignoreLocation: true,
-    }), [nodes]);
+    }), [filteredNodes]);
 
     // Search Method: fuzzy on names, exact substring on descriptions/synonyms
     const { fuzzyResults, descriptionResults } = useMemo(() => {
         const q = searchQuery.trim();
         if (!q) {
-            setSearchResultsFuzzyTitle([]);
-            setSearchResultsDescription([]);
             return { fuzzyResults: [], descriptionResults: [] };
         }
 
@@ -57,7 +62,7 @@ export function ExplorerSearch() {
         // Exact substring search on definition + synonyms
         // Only runs if query is at least 3 chars to reduce matches
         const descHits = q.length >= 3
-            ? nodes.filter(node => {
+            ? filteredNodes.filter(node => {
                 if (fuzzyIds.has(node.id)) return false; // already in fuzzy results
                 const ql = q.toLowerCase();
                 const def = ((node.attributes.definition as string) ?? "").toLowerCase();
@@ -69,10 +74,14 @@ export function ExplorerSearch() {
             }).slice(0, 20)
             : [];
 
-        setSearchResultsFuzzyTitle(fuzzyHits);
-        setSearchResultsDescription(descHits);
         return { fuzzyResults: fuzzyHits, descriptionResults: descHits };
-    }, [fuse, nodes, searchQuery]);
+    }, [fuse, filteredNodes, searchQuery]);
+
+    // Sync results to store in an effect (not during render)
+    useEffect(() => {
+        setSearchResultsFuzzyTitle(fuzzyResults);
+        setSearchResultsDescription(descriptionResults);
+    }, [fuzzyResults, descriptionResults, setSearchResultsFuzzyTitle, setSearchResultsDescription]);
 
     const searchResults = useMemo(
         () => [...fuzzyResults, ...descriptionResults],
