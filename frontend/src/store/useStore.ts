@@ -21,6 +21,20 @@ export interface GraphEdge {
     color: string;
 }
 
+export interface GraphFilters {
+    labelKeyword: string;
+    descriptionKeyword: string;
+    minImportance: number;       // 0–1 percentile_rank threshold
+    excludedColors: Set<string>; // hex colours of community clusters to hide
+}
+
+export const DEFAULT_FILTERS: GraphFilters = {
+    labelKeyword: '',
+    descriptionKeyword: '',
+    minImportance: 0,
+    excludedColors: new Set(),
+};
+
 interface ExplorerState {
     nodes: GraphNode[];
     edges: GraphEdge[];
@@ -69,6 +83,10 @@ interface ExplorerState {
     pathLoading: boolean;
     fetchPath: () => Promise<void>;
     clearPath: () => void;
+    // graph filters
+    graphFilters: GraphFilters;
+    setGraphFilters: (filters: Partial<GraphFilters>) => void;
+    resetGraphFilters: () => void;
 }
 
 // Convert Graphology JSON format to our store format
@@ -194,6 +212,10 @@ export const useStore = create<ExplorerState>((set) => ({
         }
     },
     setViewLevel: (level) => set({ viewLevel: level }),
+    // graph filters
+    graphFilters: DEFAULT_FILTERS,
+    setGraphFilters: (filters) => set((state) => ({ graphFilters: { ...state.graphFilters, ...filters } })),
+    resetGraphFilters: () => set({ graphFilters: DEFAULT_FILTERS }),
     fetchGraphData: async () => {
         set({ isGraphLoading: true });
         try {
