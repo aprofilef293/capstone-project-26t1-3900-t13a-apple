@@ -6,6 +6,7 @@ import { useTheme } from "./theme-provider";
 import { NodeBorderProgram } from "@sigma/node-border";
 import { EdgeLineProgram, NodePointProgram } from "sigma/rendering";
 import { adjustColorBrightness } from "../lib/utils";
+import { getGroups, checkMatch } from "../lib/filterUtils";
 import { MultiDirectedGraph } from "graphology";
 
 /** UI Configuration */
@@ -413,25 +414,8 @@ const GraphManager = forwardRef<GraphViewRef, unknown>((_, ref) => {
     useEffect(() => {
         const graph = sigma.getGraph();
         const query = deferredSearchQuery.toLowerCase();
-        const labelKws = graphFilters.labelKeywords || [];
-        const descKws = graphFilters.descriptionKeywords || [];
-        
-        const getGroups = (kws: typeof labelKws) => ({
-            include: kws.filter(k => k.mode === 'include').map(k => k.text.toLowerCase().trim()).filter(Boolean),
-            mandatory: kws.filter(k => k.mode === 'mandatory').map(k => k.text.toLowerCase().trim()).filter(Boolean),
-            exclude: kws.filter(k => k.mode === 'exclude').map(k => k.text.toLowerCase().trim()).filter(Boolean),
-        });
-
-        const labelGroups = getGroups(labelKws);
-        const descGroups = getGroups(descKws);
-
-        const checkMatch = (text: string, groups: ReturnType<typeof getGroups>) => {
-            const t = text.toLowerCase();
-            if (groups.exclude.some(kw => t.includes(kw))) return false;
-            if (groups.mandatory.length > 0 && !groups.mandatory.every(kw => t.includes(kw))) return false;
-            if (groups.include.length > 0 && !groups.include.some(kw => t.includes(kw))) return false;
-            return true;
-        };
+        const labelGroups = getGroups(graphFilters.labelKeywords || []);
+        const descGroups = getGroups(graphFilters.descriptionKeywords || []);
 
         const visibleNodes = new Set<string>();
 
@@ -440,13 +424,11 @@ const GraphManager = forwardRef<GraphViewRef, unknown>((_, ref) => {
             const matchesSearch = !!selectedNodeId || !query || label.toLowerCase().includes(query);
             const level = ((attrs.attributes as Record<string, unknown>)?.viewLevel as number) ?? 1;
 
-            // Apply graph filters
-            const matchesLabel = checkMatch(label, labelGroups);
             const nodeAttrs = attrs.attributes as Record<string, unknown>;
-            
+            const matchesLabel = checkMatch(label, labelGroups);
             const matchesDesc = checkMatch(
-                ((nodeAttrs?.definition as string) ?? '') + 
-                ((nodeAttrs?.synonyms as string[]) ?? []).join(' '), 
+                ((nodeAttrs?.definition as string) ?? '') +
+                ((nodeAttrs?.synonyms as string[]) ?? []).join(' '),
                 descGroups
             );
             const rank = (nodeAttrs?.percentile_rank as number) ?? 0;
