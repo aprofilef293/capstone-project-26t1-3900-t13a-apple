@@ -17,10 +17,13 @@ export function GraphExplorer() {
     const [viewMode, setViewMode] = useState<'graph' | 'hierarchy'>('graph');
     const graphViewRef = useRef<GraphViewRef>(null);
     const isInitialGraphLoading = useStore(state => state.isInitialGraphLoading);
+    const isGraphLoading = useStore(state => state.isGraphLoading);
     const nodes = useStore(state => state.nodes);
+    const hasFetchedRef = useRef(false);
 
     useEffect(() => {
-        if (nodes.length === 0) {
+        if (nodes.length === 0 && !hasFetchedRef.current) {
+            hasFetchedRef.current = true;
             fetchGraphData(true);
         }
     }, [fetchGraphData, nodes.length]);

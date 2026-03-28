@@ -36,12 +36,17 @@ def _node_from_record(node_props: dict, index: int, total: int) -> SerializedNod
 
     # sigma.js needs colour spelt color
     color = node_props.get("color") or node_props.get("colour") or COLOR_MAP.get(node_type, "#6b7280")
-    size = node_props.get("size", 12)
+    size = round(float(node_props.get("size", 12)), 2)
+
+    # Drop fields duplicated by key/label/color; round floats to reduce send size
+    attrs = {k: v for k, v in node_props.items() if k not in ("id", "name")}
+    if attrs.get("pagerank_score") is not None:
+        attrs["pagerank_score"] = round(float(attrs["pagerank_score"]), 4)
 
     return SerializedNode(
         key=node_props["id"],
         attributes={
-            **node_props,
+            **attrs,
             "label": node_props.get("name", node_props["id"]),
             "x": x,
             "y": y,
@@ -151,6 +156,10 @@ def get_graph(
     (biological_process, molecular_function, cellular_component).
     The response conforms to the Graphology JSON serialization format.
     """
+    cached = getattr(request.app.state, "graph_cache", None)
+    if cached is not None:
+        return cached
+
     mg = request.app.state.memgraph
     node_records = mg.execute_read(
         "MATCH (n:OntologyTerm) RETURN n",
@@ -159,7 +168,9 @@ def get_graph(
         "MATCH (n:OntologyTerm)-[r]->(m:OntologyTerm) "
         "RETURN n.id AS source, m.id AS target, type(r) AS rel_type, r.type AS sub_type",
     )
-    return _build_graph_data(node_records, edge_records)
+    result = _build_graph_data(node_records, edge_records)
+    request.app.state.graph_cache = result
+    return result
 
 
 @router.get(
