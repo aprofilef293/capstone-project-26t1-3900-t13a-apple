@@ -413,8 +413,26 @@ const GraphManager = forwardRef<GraphViewRef, unknown>((_, ref) => {
     useEffect(() => {
         const graph = sigma.getGraph();
         const query = deferredSearchQuery.toLowerCase();
-        const labelKws = (graphFilters.labelKeywords || []).map(k => k.toLowerCase().trim()).filter(Boolean);
-        const descKws = (graphFilters.descriptionKeywords || []).map(k => k.toLowerCase().trim()).filter(Boolean);
+        const labelKws = graphFilters.labelKeywords || [];
+        const descKws = graphFilters.descriptionKeywords || [];
+        
+        const getGroups = (kws: typeof labelKws) => ({
+            include: kws.filter(k => k.mode === 'include').map(k => k.text.toLowerCase().trim()).filter(Boolean),
+            mandatory: kws.filter(k => k.mode === 'mandatory').map(k => k.text.toLowerCase().trim()).filter(Boolean),
+            exclude: kws.filter(k => k.mode === 'exclude').map(k => k.text.toLowerCase().trim()).filter(Boolean),
+        });
+
+        const labelGroups = getGroups(labelKws);
+        const descGroups = getGroups(descKws);
+
+        const checkMatch = (text: string, groups: ReturnType<typeof getGroups>) => {
+            const t = text.toLowerCase();
+            if (groups.exclude.some(kw => t.includes(kw))) return false;
+            if (groups.mandatory.length > 0 && !groups.mandatory.every(kw => t.includes(kw))) return false;
+            if (groups.include.length > 0 && !groups.include.some(kw => t.includes(kw))) return false;
+            return true;
+        };
+
         const visibleNodes = new Set<string>();
 
         graph.forEachNode((id: string, attrs: NodeAttributes) => {
@@ -423,12 +441,14 @@ const GraphManager = forwardRef<GraphViewRef, unknown>((_, ref) => {
             const level = ((attrs.attributes as Record<string, unknown>)?.viewLevel as number) ?? 1;
 
             // Apply graph filters
-            const matchesLabel = labelKws.length === 0 || labelKws.some(kw => label.toLowerCase().includes(kw));
+            const matchesLabel = checkMatch(label, labelGroups);
             const nodeAttrs = attrs.attributes as Record<string, unknown>;
-            const matchesDesc = descKws.length === 0 || descKws.some(kw => (
-                ((nodeAttrs?.definition as string) ?? '').toLowerCase().includes(kw) ||
-                ((nodeAttrs?.synonyms as string[]) ?? []).some(s => s.toLowerCase().includes(kw))
-            ));
+            
+            const matchesDesc = checkMatch(
+                ((nodeAttrs?.definition as string) ?? '') + 
+                ((nodeAttrs?.synonyms as string[]) ?? []).join(' '), 
+                descGroups
+            );
             const rank = (nodeAttrs?.percentile_rank as number) ?? 0;
             const matchesImportance = rank >= graphFilters.minImportance;
             const matchesColor = !graphFilters.excludedColors.has(attrs.color as string);
