@@ -38,8 +38,8 @@ def _node_from_record(node_props: dict, index: int, total: int) -> SerializedNod
     color = node_props.get("color") or node_props.get("colour") or COLOR_MAP.get(node_type, "#6b7280")
     size = round(float(node_props.get("size", 12)), 2)
 
-    # Drop fields duplicated by key/label/color; round floats to reduce send size
-    attrs = {k: v for k, v in node_props.items() if k not in ("id", "name")}
+    # Drop fields duplicated by label/color; round floats to reduce send size
+    attrs = {k: v for k, v in node_props.items() if k not in ("name",)}
     if attrs.get("pagerank_score") is not None:
         attrs["pagerank_score"] = round(float(attrs["pagerank_score"]), 4)
 
