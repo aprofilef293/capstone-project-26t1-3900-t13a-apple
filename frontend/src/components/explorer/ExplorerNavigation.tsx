@@ -20,7 +20,7 @@ export function ExplorerToolbar({
     onViewModeChange: (mode: "graph" | "hierarchy") => void;
 }) {
     const { nodes, edges, viewLevel, searchQuery, selectedNodeId } = useStore();
-    const { isMultiSelect, setIsMultiSelect, setInfoPanelMode, setSelectedNodeIds } = useStore();
+    const { isMultiSelect, setIsMultiSelect, setInfoPanelMode } = useStore();
 
     const deferredSearchQuery = useDeferredValue(searchQuery);
 

@@ -11,7 +11,8 @@ export function ExplorerSearch() {
         setViewLevel,
         nodes,
         setSelectedNodeId,
-        updateSearchResults,
+        setSearchResultsFuzzyTitle,
+        setSearchResultsDescription,
         setInfoPanelMode
     } = useStore();
 
@@ -43,7 +44,11 @@ export function ExplorerSearch() {
     // Search Method: fuzzy on names, exact substring on descriptions/synonyms
     const { fuzzyResults, descriptionResults } = useMemo(() => {
         const q = searchQuery.trim();
-        if (!q) return { fuzzyResults: [], descriptionResults: [] };
+        if (!q) {
+            setSearchResultsFuzzyTitle([]);
+            setSearchResultsDescription([]);
+            return { fuzzyResults: [], descriptionResults: [] };
+        }
 
         // Fuzzy search on label / id - ie can have typos
         const fuzzyHits = fuse.search(q).slice(0, 50).map(r => r.item);
@@ -64,6 +69,8 @@ export function ExplorerSearch() {
             }).slice(0, 20)
             : [];
 
+        setSearchResultsFuzzyTitle(fuzzyHits);
+        setSearchResultsDescription(descHits);
         return { fuzzyResults: fuzzyHits, descriptionResults: descHits };
     }, [fuse, nodes, searchQuery]);
 
@@ -74,7 +81,6 @@ export function ExplorerSearch() {
 
     const handleSearchTrigger = () => {
         if (searchQuery.trim()) {
-            updateSearchResults();
             setInfoPanelMode('search-results');
             setIsOpen(false);
         }
@@ -84,7 +90,6 @@ export function ExplorerSearch() {
         <div ref={wrapperRef} className="relative w-full max-w-lg pointer-events-auto mx-auto group">
             <div className="w-full bg-sidebar/95 backdrop-blur-sm border border-sidebar-border rounded-lg p-1.5 flex items-center gap-2 shadow-sm transition-colors">
                 <div className="flex-1 flex items-center gap-2 px-3 h-8">
-                    <Search className="w-4 h-4 text-sidebar-foreground/70 cursor-pointer hover:text-sidebar-foreground transition-colors" onClick={handleSearchTrigger} />
                     <input
                         type="text"
                         value={searchQuery}
@@ -102,22 +107,22 @@ export function ExplorerSearch() {
                         placeholder="Search nodes..."
                         className="w-full bg-transparent border-none text-sm text-sidebar-foreground placeholder:text-sidebar-foreground/50 focus:outline-none focus:ring-0"
                     />
-                    {searchQuery && (
-                        <Button
-                            onClick={() => {
-                                setSearchQuery("");
-                                setIsOpen(false);
-                                setViewLevel(1);
-                                setInfoPanelMode('closed');
-                            }}
-                            variant="ghost"
-                            size="sm"
-                            className="h-6 w-6 p-0 hover:bg-sidebar-accent"
-                        >
-                            <X className="w-4 h-4 text-sidebar-foreground/70 hover:text-sidebar-foreground transition-colors" />
-                        </Button>
-                    )}
                 </div>
+                {searchQuery && (
+                    <Button
+                        onClick={() => {
+                            setSearchQuery("");
+                            setIsOpen(false);
+                            setViewLevel(1);
+                            setInfoPanelMode('closed');
+                        }}
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 w-6 p-0 hover:bg-sidebar-accent"
+                    >
+                        <X className="w-4 h-4 text-sidebar-foreground/70 hover:text-sidebar-foreground transition-colors" />
+                    </Button>
+                )}
                 <Button
                     onClick={handleSearchTrigger}
                     variant="ghost"

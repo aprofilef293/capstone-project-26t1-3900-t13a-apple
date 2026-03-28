@@ -47,12 +47,15 @@ interface ExplorerState {
     setSelectedNodeId: (id: string | null) => void;
     setGraphData: (nodes: GraphNode[], edges: GraphEdge[]) => void;
     setSearchQuery: (query: string) => void;
+    searchResultsFuzzyTitle: GraphNode[],
+    setSearchResultsFuzzyTitle: (results: GraphNode[]) => void,
+    searchResultsDescription: GraphNode[],
+    setSearchResultsDescription: (results: GraphNode[]) => void,
     searchResults: GraphNode[];
-    searchResultsQuery: string;
-    updateSearchResults: () => void;
     setViewLevel: (level: number) => void;
-    fetchGraphData: () => Promise<void>;
+    fetchGraphData: (isInitial?: boolean) => Promise<void>;
     isGraphLoading: boolean;
+    isInitialGraphLoading: boolean;
     // File import
     fileName: string | null;
     importStatus: 'idle' | 'waiting' | 'loading' | 'complete' | 'error';
@@ -166,6 +169,7 @@ export const useStore = create<ExplorerState>((set) => ({
     searchQuery: "",
     viewLevel: 1,
     isGraphLoading: false,
+    isInitialGraphLoading: false,
     prevNodes: [],
     setPrevNodes: (prevNodes) => {
         set({ prevNodes });
@@ -174,10 +178,8 @@ export const useStore = create<ExplorerState>((set) => ({
         set({ selectedNodeId: id });
         localStorage.setItem('selectedNodeId', id ?? '');
         updatePrevNodes(id);
-        // if (id) useStore.getState().setInfoPanelMode('node-info');
         if (id) {
-            useStore.getState().clearSelectedNodes();
-            set({ isMultiSelect: false });
+            useStore.getState().setIsMultiSelect(false);
             localStorage.setItem('isMultiSelect', 'false');
             useStore.getState().setInfoPanelMode('node-info');
         }
@@ -188,36 +190,22 @@ export const useStore = create<ExplorerState>((set) => ({
         graph: createGraph(nodes, edges)
     }),
     setSearchQuery: (query) => set({ searchQuery: query }),
+    searchResultsFuzzyTitle: [],
+    setSearchResultsFuzzyTitle: (results) => set({ searchResultsFuzzyTitle: results }),
+    searchResultsDescription: [],
+    setSearchResultsDescription: (results) => set({ searchResultsDescription: results }),
     searchResults: [],
-    searchResultsQuery: '',
-    updateSearchResults: async () => {
-        try {
-            set({searchResultsQuery: useStore.getState().searchQuery});
-            const response = await api.fetchGraphData(`/api/graph/search?q=${useStore.getState().searchQuery}`);
-            const nodes = (response.nodes || []).map((n: { key: string; attributes?: Record<string, unknown> }) => ({
-                id: n.key,
-                label: (n.attributes?.label as string) || n.key,
-                type: (n.attributes?.nodeType as string) || 'Data',
-                x: typeof n.attributes?.x === 'number' ? n.attributes.x : (Math.random() - 0.5) * 10,
-                y: typeof n.attributes?.y === 'number' ? n.attributes.y : (Math.random() - 0.5) * 10,
-                size: (n.attributes?.size as number) || 10,
-                color: (n.attributes?.color as string) || '#3b82f6',
-                attributes: n.attributes || {}
-            }));
-            set({ searchResults: nodes, searchError: null });
-        } catch (error) {
-            console.error('Error getting search results', error);
-            set({ searchError: String(error) });
-            set({ searchResults: [] });
-        }
-    },
     setViewLevel: (level) => set({ viewLevel: level }),
     // graph filters
     graphFilters: DEFAULT_FILTERS,
     setGraphFilters: (filters) => set((state) => ({ graphFilters: { ...state.graphFilters, ...filters } })),
     resetGraphFilters: () => set({ graphFilters: DEFAULT_FILTERS }),
-    fetchGraphData: async () => {
-        set({ isGraphLoading: true });
+    fetchGraphData: async (isInitial = false) => {
+        if (isInitial) {
+            set({ isInitialGraphLoading: true });
+        } else {
+            set({ isGraphLoading: true });
+        }
         try {
             const data = await api.fetchGraphData("/api/graph/");
             const nodes = (data.nodes || []).map((n: { key: string; attributes?: Record<string, unknown> }) => ({
@@ -250,7 +238,11 @@ export const useStore = create<ExplorerState>((set) => ({
                 graph: createGraph(nodes, edges)
             });
         } finally {
-            set({ isGraphLoading: false });
+            if (isInitial) {
+                set({ isInitialGraphLoading: false });
+            } else {
+                set({ isGraphLoading: false });
+            }
         }
     },
     // File import
@@ -376,12 +368,11 @@ export const useStore = create<ExplorerState>((set) => ({
     setIsMultiSelect: (val: boolean) => {
         localStorage.setItem('isMultiSelect', String(val));
         set({ isMultiSelect: val, ...(val && { selectedNodeId: null }) });
-        // if (!val) set({ selectedNodeIds: [] });
     },
     selectedNodeIds: JSON.parse(localStorage.getItem('selectedNodeIds') || '[]'),
     setSelectedNodeIds: (ids: string[]) => {
-    localStorage.setItem('selectedNodeIds', JSON.stringify(ids));
-    set({ selectedNodeIds: ids });
+        localStorage.setItem('selectedNodeIds', JSON.stringify(ids));
+        set({ selectedNodeIds: ids });
     },
     toggleNodeSelection: (id: string) => {
         const state = useStore.getState();
@@ -396,14 +387,14 @@ export const useStore = create<ExplorerState>((set) => ({
             return;
         }
         localStorage.setItem('selectedNodeIds', JSON.stringify(newIds));
-        set({ selectedNodeIds: newIds });
+        useStore.getState().setSelectedNodeIds(newIds);
         // Re-open the panel if it was closed (e.g. after a page refresh)
         if (newIds.length > 0 && useStore.getState().infoPanelMode === 'closed') {
-            set({ infoPanelMode: 'multi-select' });
+            useStore.getState().setInfoPanelMode('multi-select');
         }
         // Close panel if all nodes deselected
         if (newIds.length === 0) {
-            set({ infoPanelMode: 'closed' });
+            useStore.getState().setInfoPanelMode('closed');
         }
         if (newIds.length >= 2) {
             setTimeout(() => useStore.getState().fetchPath(), 0);
@@ -435,12 +426,9 @@ export const useStore = create<ExplorerState>((set) => ({
         set({ infoPanelMode: mode });
         if (mode === 'closed' || mode === 'search-results') {
             useStore.getState().setSelectedNodeId(null);
-            useStore.getState().setIsMultiSelect(false);
         }
-        if (mode === 'multi-select') {
-            useStore.getState().setIsMultiSelect(true);
-        }
-        // 'node-info' preserves isMultiSelect so back button can return to multi-select sidebar
+        // keeping isMultiSelect aligned with infoPanelMode (should always match)
+        useStore.getState().setIsMultiSelect(mode === 'multi-select');
     },
     // shortest path
     pathNodeIds: [],

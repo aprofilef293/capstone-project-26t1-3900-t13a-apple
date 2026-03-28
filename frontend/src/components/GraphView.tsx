@@ -155,7 +155,7 @@ const GraphManager = forwardRef<GraphViewRef, unknown>((_, ref) => {
 
     // Isolation data
     const isolationData = useMemo(() => {
-        if (!selectedNodeId) return null;
+        if (!selectedNodeId || infoPanelMode != 'node-info') return null;;
 
         const graph = sigma.getGraph();
         if (!graph.hasNode(selectedNodeId)) return null;

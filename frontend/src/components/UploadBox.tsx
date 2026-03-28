@@ -28,6 +28,7 @@ export function UploadBox({
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
+        localStorage.removeItem('selectedNodeId');
         clearSelectedNodes(); 
         startFileImport(file);
         navigate({ to: '/manager' });
