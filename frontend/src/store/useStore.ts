@@ -93,6 +93,8 @@ interface ExplorerState {
     pathLoading: boolean;
     fetchPath: () => Promise<void>;
     clearPath: () => void;
+    pathViewOnly: boolean
+    togglePathViewOnly: () => void;
     // graph filters
     graphFilters: GraphFilters;
     setGraphFilters: (filters: Partial<GraphFilters>) => void;
@@ -486,4 +488,10 @@ export const useStore = create<ExplorerState>((set) => ({
             set({ pathLoading: false });
         }
     },
+    pathViewOnly: localStorage.getItem('pathViewOnly') === 'true',
+    togglePathViewOnly: () => set(state => {
+        const next = !state.pathViewOnly;
+        localStorage.setItem('pathViewOnly', String(next));
+        return { pathViewOnly: next };
+    }),
 }));

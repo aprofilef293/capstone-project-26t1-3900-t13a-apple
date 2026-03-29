@@ -72,7 +72,7 @@ const GraphManager = forwardRef<GraphViewRef, unknown>((_, ref) => {
         toggleNodeSelection, selectedNodeId, setSelectedNodeId,
         searchQuery, viewLevel, setIsNodeSelecting, selectedNodeIds,
         pathNodeIds, pathEdgeIds,
-        infoPanelMode, graphFilters: rawFilters,
+        infoPanelMode, graphFilters: rawFilters, pathViewOnly
     } = useStore();
     const graphFilters = rawFilters ?? DEFAULT_FILTERS;
     const lastClickedNodeRef = useRef(false);
@@ -386,6 +386,7 @@ const GraphManager = forwardRef<GraphViewRef, unknown>((_, ref) => {
         isolationData,
         multiSelectPathData,
         isDark,
+        pathViewOnly,
         // Edge endpoint cache to avoid graph.source()/target() per frame
         edgeEndpoints: new Map<string, { source: string; target: string }>(),
     });
@@ -399,8 +400,10 @@ const GraphManager = forwardRef<GraphViewRef, unknown>((_, ref) => {
         stateRef.current.isolationData = isolationData;
         stateRef.current.multiSelectPathData = multiSelectPathData;
         stateRef.current.isDark = isDark;
-    }, [selectedNodeId, isMultiSelect, selectedNodeIds, nodeStyles, isolationData, multiSelectPathData, isDark]);
-
+        stateRef.current.pathViewOnly = pathViewOnly;
+        sigma.refresh();
+    }, [selectedNodeId, isMultiSelect, selectedNodeIds, nodeStyles, isolationData, multiSelectPathData, isDark, pathViewOnly, sigma]);
+    
     useEffect(() => {
         const graph = sigma.getGraph();
         const cache = new Map<string, { source: string; target: string }>();
@@ -478,8 +481,12 @@ const GraphManager = forwardRef<GraphViewRef, unknown>((_, ref) => {
                     : state.selectedNodeIds.includes(node);
 
                 if (!isRelated) {
-                    opacity = 0.08;
-                    color = desaturateColor(color || "#888", 0.7);
+                    if (state.pathViewOnly) {
+                        hidden = true; // path view: hide unrelated nodes
+                    } else {
+                        opacity = 0.08;
+                        color = desaturateColor(color || "#888", 0.7);
+                    }
                 }
             } else if (!state.isMultiSelect) {
                 if (!state.visibleNodes.has(node)) {
@@ -495,7 +502,11 @@ const GraphManager = forwardRef<GraphViewRef, unknown>((_, ref) => {
             if (state.isMultiSelect && state.multiSelectPathData) {
                 if (state.multiSelectPathData.pathNodes.has(node)) {
                     finalSize = size * GRAPH_CONFIG.SELECTED_SCALE;
-                    highlighted = true;
+                    if (isSelected) {
+                        highlighted = true; // selected endpoints = orange overlay
+                    } else {
+                        highlighted = false;
+                    }
                 } else if (state.multiSelectPathData.neighborNodes.has(node)) {
                     color = adjustColorBrightness(color || "#888", state.isDark ? -30 : 30);
                 }
@@ -535,16 +546,21 @@ const GraphManager = forwardRef<GraphViewRef, unknown>((_, ref) => {
             // Multi-select path edge styling
             if (state.isMultiSelect && state.multiSelectPathData && graph.hasEdge(edge)) {
                 if (state.multiSelectPathData.pathEdgeIds.has(edge)) {
-                    res.color = "#fbbf24";
+                    res.color = "#fbbf24"; 
+                    // res.color = "#ef4444"; // path edges = red
                     res.size = 5;
-                } else if (state.multiSelectPathData.pathNodes.has(source) || state.multiSelectPathData.pathNodes.has(target)) {
-                    // res.color = state.isDark ? "rgba(255,255,255,0.3)" : "rgba(0,0,0,0.3)";
-                    // res.size = 1;
-                    return { ...res, hidden: true };
                 } else {
-                    // res.color = state.isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.1)";
-                    return { ...res, hidden: true };
+                    res.color = state.isDark // all other edges = white
+                        ? "rgba(255,255,255,0.2)"
+                        : "rgba(0,0,0,0.2)";
+                    res.size = 1;
                 }
+                // else if (state.multiSelectPathData.pathNodes.has(source) || state.multiSelectPathData.pathNodes.has(target)) {
+                //     res.color = state.isDark ? "rgba(255,255,255,0.3)" : "rgba(0,0,0,0.3)";
+                //     res.size = 1;
+                // } else {
+                //     res.color = state.isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.1)";
+                // }
                 return res;
             }
 
