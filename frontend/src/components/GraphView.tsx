@@ -475,7 +475,7 @@ const GraphManager = forwardRef<GraphViewRef, unknown>((_, ref) => {
             let hidden = false;
             let color = data.color;
 
-            if (state.isMultiSelect && state.selectedNodeIds.length > 2) {
+            if (state.isMultiSelect && state.selectedNodeIds.length >= 2) {
                 const isRelated = state.multiSelectPathData
                     ? state.multiSelectPathData.pathNodes.has(node)
                     : state.selectedNodeIds.includes(node);
@@ -546,8 +546,7 @@ const GraphManager = forwardRef<GraphViewRef, unknown>((_, ref) => {
             // Multi-select path edge styling
             if (state.isMultiSelect && state.multiSelectPathData && graph.hasEdge(edge)) {
                 if (state.multiSelectPathData.pathEdgeIds.has(edge)) {
-                    res.color = "#fbbf24"; 
-                    // res.color = "#ef4444"; // path edges = red
+                    res.color = "#ef4444"; // path edges = red
                     res.size = 5;
                 } else {
                     res.color = state.isDark // all other edges = white
@@ -555,12 +554,6 @@ const GraphManager = forwardRef<GraphViewRef, unknown>((_, ref) => {
                         : "rgba(0,0,0,0.2)";
                     res.size = 1;
                 }
-                // else if (state.multiSelectPathData.pathNodes.has(source) || state.multiSelectPathData.pathNodes.has(target)) {
-                //     res.color = state.isDark ? "rgba(255,255,255,0.3)" : "rgba(0,0,0,0.3)";
-                //     res.size = 1;
-                // } else {
-                //     res.color = state.isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.1)";
-                // }
                 return res;
             }
 
