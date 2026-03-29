@@ -401,6 +401,7 @@ const GraphManager = forwardRef<GraphViewRef, unknown>((_, ref) => {
         stateRef.current.multiSelectPathData = multiSelectPathData;
         stateRef.current.isDark = isDark;
         stateRef.current.pathViewOnly = pathViewOnly;
+        sigma.refresh();
     }, [selectedNodeId, isMultiSelect, selectedNodeIds, nodeStyles, isolationData, multiSelectPathData, isDark, pathViewOnly, sigma]);
     
     useEffect(() => {
