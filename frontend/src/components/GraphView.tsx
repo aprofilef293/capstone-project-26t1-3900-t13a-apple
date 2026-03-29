@@ -5,7 +5,7 @@ import { useStore, DEFAULT_FILTERS } from "../store/useStore";
 import { useTheme } from "./theme-provider";
 import { NodeBorderProgram } from "@sigma/node-border";
 import { EdgeLineProgram, NodePointProgram } from "sigma/rendering";
-import { adjustColorBrightness } from "../lib/utils";
+import { adjustColorBrightness, desaturateColor } from "../lib/utils";
 import { getGroups, checkMatch } from "../lib/filterUtils";
 import { MultiDirectedGraph } from "graphology";
 
@@ -468,9 +468,27 @@ const GraphManager = forwardRef<GraphViewRef, unknown>((_, ref) => {
                 ? state.selectedNodeIds.includes(node)
                 : node === state.selectedNodeId;
 
+            let opacity = 1;
+            let hidden = false;
+            let color = data.color;
+
+            if (state.isMultiSelect && state.selectedNodeIds.length > 2) {
+                const isRelated = state.multiSelectPathData
+                    ? state.multiSelectPathData.pathNodes.has(node)
+                    : state.selectedNodeIds.includes(node);
+
+                if (!isRelated) {
+                    opacity = 0.08;
+                    color = desaturateColor(color || "#888", 0.7);
+                }
+            } else if (!state.isMultiSelect) {
+                if (!state.visibleNodes.has(node)) {
+                    hidden = true;
+                }
+            }
+
             const size = Math.max(0.1, Number(data.size) || GRAPH_CONFIG.DEFAULT_NODE_SIZE);
             let finalSize = isSelected ? size * GRAPH_CONFIG.SELECTED_SCALE : size;
-            let color = data.color;
             let highlighted = isSelected;
 
             // Multi-select path styling
@@ -493,7 +511,9 @@ const GraphManager = forwardRef<GraphViewRef, unknown>((_, ref) => {
                 color,
                 highlighted,
                 zIndex: finalSize,
-                hidden: !state.visibleNodes.has(node),
+                // hidden: !state.visibleNodes.has(node),
+                hidden,
+                opacity: opacity
             };
         });
 
