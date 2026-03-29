@@ -17,6 +17,16 @@ export async function fetchShortestPath(source: string, target: string) {
     return response.json();
 }
 
+export async function fetchMultiShortestPaths(ids: string[]) {
+    const params = ids.map(id => `ids=${encodeURIComponent(id)}`).join('&');
+    const response = await fetch(`/api/graph/paths?${params}`);
+    if (response.status === 404) return null;
+    if (!response.ok) {
+        throw new Error(`Failed to fetch paths: ${response.statusText}`);
+    }
+    return response.json();
+}
+
 // Can use to get upload/processing progress from backend
 export function listenToSSE(
     endpoint: string,
