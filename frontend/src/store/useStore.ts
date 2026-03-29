@@ -403,9 +403,7 @@ export const useStore = create<ExplorerState>((set) => ({
         if (newIds.length === 0) {
             useStore.getState().setInfoPanelMode('closed');
         }
-        if (newIds.length >= 2) {
-            setTimeout(() => useStore.getState().fetchPath(), 0);
-        } else {
+        if (newIds.length < 2) {
             set({ pathNodeIds: [], pathEdgeIds: [] });
         }
     },
