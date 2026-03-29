@@ -4,14 +4,20 @@ import { cn } from "../../lib/utils";
 import { useStore } from "../../store/useStore";
 import { buildHierarchyFromGraph } from "../../lib/hierarchyUtils";
 import type { HierarchyNode } from "../../lib/hierarchyUtils";
+import { matchesGraphFilters } from "../../lib/filterUtils";
 
 export function HierarchyView() {
-    const { nodes, edges, searchQuery } = useStore();
+    const { nodes, edges, searchQuery, graphFilters } = useStore();
+
+    // Pre-filter nodes by graphFilters before building the hierarchy
+    const filteredNodes = useMemo(() => {
+        return nodes.filter(n => matchesGraphFilters(n, graphFilters));
+    }, [nodes, graphFilters]);
 
     // Dynamically build the hierarchy tree from the flat graph data
     const baseHierarchyData = useMemo(() => {
-        return buildHierarchyFromGraph(nodes, edges);
-    }, [nodes, edges]);
+        return buildHierarchyFromGraph(filteredNodes, edges);
+    }, [filteredNodes, edges]);
 
     const deferredSearchQuery = useDeferredValue(searchQuery);
 
@@ -52,7 +58,7 @@ export function HierarchyView() {
                 style={{ backgroundImage: 'linear-gradient(to right, currentColor 1px, transparent 1px), linear-gradient(to bottom, currentColor 1px, transparent 1px)', backgroundSize: '40px 40px' }}
             />
 
-            <div className="flex-1 relative z-10 pt-[100px] pb-6 px-6 flex flex-col h-full pointer-events-none">
+            <div className="flex-1 relative z-10 pt-[140px] pb-6 px-6 flex flex-col h-full pointer-events-none">
                 <div className="flex-1 overflow-y-auto custom-scrollbar max-w-[800px] mx-auto w-full bg-sidebar/50 rounded-xl border border-sidebar-border p-6 shadow-sm pointer-events-auto backdrop-blur-sm">
                     <h2 className="text-lg font-semibold tracking-tight mb-4 text-sidebar-foreground">Data Ontology Hierarchy</h2>
 
