@@ -403,9 +403,7 @@ export const useStore = create<ExplorerState>((set) => ({
         if (newIds.length === 0) {
             useStore.getState().setInfoPanelMode('closed');
         }
-        if (newIds.length >= 2) {
-            setTimeout(() => useStore.getState().fetchPath(), 0);
-        } else {
+        if (newIds.length < 2) {
             set({ pathNodeIds: [], pathEdgeIds: [] });
         }
     },
@@ -451,34 +449,14 @@ export const useStore = create<ExplorerState>((set) => ({
 
         set({ pathLoading: true });
         try {
-            const allNodeIds: string[] = [];
-            const allEdgeIds: string[] = [];
-            const seenNodes = new Set<string>();
-            const seenEdges = new Set<string>();
-
-            for (let i = 0; i < selectedNodeIds.length; i++) {
-                for (let j = i + 1; j < selectedNodeIds.length; j++) {
-                    const data = await api.fetchShortestPath(selectedNodeIds[i], selectedNodeIds[j]);
-                    if (data) {
-                        for (const n of (data.nodes || [])) {
-                            const id = n.key;
-                            if (!seenNodes.has(id)) {
-                                seenNodes.add(id);
-                                allNodeIds.push(id);
-                            }
-                        }
-                        for (const e of (data.edges || [])) {
-                            const id = e.key || e.id;
-                            if (id && !seenEdges.has(id)) {
-                                seenEdges.add(id);
-                                allEdgeIds.push(id);
-                            }
-                        }
-                    }
-                }
+            const data = await api.fetchMultiShortestPaths(selectedNodeIds);
+            if (data) {
+                const nodeIds = (data.nodes || []).map((n: { key: string }) => n.key);
+                const edgeIds = (data.edges || []).map((e: { key?: string; id?: string }) => e.key || e.id).filter(Boolean);
+                set({ pathNodeIds: nodeIds, pathEdgeIds: edgeIds });
+            } else {
+                set({ pathNodeIds: [], pathEdgeIds: [] });
             }
-
-            set({ pathNodeIds: allNodeIds, pathEdgeIds: allEdgeIds });
         } catch (error) {
             console.error('Error fetching shortest path:', error);
             set({ pathNodeIds: [], pathEdgeIds: [] });

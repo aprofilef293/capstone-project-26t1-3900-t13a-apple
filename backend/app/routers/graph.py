@@ -277,6 +277,67 @@ def get_shortest_path(
 
 
 @router.get(
+    "/paths",
+    response_model=GraphData,
+    summary="Shortest paths between multiple nodes",
+    description="Return the union of shortest undirected paths for all pairs among the supplied "
+    "node IDs in a single Memgraph query. Returns 404 if any node does not exist or no paths "
+    "are found.",
+    response_description="Subgraph containing all nodes and edges along all shortest paths.",
+)
+def get_multi_shortest_paths(
+    request: Request,
+    ids: list[str] = Query(..., description="Node IDs to find paths between (min 2, max 10)"),
+    max_depth: int = Query(
+        50,
+        ge=1,
+        le=50,
+        description="Maximum path length to search (1–50).",
+    ),
+):
+    """Return the union of shortest paths between all pairs of the supplied nodes.
+
+    Runs a single Memgraph BFS query via UNWIND over all pairs.
+    """
+    if len(ids) < 2:
+        raise HTTPException(status_code=422, detail="At least 2 node IDs are required")
+    if len(ids) > 10:
+        raise HTTPException(status_code=422, detail="At most 10 node IDs are allowed")
+
+    mg = request.app.state.memgraph
+
+    check = mg.execute_read(
+        "MATCH (n:OntologyTerm) WHERE n.id IN $ids RETURN n.id AS id",
+        {"ids": ids},
+    )
+    found_ids = {r["id"] for r in check}
+    missing = [i for i in ids if i not in found_ids]
+    if missing:
+        raise HTTPException(status_code=404, detail=f"Nodes not found: {missing}")
+
+    pairs = [[ids[i], ids[j]] for i in range(len(ids)) for j in range(i + 1, len(ids))]
+
+    cypher = (
+        f"UNWIND $pairs AS pair "
+        f"MATCH p = (a:OntologyTerm {{id: pair[0]}})"
+        f"-[*BFS ..{max_depth}]-"
+        f"(b:OntologyTerm {{id: pair[1]}}) "
+        "WITH nodes(p) AS ns, relationships(p) AS rs "
+        "UNWIND range(0, size(rs)-1) AS i "
+        "RETURN ns[i] AS n, rs[i] AS r, ns[i+1] AS m"
+    )
+    records = mg.execute_read(cypher, {"pairs": pairs})
+
+    if not records:
+        raise HTTPException(
+            status_code=404,
+            detail=f"No paths found between any of the supplied nodes within {max_depth} hops",
+        )
+
+    return _build_graph_data_from_paths(records)
+
+
+@router.get(
     "/search",
     response_model=GraphData,
     summary="Search graph nodes",
