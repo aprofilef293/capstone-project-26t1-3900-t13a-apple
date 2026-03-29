@@ -29,6 +29,10 @@ export function UploadBox({
         const file = e.target.files?.[0];
         if (!file) return;
         localStorage.removeItem('selectedNodeId');
+        localStorage.removeItem('selectedNodeIds');
+        localStorage.removeItem('infoPanelMode');
+        localStorage.removeItem('isMultiSelect');
+        localStorage.removeItem('pathViewOnly');
         clearSelectedNodes(); 
         startFileImport(file);
         navigate({ to: '/manager' });

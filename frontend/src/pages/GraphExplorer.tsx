@@ -13,7 +13,7 @@ import MultiSelectNodeSidebar from "../components/explorer/MultiSelectNodeSideba
 import { FullScreenSpinner } from "@/components/ui/spinner";
 
 export function GraphExplorer() {
-    const { searchQuery, fetchGraphData, isNodeSelecting, selectedNodeIds, infoPanelMode,  isMultiSelect, fetchPath } = useStore();
+    const { searchQuery, fetchGraphData, isNodeSelecting, selectedNodeIds, infoPanelMode,  isMultiSelect, fetchPath, pathViewOnly, togglePathViewOnly, pathNodeIds } = useStore();
     const [viewMode, setViewMode] = useState<'graph' | 'hierarchy'>('graph');
     const graphViewRef = useRef<GraphViewRef>(null);
     const isInitialGraphLoading = useStore(state => state.isInitialGraphLoading);
@@ -45,6 +45,20 @@ export function GraphExplorer() {
                     {/* Right-side controls: size filter + zoom */}
                     {viewMode === 'graph' && (
                         <div className="absolute bottom-6 right-6 z-10 flex items-end gap-3">
+                            {isMultiSelect && pathNodeIds.length > 0 && (
+                                <button
+                                    onClick={togglePathViewOnly}
+                                    title="Toggle path view"
+                                    className={`px-3 py-1.5 rounded-lg text-xs font-medium border shadow-sm backdrop-blur-sm transition-colors ${
+                                        pathViewOnly
+                                            ? "bg-sidebar-accent border-sidebar-border text-foreground hover:bg-sidebar-accent/80"
+                                            : "bg-sidebar/90 border-sidebar-border text-muted-foreground hover:bg-sidebar-accent"
+                                    }`}
+                                >
+                                    Path View
+                                </button>
+                            )}
+                            
                             {/* Node size filter slider */}
                             <NodeSizeFilter />
 
