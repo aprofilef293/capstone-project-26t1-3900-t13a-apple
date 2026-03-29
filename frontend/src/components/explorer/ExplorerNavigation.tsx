@@ -103,7 +103,7 @@ export function ExplorerToolbar({
 
                     {/* Search Bar */}
                     <div className="flex-1 flex justify-center min-w-0">
-                        <ExplorerSearch />
+                        <ExplorerSearch viewMode={viewMode} />
                     </div>
                 </div>
 
