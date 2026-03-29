@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { Filter, X, RotateCcw, Check, Asterisk, Ban } from "lucide-react";
+import { Filter, X, RotateCcw, Check, Asterisk, Ban, ChevronDown, ChevronUp } from "lucide-react";
 import { useStore, DEFAULT_FILTERS } from "../../store/useStore";
 import type { TagKeyword, TagMode } from "../../store/useStore";
 import { cn } from "../../lib/utils";
@@ -139,6 +139,7 @@ export function GraphFilterPanel() {
     const { graphFilters: rawFilters, setGraphFilters, resetGraphFilters } = useStore();
     const graphFilters = rawFilters ?? DEFAULT_FILTERS;
     const [isOpen, setIsOpen] = useState(false);
+    const [isAdvanced, setIsAdvanced] = useState(false);
     const panelRef = useRef<HTMLDivElement>(null);
 
     // Close on outside click
@@ -214,46 +215,108 @@ export function GraphFilterPanel() {
 
                     <div className="p-4 space-y-5">
 
-                        {/* Label keyword */}
-                        <div>
-                            <SectionLabel>Node name contains</SectionLabel>
-                            <TagInput
-                                id="filter-label-keyword"
-                                tags={graphFilters.labelKeywords}
-                                onAdd={(text) => setGraphFilters({ labelKeywords: [...graphFilters.labelKeywords, { text, mode: 'include' }] })}
-                                onRemove={(text) => setGraphFilters({ labelKeywords: graphFilters.labelKeywords.filter(t => t.text !== text) })}
-                                onToggleMode={(text) => setGraphFilters({
-                                    labelKeywords: graphFilters.labelKeywords.map(t =>
-                                        t.text === text
-                                            ? { ...t, mode: t.mode === 'include' ? 'mandatory' : t.mode === 'mandatory' ? 'exclude' : 'include' }
-                                            : t
-                                    )
-                                })}
-                                placeholder="e.g. cancer, allergy…"
-                            />
-                        </div>
+                        {/* Keyword filters — simple or advanced */}
+                        <div className="space-y-3">
+                            {!isAdvanced ? (
+                                /* Simple mode: single input applies to both name and description */
+                                <div>
+                                    <div className="flex items-center justify-between mb-1.5">
+                                        <SectionLabel>Name &amp; Description contains</SectionLabel>
+                                        <button
+                                            onClick={() => setIsAdvanced(true)}
+                                            className="p-0.5 rounded text-muted-foreground/50 hover:text-muted-foreground hover:bg-sidebar-accent transition-colors"
+                                            title="Split into separate name and description filters"
+                                        >
+                                            <ChevronDown className="w-3.5 h-3.5" />
+                                        </button>
+                                    </div>
+                                    <TagInput
+                                        id="filter-combined-keyword"
+                                        tags={graphFilters.labelKeywords}
+                                        onAdd={(text) => {
+                                            const tag: TagKeyword = { text, mode: 'include' };
+                                            setGraphFilters({
+                                                labelKeywords: [...graphFilters.labelKeywords, tag],
+                                                descriptionKeywords: [...graphFilters.descriptionKeywords, tag],
+                                            });
+                                        }}
+                                        onRemove={(text) => setGraphFilters({
+                                            labelKeywords: graphFilters.labelKeywords.filter(t => t.text !== text),
+                                            descriptionKeywords: graphFilters.descriptionKeywords.filter(t => t.text !== text),
+                                        })}
+                                        onToggleMode={(text) => {
+                                            const cycle = (t: TagKeyword) =>
+                                                t.text === text
+                                                    ? { ...t, mode: (t.mode === 'include' ? 'mandatory' : t.mode === 'mandatory' ? 'exclude' : 'include') as TagMode }
+                                                    : t;
+                                            setGraphFilters({
+                                                labelKeywords: graphFilters.labelKeywords.map(cycle),
+                                                descriptionKeywords: graphFilters.descriptionKeywords.map(cycle),
+                                            });
+                                        }}
+                                        placeholder="e.g. cancer, allergy…"
+                                    />
+                                </div>
+                            ) : (
+                                /* Advanced mode: separate inputs */
+                                <>
+                                    <div>
+                                        <div className="flex items-center justify-between mb-1.5">
+                                            <SectionLabel>Node name contains</SectionLabel>
+                                            <button
+                                                onClick={() => {
+                                                    const merged = [...graphFilters.labelKeywords];
+                                                    for (const tag of graphFilters.descriptionKeywords) {
+                                                        if (!merged.some(t => t.text === tag.text)) merged.push(tag);
+                                                    }
+                                                    setGraphFilters({ labelKeywords: merged, descriptionKeywords: merged });
+                                                    setIsAdvanced(false);
+                                                }}
+                                                className="p-0.5 rounded text-muted-foreground/50 hover:text-muted-foreground hover:bg-sidebar-accent transition-colors"
+                                                title="Combine name and description into one filter"
+                                            >
+                                                <ChevronUp className="w-3.5 h-3.5" />
+                                            </button>
+                                        </div>
+                                        <TagInput
+                                            id="filter-label-keyword"
+                                            tags={graphFilters.labelKeywords}
+                                            onAdd={(text) => setGraphFilters({ labelKeywords: [...graphFilters.labelKeywords, { text, mode: 'include' }] })}
+                                            onRemove={(text) => setGraphFilters({ labelKeywords: graphFilters.labelKeywords.filter(t => t.text !== text) })}
+                                            onToggleMode={(text) => setGraphFilters({
+                                                labelKeywords: graphFilters.labelKeywords.map(t =>
+                                                    t.text === text
+                                                        ? { ...t, mode: t.mode === 'include' ? 'mandatory' : t.mode === 'mandatory' ? 'exclude' : 'include' }
+                                                        : t
+                                                )
+                                            })}
+                                            placeholder="e.g. cancer, allergy…"
+                                        />
+                                    </div>
+                                    <div>
+                                        <SectionLabel>Description contains</SectionLabel>
+                                        <TagInput
+                                            id="filter-description-keyword"
+                                            tags={graphFilters.descriptionKeywords}
+                                            onAdd={(text) => setGraphFilters({ descriptionKeywords: [...graphFilters.descriptionKeywords, { text, mode: 'include' }] })}
+                                            onRemove={(text) => setGraphFilters({ descriptionKeywords: graphFilters.descriptionKeywords.filter(t => t.text !== text) })}
+                                            onToggleMode={(text) => setGraphFilters({
+                                                descriptionKeywords: graphFilters.descriptionKeywords.map(t =>
+                                                    t.text === text
+                                                        ? { ...t, mode: t.mode === 'include' ? 'mandatory' : t.mode === 'mandatory' ? 'exclude' : 'include' }
+                                                        : t
+                                                )
+                                            })}
+                                            placeholder="e.g. chronic, viral…"
+                                        />
+                                        <p className="text-[10px] text-muted-foreground mt-1.5 leading-tight px-1.5">
+                                            Searches definition fields (OBO data)
+                                        </p>
+                                    </div>
+                                </>
+                            )}
 
-                        {/* Description / definition keyword */}
-                        <div>
-                            <SectionLabel>Description contains</SectionLabel>
-                            <TagInput
-                                id="filter-description-keyword"
-                                tags={graphFilters.descriptionKeywords}
-                                onAdd={(text) => setGraphFilters({ descriptionKeywords: [...graphFilters.descriptionKeywords, { text, mode: 'include' }] })}
-                                onRemove={(text) => setGraphFilters({ descriptionKeywords: graphFilters.descriptionKeywords.filter(t => t.text !== text) })}
-                                onToggleMode={(text) => setGraphFilters({
-                                    descriptionKeywords: graphFilters.descriptionKeywords.map(t =>
-                                        t.text === text
-                                            ? { ...t, mode: t.mode === 'include' ? 'mandatory' : t.mode === 'mandatory' ? 'exclude' : 'include' }
-                                            : t
-                                    )
-                                })}
-                                placeholder="e.g. chronic, viral…"
-                            />
-                            <p className="text-[10px] text-muted-foreground mt-1.5 leading-tight px-1.5">
-                                Searches definition fields (OBO data)
-                            </p>
-                            <div className="mt-3 flex flex-wrap gap-x-3 gap-y-1.5 px-1.5">
+                            <div className="flex flex-wrap gap-x-3 gap-y-1.5 px-0.5">
                                 <div className="flex items-center gap-1 text-[9px] text-blue-500/80">
                                     <Check className="w-2.5 h-2.5" /> <span>Include (OR)</span>
                                 </div>

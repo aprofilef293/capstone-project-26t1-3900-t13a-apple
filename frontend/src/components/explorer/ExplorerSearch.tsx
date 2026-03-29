@@ -5,7 +5,7 @@ import { useStore } from "../../store/useStore";
 import { Button } from "../ui/button";
 import { matchesGraphFilters } from "../../lib/filterUtils";
 
-export function ExplorerSearch() {
+export function ExplorerSearch({ viewMode = "graph" }: { viewMode?: "graph" | "hierarchy" }) {
     const {
         searchQuery,
         setSearchQuery,
@@ -142,8 +142,8 @@ export function ExplorerSearch() {
                 </Button>
             </div>
 
-            {/* Render dropdown if open and query is not empty */}
-            {isOpen && searchQuery.trim() && (
+            {/* Render dropdown if open and query is not empty (not in hierarchy view) */}
+            {isOpen && searchQuery.trim() && viewMode !== "hierarchy" && (
                 <div className="absolute top-full left-0 right-0 mt-2 bg-sidebar border border-sidebar-border rounded-lg shadow-lg overflow-hidden z-[100] max-h-[400px] flex flex-col pointer-events-auto">
                     {searchResults.length === 0 ? (
                         <div className="p-4 text-center text-sm text-sidebar-foreground/70">
