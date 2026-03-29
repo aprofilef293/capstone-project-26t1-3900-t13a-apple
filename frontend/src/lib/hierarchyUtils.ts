@@ -73,7 +73,7 @@ export function buildHierarchyFromGraph(nodes: GraphNode[], edges: GraphEdge[]):
         rootNodes.push(...nodes.map(n => nodeMap.get(n.id)!));
     }
 
-    if (rootNodes.length > 50) {
+    if (rootNodes.length > 300) {
         const groupedRoots = new Map<string, HierarchyNode>();
         const getGroupKey = (name: string): string => {
             const firstChar = (name || '').charAt(0).toUpperCase();

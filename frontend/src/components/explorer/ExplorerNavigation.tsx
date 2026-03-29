@@ -6,6 +6,7 @@ import { ExplorerSearch } from "./ExplorerSearch";
 import { Switch } from "../ui/switch";
 import { useStore } from "../../store/useStore";
 import { GraphFilterPanel } from "./FilterDetailsPanel";
+import { matchesGraphFilters } from "../../lib/filterUtils";
 
 const VIEW_MODES: { mode: "graph" | "hierarchy"; label: string; icon: LucideIcon }[] = [
     { mode: "graph", label: "Graph", icon: Network },
@@ -20,7 +21,7 @@ export function ExplorerToolbar({
     viewMode: "graph" | "hierarchy";
     onViewModeChange: (mode: "graph" | "hierarchy") => void;
 }) {
-    const { nodes, edges, viewLevel, searchQuery, selectedNodeId } = useStore();
+    const { nodes, edges, viewLevel, searchQuery, selectedNodeId, graphFilters } = useStore();
     const { isMultiSelect, setIsMultiSelect, setInfoPanelMode } = useStore();
 
     const deferredSearchQuery = useDeferredValue(searchQuery);
@@ -31,7 +32,7 @@ export function ExplorerToolbar({
         const baseFilteredNodes = nodes.filter(n => {
             const level = ((n.attributes as Record<string, unknown>)?.viewLevel as number) ?? 1;
             const matchesSearch = !!selectedNodeId || !lowerQuery || (n.label || "").toLowerCase().includes(lowerQuery);
-            return level >= viewLevel && matchesSearch;
+            return level >= viewLevel && matchesSearch && matchesGraphFilters(n, graphFilters);
         });
 
         let finalNodeIds: Set<string>;
@@ -75,7 +76,7 @@ export function ExplorerToolbar({
         );
 
         return { visibleNodeCount: finalNodeIds.size, visibleEdgeCount: visibleEdges.length };
-    }, [nodes, edges, viewLevel, deferredSearchQuery, selectedNodeId]);
+    }, [nodes, edges, viewLevel, deferredSearchQuery, selectedNodeId, graphFilters]);
 
     return (
         <div className="absolute top-6 left-6 right-6 z-20 flex items-start justify-between gap-4 pointer-events-none transition-all duration-300">
@@ -109,18 +110,20 @@ export function ExplorerToolbar({
                 {/* Filter + Toggle Switch Row */}
                 <div className="flex items-center self-start gap-4 pointer-events-auto">
                     <GraphFilterPanel />
-                    <div className="flex items-center bg-sidebar/95 backdrop-blur-sm border border-sidebar-border rounded-lg p-3 shadow-sm gap-2 w-fit">
-                        <span className="text-xs font-medium text-sidebar-foreground/80">Multi-Select</span>
-                        <Switch
-                            checked={isMultiSelect}
-                            onCheckedChange={(val) => {
-                                setIsMultiSelect(val);
-                                if (val) setInfoPanelMode('multi-select');
-                                if (!val) setInfoPanelMode('closed');
-                            }}
-                            aria-label="Toggle multi-select mode"
-                        />
-                    </div>
+                    {viewMode === 'graph' && (
+                        <div className="flex items-center bg-sidebar/95 backdrop-blur-sm border border-sidebar-border rounded-lg p-3 shadow-sm gap-2 w-fit">
+                            <span className="text-xs font-medium text-sidebar-foreground/80">Multi-Select</span>
+                            <Switch
+                                checked={isMultiSelect}
+                                onCheckedChange={(val) => {
+                                    setIsMultiSelect(val);
+                                    if (val) setInfoPanelMode('multi-select');
+                                    if (!val) setInfoPanelMode('closed');
+                                }}
+                                aria-label="Toggle multi-select mode"
+                            />
+                        </div>
+                    )}
                 </div>
             </div>
 
