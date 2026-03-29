@@ -536,12 +536,14 @@ const GraphManager = forwardRef<GraphViewRef, unknown>((_, ref) => {
             if (state.isMultiSelect && state.multiSelectPathData && graph.hasEdge(edge)) {
                 if (state.multiSelectPathData.pathEdgeIds.has(edge)) {
                     res.color = "#fbbf24";
-                    res.size = 3;
+                    res.size = 5;
                 } else if (state.multiSelectPathData.pathNodes.has(source) || state.multiSelectPathData.pathNodes.has(target)) {
-                    res.color = state.isDark ? "rgba(255,255,255,0.3)" : "rgba(0,0,0,0.3)";
-                    res.size = 1;
+                    // res.color = state.isDark ? "rgba(255,255,255,0.3)" : "rgba(0,0,0,0.3)";
+                    // res.size = 1;
+                    return { ...res, hidden: true };
                 } else {
-                    res.color = state.isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.1)";
+                    // res.color = state.isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.1)";
+                    return { ...res, hidden: true };
                 }
                 return res;
             }
