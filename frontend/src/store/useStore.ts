@@ -59,6 +59,8 @@ interface ExplorerState {
     searchResultsDescription: GraphNode[],
     setSearchResultsDescription: (results: GraphNode[]) => void,
     searchResults: GraphNode[];
+    searchMode: 'keyword' | 'semantic';
+    setSearchMode: (mode: 'keyword' | 'semantic') => void;
     setViewLevel: (level: number) => void;
     fetchGraphData: (isInitial?: boolean) => Promise<void>;
     isGraphLoading: boolean;
@@ -204,6 +206,8 @@ export const useStore = create<ExplorerState>((set) => ({
     searchResultsDescription: [],
     setSearchResultsDescription: (results) => set({ searchResultsDescription: results }),
     searchResults: [],
+    searchMode: 'keyword',
+    setSearchMode: (mode) => set({ searchMode: mode }),
     setViewLevel: (level) => set({ viewLevel: level }),
     // graph filters
     graphFilters: DEFAULT_FILTERS,

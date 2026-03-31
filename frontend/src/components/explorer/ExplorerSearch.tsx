@@ -4,6 +4,12 @@ import Fuse from "fuse.js";
 import { useStore } from "../../store/useStore";
 import { Button } from "../ui/button";
 import { matchesGraphFilters } from "../../lib/filterUtils";
+import { cn } from "../../lib/utils";
+
+const SEARCH_MODES: { mode: 'keyword' | 'semantic'; label: string; }[] = [
+    { mode: "keyword", label: "Keyword" },
+    { mode: "semantic", label: "Advanced" },
+];
 
 export function ExplorerSearch({ viewMode = "graph" }: { viewMode?: "graph" | "hierarchy" }) {
     const {
@@ -15,7 +21,9 @@ export function ExplorerSearch({ viewMode = "graph" }: { viewMode?: "graph" | "h
         setSearchResultsFuzzyTitle,
         setSearchResultsDescription,
         setInfoPanelMode,
-        graphFilters
+        graphFilters,
+        searchMode,
+        setSearchMode,
     } = useStore();
 
     const [isOpen, setIsOpen] = useState(false);
@@ -140,6 +148,25 @@ export function ExplorerSearch({ viewMode = "graph" }: { viewMode?: "graph" | "h
                 >
                     <Search className="w-4 h-4 text-sidebar-foreground/70" />
                 </Button>
+
+                {/* Search Mode Toggles */}
+                <div className="flex shrink-0 bg-sidebar/95 backdrop-blur-sm rounded-lg shadow-sm pointer-events-auto">
+                    {SEARCH_MODES.map(({ mode, label }) => (
+                        <Button
+                            key={mode}
+                            variant="ghost"
+                            onClick={() => setSearchMode(mode)}
+                            className={cn(
+                                "h-8 px-3 text-xs font-medium gap-2",
+                                searchMode === mode
+                                    ? "bg-blue-500/10 text-blue-600 dark:bg-blue-600/10 dark:text-blue-400"
+                                    : "text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent"
+                            )}
+                        >
+                            {label}
+                        </Button>
+                    ))}
+                </div>
             </div>
 
             {/* Render dropdown if open and query is not empty (not in hierarchy view) */}
