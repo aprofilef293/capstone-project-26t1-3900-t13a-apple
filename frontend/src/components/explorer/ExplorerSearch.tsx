@@ -1,14 +1,14 @@
 import { useState, useMemo, useRef, useEffect } from "react";
-import { Search, X } from "lucide-react";
+import { DatabaseSearch, Search, WholeWord, X, type LucideIcon } from "lucide-react";
 import Fuse from "fuse.js";
 import { useStore } from "../../store/useStore";
 import { Button } from "../ui/button";
 import { matchesGraphFilters } from "../../lib/filterUtils";
 import { cn } from "../../lib/utils";
 
-const SEARCH_MODES: { mode: 'keyword' | 'semantic'; label: string; }[] = [
-    { mode: "keyword", label: "Keyword" },
-    { mode: "semantic", label: "Advanced" },
+const SEARCH_MODES: { mode: 'keyword' | 'semantic'; label: string; Icon: LucideIcon; }[] = [
+    { mode: "keyword", label: "Keyword", Icon: WholeWord },
+    { mode: "semantic", label: "Advanced", Icon: DatabaseSearch },
 ];
 
 export function ExplorerSearch({ viewMode = "graph" }: { viewMode?: "graph" | "hierarchy" }) {
@@ -21,6 +21,7 @@ export function ExplorerSearch({ viewMode = "graph" }: { viewMode?: "graph" | "h
         setSearchResultsFuzzyTitle,
         setSearchResultsDescription,
         doSemanticSearch,
+        infoPanelMode,
         setInfoPanelMode,
         graphFilters,
         searchMode,
@@ -159,7 +160,7 @@ export function ExplorerSearch({ viewMode = "graph" }: { viewMode?: "graph" | "h
 
                 {/* Search Mode Toggles */}
                 <div className="flex shrink-0 bg-sidebar/95 backdrop-blur-sm rounded-lg shadow-sm pointer-events-auto">
-                    {SEARCH_MODES.map(({ mode, label }) => (
+                    {SEARCH_MODES.map(({ mode, label, Icon }) => (
                         <Button
                             key={mode}
                             variant="ghost"
@@ -174,7 +175,7 @@ export function ExplorerSearch({ viewMode = "graph" }: { viewMode?: "graph" | "h
                                     : "text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent"
                             )}
                         >
-                            {label}
+                            {infoPanelMode !== "closed" ? (<Icon />) : label}
                         </Button>
                     ))}
                 </div>
