@@ -29,8 +29,7 @@ dask = {version = ">=2023.10.0", extras = ["dataframe"]}
 numba = ">=0.58.0"
 pyfftw = ">=0.13.0"
 numba-kdtree = ">=0.3.0"
-langchain-memgraph = ">=0.1.0"
-langchain-openai = ">=0.3.0"
+sentence-transformers = ">=2.2.0"
 
 [tool.poetry.group.dev.dependencies]
 pytest = ">=8.0"
@@ -49,9 +48,6 @@ target-version = "py311"
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I"]
-
-[tool.ruff.lint.per-file-ignores]
-"app/services/langchain_search.py" = ["E501"]
 
 [tool.ruff.format]
 quote-style = "double"
