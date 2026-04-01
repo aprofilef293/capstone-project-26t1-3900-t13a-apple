@@ -58,6 +58,9 @@ interface ExplorerState {
     setSearchResultsFuzzyTitle: (results: GraphNode[]) => void,
     searchResultsDescription: GraphNode[],
     setSearchResultsDescription: (results: GraphNode[]) => void,
+    searchResultsSemantic: GraphNode[],
+    setSearchResultsSemantic: (results: GraphNode[]) => void,
+    doSemanticSearch: () => void;
     searchResults: GraphNode[];
     searchMode: 'keyword' | 'semantic';
     setSearchMode: (mode: 'keyword' | 'semantic') => void;
@@ -205,7 +208,29 @@ export const useStore = create<ExplorerState>((set) => ({
     setSearchResultsFuzzyTitle: (results) => set({ searchResultsFuzzyTitle: results }),
     searchResultsDescription: [],
     setSearchResultsDescription: (results) => set({ searchResultsDescription: results }),
+    searchResultsSemantic: [],
+    setSearchResultsSemantic: (results) => set({ searchResultsSemantic: results }),
+    doSemanticSearch: async () => {
+        try {
+            const response = await api.fetchGraphData(`/api/graph/semantic-search?q=${useStore.getState().searchQuery}`);
+            const nodes = (response.nodes || []).map((n: { key: string; attributes?: Record<string, unknown> }) => ({
+                id: n.key,
+                label: (n.attributes?.label as string) || n.key,
+                type: (n.attributes?.nodeType as string) || 'Data',
+                x: typeof n.attributes?.x === 'number' ? n.attributes.x : (Math.random() - 0.5) * 10,
+                y: typeof n.attributes?.y === 'number' ? n.attributes.y : (Math.random() - 0.5) * 10,
+                size: (n.attributes?.size as number) || 10,
+                color: (n.attributes?.color as string) || '#3b82f6',
+                attributes: n.attributes || {}
+            }));
+            useStore.getState().setSearchResultsSemantic(nodes);
+        } catch (error) {
+            console.error("Error fetching semantic search results:", error);
+            useStore.getState().setSearchResultsSemantic([]);
+        }
+    },
     searchResults: [],
+    // TODO: make this localstorage (save search mode)
     searchMode: 'keyword',
     setSearchMode: (mode) => set({ searchMode: mode }),
     setViewLevel: (level) => set({ viewLevel: level }),
@@ -260,7 +285,7 @@ export const useStore = create<ExplorerState>((set) => ({
     },
     // File import
     fileName: getPersistedFileInfo().fileName,
-    importStatus: getPersistedFileInfo().importStatus === 'loading' 
+    importStatus: getPersistedFileInfo().importStatus === 'loading'
         ? 'error'  // file upload interrupted by refresh
         : getPersistedFileInfo().importStatus,
     importProgress: 0,
@@ -271,9 +296,9 @@ export const useStore = create<ExplorerState>((set) => ({
         localStorage.setItem('importFileName', file.name);
         localStorage.setItem('importStatus', 'loading');
         localStorage.setItem('importDate', now.toISOString());
-        localStorage.setItem('importError', JSON.stringify(null)); 
-        set({ fileName: file.name, importStatus: 'loading', importProgress: 0, importDate: now, importError: null }); 
-        
+        localStorage.setItem('importError', JSON.stringify(null));
+        set({ fileName: file.name, importStatus: 'loading', importProgress: 0, importDate: now, importError: null });
+
         useStore.getState().setIsMultiSelect(false);
         // simulate progress bar slowly moving toward the ceiling between real events
         let ceiling = 24;

@@ -70,8 +70,8 @@ const GraphManager = forwardRef<GraphViewRef, unknown>((_, ref) => {
     const {
         nodes, edges, isMultiSelect,
         toggleNodeSelection, selectedNodeId, setSelectedNodeId,
-        searchQuery, viewLevel, setIsNodeSelecting, selectedNodeIds,
-        pathNodeIds, pathEdgeIds,
+        searchQuery, searchMode, viewLevel, setIsNodeSelecting,
+        selectedNodeIds, pathNodeIds, pathEdgeIds,
         infoPanelMode, graphFilters: rawFilters, pathViewOnly
     } = useStore();
     const graphFilters = rawFilters ?? DEFAULT_FILTERS;
@@ -424,7 +424,11 @@ const GraphManager = forwardRef<GraphViewRef, unknown>((_, ref) => {
 
         graph.forEachNode((id: string, attrs: NodeAttributes) => {
             const label = String(attrs.label ?? "");
-            const matchesSearch = !!selectedNodeId || !query || label.toLowerCase().includes(query);
+            const matchesSearch = !!selectedNodeId
+                                || !query
+                                || (searchMode === "keyword" && label.toLowerCase().includes(query))
+                                // TODO: change true to only be if it's included in search results
+                                || (searchMode === "semantic" && (infoPanelMode === "closed" || true));
             const level = ((attrs.attributes as Record<string, unknown>)?.viewLevel as number) ?? 1;
 
             const nodeAttrs = attrs.attributes as Record<string, unknown>;

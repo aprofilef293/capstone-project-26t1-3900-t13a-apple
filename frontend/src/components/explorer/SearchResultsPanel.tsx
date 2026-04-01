@@ -38,7 +38,7 @@ function SearchResults({
 }
 
 export function SearchResultsPanel() {
-    const { searchQuery, setSearchQuery, searchResultsFuzzyTitle, searchResultsDescription, setViewLevel, setSelectedNodeId, setInfoPanelMode } = useStore();
+    const { searchQuery, setSearchQuery, searchMode, searchResultsFuzzyTitle, searchResultsDescription, searchResultsSemantic, setViewLevel, setSelectedNodeId, setInfoPanelMode } = useStore();
 
     return (
         <div className="w-[400px] border-l border-sidebar-border bg-sidebar flex flex-col h-full shadow-xl z-20 transition-colors">
@@ -61,7 +61,7 @@ export function SearchResultsPanel() {
                 <span className="text-[12px] text-sidebar-foreground/70 font-mono tracking-wider mr-auto">Query: {searchQuery}</span>
             </div>
 
-            <ScrollArea className="flex-1 min-h-0 pb-6 px-6 pt-4">
+            {searchMode === "keyword" && (<ScrollArea className="flex-1 min-h-0 pb-6 px-6 pt-4">
                 <h3 className="text-xs font-bold text-sidebar-foreground mb-4 uppercase tracking-wider flex items-center gap-2">Most Relevant</h3>
                 <SearchResults items={searchResultsFuzzyTitle} icon={ArrowRight} onSelect={setSelectedNodeId} />
                 {searchResultsDescription.length != 0 && (
@@ -71,7 +71,15 @@ export function SearchResultsPanel() {
                 {searchResultsFuzzyTitle.length == 0 && searchResultsDescription.length == 0 && (
                     <div className="text-s text-sidebar-foreground/40 px-1">No results found.</div>
                 )}
-            </ScrollArea>
+            </ScrollArea>)}
+
+            {searchMode === "semantic" && (<ScrollArea className="flex-1 min-h-0 pb-6 px-6 pt-4">
+                <h3 className="text-xs font-bold text-sidebar-foreground mb-4 uppercase tracking-wider flex items-center gap-2">Most Relevant</h3>
+                <SearchResults items={searchResultsSemantic} icon={ArrowRight} onSelect={setSelectedNodeId} />
+                {searchResultsSemantic.length == 0 && (
+                    <div className="text-s text-sidebar-foreground/40 px-1">No results found.</div>
+                )}
+            </ScrollArea>)}
         </div>
     );
 }

@@ -20,6 +20,7 @@ export function ExplorerSearch({ viewMode = "graph" }: { viewMode?: "graph" | "h
         setSelectedNodeId,
         setSearchResultsFuzzyTitle,
         setSearchResultsDescription,
+        doSemanticSearch,
         setInfoPanelMode,
         graphFilters,
         searchMode,
@@ -58,6 +59,10 @@ export function ExplorerSearch({ viewMode = "graph" }: { viewMode?: "graph" | "h
 
     // Search Method: fuzzy on names, exact substring on descriptions/synonyms
     const { fuzzyResults, descriptionResults } = useMemo(() => {
+        if (searchMode === "semantic") {
+            return {fuzzyResults: [], descriptionResults: []};
+        }
+
         const q = searchQuery.trim();
         if (!q) {
             return { fuzzyResults: [], descriptionResults: [] };
@@ -100,6 +105,9 @@ export function ExplorerSearch({ viewMode = "graph" }: { viewMode?: "graph" | "h
         if (searchQuery.trim()) {
             setInfoPanelMode('search-results');
             setIsOpen(false);
+        }
+        if (searchMode === "semantic") {
+            doSemanticSearch();
         }
     };
 
@@ -155,7 +163,11 @@ export function ExplorerSearch({ viewMode = "graph" }: { viewMode?: "graph" | "h
                         <Button
                             key={mode}
                             variant="ghost"
-                            onClick={() => setSearchMode(mode)}
+                            onClick={() => {
+                                // TODO: try find a way to update graph here (graph view doesn't update until another key pressed)
+                                setInfoPanelMode('closed');
+                                setSearchMode(mode);
+                            }}
                             className={cn(
                                 "h-8 px-3 text-xs font-medium gap-2",
                                 searchMode === mode
@@ -170,11 +182,11 @@ export function ExplorerSearch({ viewMode = "graph" }: { viewMode?: "graph" | "h
             </div>
 
             {/* Render dropdown if open and query is not empty (not in hierarchy view) */}
-            {isOpen && searchQuery.trim() && viewMode !== "hierarchy" && (
+            {isOpen && searchQuery.trim() && viewMode !== "hierarchy" && searchMode === "keyword" && (
                 <div className="absolute top-full left-0 right-0 mt-2 bg-sidebar border border-sidebar-border rounded-lg shadow-lg overflow-hidden z-[100] max-h-[400px] flex flex-col pointer-events-auto">
                     {searchResults.length === 0 ? (
                         <div className="p-4 text-center text-sm text-sidebar-foreground/70">
-                            No quick matches for "{searchQuery}". Press Enter for deep search.
+                            No quick matches for "{searchQuery}". Please try Advanced Search.
                         </div>
                     ) : (
                         <div className="overflow-y-auto py-2 custom-scrollbar">

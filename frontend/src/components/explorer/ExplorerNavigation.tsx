@@ -121,6 +121,7 @@ export function ExplorerToolbar({
                                     if (!val) setInfoPanelMode('closed');
                                 }}
                                 aria-label="Toggle multi-select mode"
+                                className="cursor-pointer"
                             />
                         </div>
                     )}
