@@ -72,7 +72,8 @@ const GraphManager = forwardRef<GraphViewRef, unknown>((_, ref) => {
         toggleNodeSelection, selectedNodeId, setSelectedNodeId,
         searchQuery, searchMode, viewLevel, setIsNodeSelecting,
         selectedNodeIds, pathNodeIds, pathEdgeIds,
-        infoPanelMode, graphFilters: rawFilters, pathViewOnly
+        infoPanelMode, graphFilters: rawFilters, pathViewOnly,
+        searchResultsSemantic
     } = useStore();
     const graphFilters = rawFilters ?? DEFAULT_FILTERS;
     const lastClickedNodeRef = useRef(false);
@@ -427,8 +428,7 @@ const GraphManager = forwardRef<GraphViewRef, unknown>((_, ref) => {
             const matchesSearch = !!selectedNodeId
                                 || !query
                                 || (searchMode === "keyword" && label.toLowerCase().includes(query))
-                                // TODO: change true to only be if it's included in search results
-                                || (searchMode === "semantic" && (infoPanelMode === "closed" || true));
+                                || (searchMode === "semantic" && (infoPanelMode === "closed" || searchResultsSemantic.filter(n => n.id == id).length > 0));
             const level = ((attrs.attributes as Record<string, unknown>)?.viewLevel as number) ?? 1;
 
             const nodeAttrs = attrs.attributes as Record<string, unknown>;
@@ -464,7 +464,7 @@ const GraphManager = forwardRef<GraphViewRef, unknown>((_, ref) => {
         stateRef.current.visibleNodes = visibleNodes;
         // update graph (note: this does not perform a hard refresh on the browser)
         sigma.refresh();
-    }, [nodes, edges, deferredSearchQuery, viewLevel, selectedNodeId, isolationData, isMultiSelect, multiSelectPathData, selectedNodeIds, sigma, graphFilters]);
+    }, [nodes, edges, deferredSearchQuery, viewLevel, selectedNodeId, isolationData, isMultiSelect, multiSelectPathData, selectedNodeIds, sigma, graphFilters, searchResultsSemantic, searchMode]);
 
     useEffect(() => {
         const graph = sigma.getGraph();

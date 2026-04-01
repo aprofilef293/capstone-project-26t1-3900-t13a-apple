@@ -204,12 +204,15 @@ export const useStore = create<ExplorerState>((set) => ({
         graph: createGraph(nodes, edges)
     }),
     setSearchQuery: (query) => set({ searchQuery: query }),
+    // used to update results panel
     searchResultsFuzzyTitle: [],
     setSearchResultsFuzzyTitle: (results) => set({ searchResultsFuzzyTitle: results }),
     searchResultsDescription: [],
     setSearchResultsDescription: (results) => set({ searchResultsDescription: results }),
     searchResultsSemantic: [],
-    setSearchResultsSemantic: (results) => set({ searchResultsSemantic: results }),
+    setSearchResultsSemantic: (results) => {
+        set({ searchResultsSemantic: results });
+    },
     doSemanticSearch: async () => {
         try {
             const response = await api.fetchGraphData(`/api/graph/semantic-search?q=${useStore.getState().searchQuery}`);

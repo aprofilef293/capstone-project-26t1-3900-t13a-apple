@@ -164,7 +164,6 @@ export function ExplorerSearch({ viewMode = "graph" }: { viewMode?: "graph" | "h
                             key={mode}
                             variant="ghost"
                             onClick={() => {
-                                // TODO: try find a way to update graph here (graph view doesn't update until another key pressed)
                                 setInfoPanelMode('closed');
                                 setSearchMode(mode);
                             }}
