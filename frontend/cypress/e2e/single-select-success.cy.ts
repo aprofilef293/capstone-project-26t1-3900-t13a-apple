@@ -92,5 +92,14 @@ describe('happy path for file upload', () => {
     cy.contains("Node Data").should("be.visible")
     cy.contains("Connections").should("be.visible")
     cy.contains("Computed Attributes").should("be.visible")
+
+    // close side panel
+    cy.get('button[title="Close details"]')
+        .should('be.visible')
+        .click()
+    
+    // check side panel is closed
+    cy.contains("Node Data").should("not.exist")
+
 });
 });
