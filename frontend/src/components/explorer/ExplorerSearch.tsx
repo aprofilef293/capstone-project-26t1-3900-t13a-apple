@@ -175,7 +175,7 @@ export function ExplorerSearch({ viewMode = "graph" }: { viewMode?: "graph" | "h
                                     : "text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent"
                             )}
                         >
-                            {infoPanelMode !== "closed" ? (<Icon />) : label}
+                            <Icon /> {infoPanelMode === "closed" && label}
                         </Button>
                     ))}
                 </div>
