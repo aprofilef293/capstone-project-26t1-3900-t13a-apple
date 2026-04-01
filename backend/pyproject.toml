@@ -29,6 +29,7 @@ dask = {version = ">=2023.10.0", extras = ["dataframe"]}
 numba = ">=0.58.0"
 pyfftw = ">=0.13.0"
 numba-kdtree = ">=0.3.0"
+pygments = ">=2.20.0"
 
 [tool.poetry.group.dev.dependencies]
 pytest = ">=8.0"
