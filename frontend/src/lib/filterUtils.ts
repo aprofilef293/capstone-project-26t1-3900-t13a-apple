@@ -1,0 +1,44 @@
+import type { GraphNode, GraphFilters, TagKeyword } from "../store/useStore";
+
+export type KeywordGroups = {
+    include: string[];
+    mandatory: string[];
+    exclude: string[];
+};
+
+export function getGroups(kws: TagKeyword[]): KeywordGroups {
+    return {
+        include: kws.filter(k => k.mode === 'include').map(k => k.text.toLowerCase().trim()).filter(Boolean),
+        mandatory: kws.filter(k => k.mode === 'mandatory').map(k => k.text.toLowerCase().trim()).filter(Boolean),
+        exclude: kws.filter(k => k.mode === 'exclude').map(k => k.text.toLowerCase().trim()).filter(Boolean),
+    };
+}
+
+export function checkMatch(text: string, groups: KeywordGroups): boolean {
+    const t = text.toLowerCase();
+    if (groups.exclude.some(kw => t.includes(kw))) return false;
+    if (groups.mandatory.length > 0 && !groups.mandatory.every(kw => t.includes(kw))) return false;
+    if (groups.include.length > 0 && !groups.include.some(kw => t.includes(kw))) return false;
+    return true;
+}
+
+export function matchesGraphFilters(node: GraphNode, filters: GraphFilters): boolean {
+    const label = node.label || node.id;
+    const attrs = node.attributes;
+    const rank = (attrs?.percentile_rank as number) ?? 0;
+
+    if (rank < filters.minImportance) return false;
+    if (filters.excludedColors.has(node.color)) return false;
+
+    const labelGroups = getGroups(filters.labelKeywords || []);
+    const descGroups = getGroups(filters.descriptionKeywords || []);
+
+    if (!checkMatch(label, labelGroups)) return false;
+
+    const descText =
+        ((attrs?.definition as string) ?? '') +
+        ((attrs?.synonyms as string[]) ?? []).join(' ');
+    if (!checkMatch(descText, descGroups)) return false;
+
+    return true;
+}

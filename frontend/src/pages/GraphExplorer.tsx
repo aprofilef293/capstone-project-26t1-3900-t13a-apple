@@ -10,15 +10,23 @@ import { NodeSizeFilter } from "../components/explorer/NodeSizeFilter";
 import { useStore } from "../store/useStore";
 import { SearchResultsPanel } from "@/components/explorer/SearchResultsPanel";
 import MultiSelectNodeSidebar from "../components/explorer/MultiSelectNodeSidebar";
+import { FullScreenSpinner } from "@/components/ui/spinner";
 
 export function GraphExplorer() {
-    const { searchQuery, fetchGraphData, isNodeSelecting, selectedNodeIds, infoPanelMode,  isMultiSelect, fetchPath } = useStore();
+    const { searchQuery, fetchGraphData, isNodeSelecting, selectedNodeIds, infoPanelMode,  isMultiSelect, fetchPath, pathViewOnly, togglePathViewOnly, pathNodeIds } = useStore();
     const [viewMode, setViewMode] = useState<'graph' | 'hierarchy'>('graph');
     const graphViewRef = useRef<GraphViewRef>(null);
+    const isInitialGraphLoading = useStore(state => state.isInitialGraphLoading);
+    const isGraphLoading = useStore(state => state.isGraphLoading);
+    const nodes = useStore(state => state.nodes);
+    const hasFetchedRef = useRef(false);
 
     useEffect(() => {
-        fetchGraphData();
-    }, [fetchGraphData]);
+        if (nodes.length === 0 && !hasFetchedRef.current) {
+            hasFetchedRef.current = true;
+            fetchGraphData(true);
+        }
+    }, [fetchGraphData, nodes.length]);
 
     useEffect(() => {
         if (isMultiSelect && selectedNodeIds.length >= 2) {
@@ -28,6 +36,7 @@ export function GraphExplorer() {
 
     return (
         <div className="flex flex-col h-full w-full relative">
+            {isInitialGraphLoading && <FullScreenSpinner />}
             <div className="flex-1 flex relative overflow-hidden bg-background">
                 {/* Main Content Area */}
                 <div className="flex-1 relative flex flex-col">
@@ -36,6 +45,20 @@ export function GraphExplorer() {
                     {/* Right-side controls: size filter + zoom */}
                     {viewMode === 'graph' && (
                         <div className="absolute bottom-6 right-6 z-10 flex items-end gap-3">
+                            {isMultiSelect && pathNodeIds.length > 0 && (
+                                <button
+                                    onClick={togglePathViewOnly}
+                                    title="Toggle path view"
+                                    className={`px-3 py-1.5 rounded-lg text-xs font-medium border shadow-sm backdrop-blur-sm transition-colors ${
+                                        pathViewOnly
+                                            ? "bg-sidebar-accent border-sidebar-border text-foreground hover:bg-sidebar-accent/80"
+                                            : "bg-sidebar/90 border-sidebar-border text-muted-foreground hover:bg-sidebar-accent"
+                                    }`}
+                                >
+                                    Path View
+                                </button>
+                            )}
+                            
                             {/* Node size filter slider */}
                             <NodeSizeFilter />
 

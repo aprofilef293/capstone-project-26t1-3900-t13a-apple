@@ -45,3 +45,14 @@ export function formatDate(date: Date): string {
     hours = hours % 12 || 12;
     return `${dd}/${mm}/${yyyy} ${hours}:${minutes}${ampm}`;
 }
+
+export function desaturateColor(hex: string, amount: number): string {
+    const r = parseInt(hex.slice(1, 3), 16);
+    const g = parseInt(hex.slice(3, 5), 16);
+    const b = parseInt(hex.slice(5, 7), 16);
+    const gray = 0.299 * r + 0.587 * g + 0.114 * b;
+    const nr = Math.round(r + (gray - r) * amount);
+    const ng = Math.round(g + (gray - g) * amount);
+    const nb = Math.round(b + (gray - b) * amount);
+    return `#${nr.toString(16).padStart(2, "0")}${ng.toString(16).padStart(2, "0")}${nb.toString(16).padStart(2, "0")}`;
+}

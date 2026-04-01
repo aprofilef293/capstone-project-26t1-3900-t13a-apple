@@ -2,6 +2,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware.gzip import GZipMiddleware
 
 from app.config import Settings
 from app.routers import file_upload, graph
@@ -50,6 +51,7 @@ def create_app() -> FastAPI:
         ),
         lifespan=lifespan,
     )
+    app.add_middleware(GZipMiddleware, minimum_size=1000)
     app.add_middleware(
         CORSMiddleware,
         allow_origins=settings.cors_origins,

@@ -1,11 +1,12 @@
 import { useEffect, useCallback, useMemo, useRef, forwardRef, useImperativeHandle, useDeferredValue } from "react";
 import { SigmaContainer, useSigma, useRegisterEvents, useCamera } from "@react-sigma/core";
 import "@react-sigma/core/lib/style.css";
-import { useStore } from "../store/useStore";
+import { useStore, DEFAULT_FILTERS } from "../store/useStore";
 import { useTheme } from "./theme-provider";
 import { NodeBorderProgram } from "@sigma/node-border";
 import { EdgeLineProgram, NodePointProgram } from "sigma/rendering";
-import { adjustColorBrightness } from "../lib/utils";
+import { adjustColorBrightness, desaturateColor } from "../lib/utils";
+import { getGroups, checkMatch } from "../lib/filterUtils";
 import { MultiDirectedGraph } from "graphology";
 
 /** UI Configuration */
@@ -71,8 +72,9 @@ const GraphManager = forwardRef<GraphViewRef, unknown>((_, ref) => {
         toggleNodeSelection, selectedNodeId, setSelectedNodeId,
         searchQuery, viewLevel, setIsNodeSelecting, selectedNodeIds,
         pathNodeIds, pathEdgeIds,
-        infoPanelMode,
+        infoPanelMode, graphFilters: rawFilters, pathViewOnly
     } = useStore();
+    const graphFilters = rawFilters ?? DEFAULT_FILTERS;
     const lastClickedNodeRef = useRef(false);
     const { resolvedTheme } = useTheme();
     const isDark = resolvedTheme === "dark";
@@ -154,7 +156,7 @@ const GraphManager = forwardRef<GraphViewRef, unknown>((_, ref) => {
 
     // Isolation data
     const isolationData = useMemo(() => {
-        if (!selectedNodeId) return null;
+        if (!selectedNodeId || infoPanelMode != 'node-info') return null;;
 
         const graph = sigma.getGraph();
         if (!graph.hasNode(selectedNodeId)) return null;
@@ -384,6 +386,7 @@ const GraphManager = forwardRef<GraphViewRef, unknown>((_, ref) => {
         isolationData,
         multiSelectPathData,
         isDark,
+        pathViewOnly,
         // Edge endpoint cache to avoid graph.source()/target() per frame
         edgeEndpoints: new Map<string, { source: string; target: string }>(),
     });
@@ -397,8 +400,10 @@ const GraphManager = forwardRef<GraphViewRef, unknown>((_, ref) => {
         stateRef.current.isolationData = isolationData;
         stateRef.current.multiSelectPathData = multiSelectPathData;
         stateRef.current.isDark = isDark;
-    }, [selectedNodeId, isMultiSelect, selectedNodeIds, nodeStyles, isolationData, multiSelectPathData, isDark]);
-
+        stateRef.current.pathViewOnly = pathViewOnly;
+        sigma.refresh();
+    }, [selectedNodeId, isMultiSelect, selectedNodeIds, nodeStyles, isolationData, multiSelectPathData, isDark, pathViewOnly, sigma]);
+    
     useEffect(() => {
         const graph = sigma.getGraph();
         const cache = new Map<string, { source: string; target: string }>();
@@ -408,16 +413,32 @@ const GraphManager = forwardRef<GraphViewRef, unknown>((_, ref) => {
         stateRef.current.edgeEndpoints = cache;
     }, [edges, sigma]);
 
-    // Visibility filter – runs on search/viewLevel/selection changes
+    // Visibility filter – runs on search/viewLevel/selection/filter changes
     useEffect(() => {
         const graph = sigma.getGraph();
         const query = deferredSearchQuery.toLowerCase();
+        const labelGroups = getGroups(graphFilters.labelKeywords || []);
+        const descGroups = getGroups(graphFilters.descriptionKeywords || []);
+
         const visibleNodes = new Set<string>();
 
         graph.forEachNode((id: string, attrs: NodeAttributes) => {
-            const matchesSearch = !!selectedNodeId || !query || String(attrs.label ?? "").toLowerCase().includes(query);
+            const label = String(attrs.label ?? "");
+            const matchesSearch = !!selectedNodeId || !query || label.toLowerCase().includes(query);
             const level = ((attrs.attributes as Record<string, unknown>)?.viewLevel as number) ?? 1;
-            let isVisible = matchesSearch && level >= viewLevel;
+
+            const nodeAttrs = attrs.attributes as Record<string, unknown>;
+            const matchesLabel = checkMatch(label, labelGroups);
+            const matchesDesc = checkMatch(
+                ((nodeAttrs?.definition as string) ?? '') +
+                ((nodeAttrs?.synonyms as string[]) ?? []).join(' '),
+                descGroups
+            );
+            const rank = (nodeAttrs?.percentile_rank as number) ?? 0;
+            const matchesImportance = rank >= graphFilters.minImportance;
+            const matchesColor = !graphFilters.excludedColors.has(attrs.color as string);
+
+            let isVisible = matchesSearch && level >= viewLevel && matchesLabel && matchesDesc && matchesImportance && matchesColor;
 
             if (selectedNodeId && isolationData) {
                 isVisible = isVisible && (
@@ -439,7 +460,7 @@ const GraphManager = forwardRef<GraphViewRef, unknown>((_, ref) => {
         stateRef.current.visibleNodes = visibleNodes;
         // update graph (note: this does not perform a hard refresh on the browser)
         sigma.refresh();
-    }, [nodes, edges, deferredSearchQuery, viewLevel, selectedNodeId, isolationData, isMultiSelect, multiSelectPathData, selectedNodeIds, sigma]);
+    }, [nodes, edges, deferredSearchQuery, viewLevel, selectedNodeId, isolationData, isMultiSelect, multiSelectPathData, selectedNodeIds, sigma, graphFilters]);
 
     useEffect(() => {
         const graph = sigma.getGraph();
@@ -450,16 +471,42 @@ const GraphManager = forwardRef<GraphViewRef, unknown>((_, ref) => {
                 ? state.selectedNodeIds.includes(node)
                 : node === state.selectedNodeId;
 
+            let opacity = 1;
+            let hidden = false;
+            let color = data.color;
+
+            if (state.isMultiSelect && state.selectedNodeIds.length >= 2) {
+                const isRelated = state.multiSelectPathData
+                    ? state.multiSelectPathData.pathNodes.has(node)
+                    : state.selectedNodeIds.includes(node);
+
+                if (!isRelated) {
+                    if (state.pathViewOnly) {
+                        hidden = true; // path view: hide unrelated nodes
+                    } else {
+                        opacity = 0.08;
+                        color = desaturateColor(color || "#888", 0.7);
+                    }
+                }
+            } else if (!state.isMultiSelect) {
+                if (!state.visibleNodes.has(node)) {
+                    hidden = true;
+                }
+            }
+
             const size = Math.max(0.1, Number(data.size) || GRAPH_CONFIG.DEFAULT_NODE_SIZE);
             let finalSize = isSelected ? size * GRAPH_CONFIG.SELECTED_SCALE : size;
-            let color = data.color;
             let highlighted = isSelected;
 
             // Multi-select path styling
             if (state.isMultiSelect && state.multiSelectPathData) {
                 if (state.multiSelectPathData.pathNodes.has(node)) {
                     finalSize = size * GRAPH_CONFIG.SELECTED_SCALE;
-                    highlighted = true;
+                    if (isSelected) {
+                        highlighted = true; // selected endpoints = orange overlay
+                    } else {
+                        highlighted = false;
+                    }
                 } else if (state.multiSelectPathData.neighborNodes.has(node)) {
                     color = adjustColorBrightness(color || "#888", state.isDark ? -30 : 30);
                 }
@@ -475,7 +522,9 @@ const GraphManager = forwardRef<GraphViewRef, unknown>((_, ref) => {
                 color,
                 highlighted,
                 zIndex: finalSize,
-                hidden: !state.visibleNodes.has(node),
+                // hidden: !state.visibleNodes.has(node),
+                hidden,
+                opacity: opacity
             };
         });
 
@@ -497,13 +546,13 @@ const GraphManager = forwardRef<GraphViewRef, unknown>((_, ref) => {
             // Multi-select path edge styling
             if (state.isMultiSelect && state.multiSelectPathData && graph.hasEdge(edge)) {
                 if (state.multiSelectPathData.pathEdgeIds.has(edge)) {
-                    res.color = "#fbbf24";
-                    res.size = 3;
-                } else if (state.multiSelectPathData.pathNodes.has(source) || state.multiSelectPathData.pathNodes.has(target)) {
-                    res.color = state.isDark ? "rgba(255,255,255,0.3)" : "rgba(0,0,0,0.3)";
-                    res.size = 1;
+                    res.color = "#ef4444"; // path edges = red
+                    res.size = 5;
                 } else {
-                    res.color = state.isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.1)";
+                    res.color = state.isDark // all other edges = white
+                        ? "rgba(255,255,255,0.2)"
+                        : "rgba(0,0,0,0.2)";
+                    res.size = 1;
                 }
                 return res;
             }

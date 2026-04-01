@@ -21,6 +21,27 @@ export interface GraphEdge {
     color: string;
 }
 
+export type TagMode = 'include' | 'exclude' | 'mandatory';
+
+export interface TagKeyword {
+    text: string;
+    mode: TagMode;
+}
+
+export interface GraphFilters {
+    labelKeywords: TagKeyword[];
+    descriptionKeywords: TagKeyword[];
+    minImportance: number;       // 0–1 percentile_rank threshold
+    excludedColors: Set<string>; // hex colours of community clusters to hide
+}
+
+export const DEFAULT_FILTERS: GraphFilters = {
+    labelKeywords: [],
+    descriptionKeywords: [],
+    minImportance: 0,
+    excludedColors: new Set(),
+};
+
 interface ExplorerState {
     nodes: GraphNode[];
     edges: GraphEdge[];
@@ -39,8 +60,9 @@ interface ExplorerState {
     setSearchResultsDescription: (results: GraphNode[]) => void,
     searchResults: GraphNode[];
     setViewLevel: (level: number) => void;
-    fetchGraphData: () => Promise<void>;
+    fetchGraphData: (isInitial?: boolean) => Promise<void>;
     isGraphLoading: boolean;
+    isInitialGraphLoading: boolean;
     // File import
     fileName: string | null;
     importStatus: 'idle' | 'waiting' | 'loading' | 'complete' | 'error';
@@ -71,6 +93,12 @@ interface ExplorerState {
     pathLoading: boolean;
     fetchPath: () => Promise<void>;
     clearPath: () => void;
+    pathViewOnly: boolean
+    togglePathViewOnly: () => void;
+    // graph filters
+    graphFilters: GraphFilters;
+    setGraphFilters: (filters: Partial<GraphFilters>) => void;
+    resetGraphFilters: () => void;
 }
 
 // Convert Graphology JSON format to our store format
@@ -150,6 +178,7 @@ export const useStore = create<ExplorerState>((set) => ({
     searchQuery: "",
     viewLevel: 1,
     isGraphLoading: false,
+    isInitialGraphLoading: false,
     prevNodes: [],
     setPrevNodes: (prevNodes) => {
         set({ prevNodes });
@@ -176,8 +205,16 @@ export const useStore = create<ExplorerState>((set) => ({
     setSearchResultsDescription: (results) => set({ searchResultsDescription: results }),
     searchResults: [],
     setViewLevel: (level) => set({ viewLevel: level }),
-    fetchGraphData: async () => {
-        set({ isGraphLoading: true });
+    // graph filters
+    graphFilters: DEFAULT_FILTERS,
+    setGraphFilters: (filters) => set((state) => ({ graphFilters: { ...state.graphFilters, ...filters } })),
+    resetGraphFilters: () => set({ graphFilters: DEFAULT_FILTERS }),
+    fetchGraphData: async (isInitial = false) => {
+        if (isInitial) {
+            set({ isInitialGraphLoading: true });
+        } else {
+            set({ isGraphLoading: true });
+        }
         try {
             const data = await api.fetchGraphData("/api/graph/");
             const nodes = (data.nodes || []).map((n: { key: string; attributes?: Record<string, unknown> }) => ({
@@ -210,7 +247,11 @@ export const useStore = create<ExplorerState>((set) => ({
                 graph: createGraph(nodes, edges)
             });
         } finally {
-            set({ isGraphLoading: false });
+            if (isInitial) {
+                set({ isInitialGraphLoading: false });
+            } else {
+                set({ isGraphLoading: false });
+            }
         }
     },
     // File import
@@ -364,9 +405,7 @@ export const useStore = create<ExplorerState>((set) => ({
         if (newIds.length === 0) {
             useStore.getState().setInfoPanelMode('closed');
         }
-        if (newIds.length >= 2) {
-            setTimeout(() => useStore.getState().fetchPath(), 0);
-        } else {
+        if (newIds.length < 2) {
             set({ pathNodeIds: [], pathEdgeIds: [] });
         }
     },
@@ -412,34 +451,14 @@ export const useStore = create<ExplorerState>((set) => ({
 
         set({ pathLoading: true });
         try {
-            const allNodeIds: string[] = [];
-            const allEdgeIds: string[] = [];
-            const seenNodes = new Set<string>();
-            const seenEdges = new Set<string>();
-
-            for (let i = 0; i < selectedNodeIds.length; i++) {
-                for (let j = i + 1; j < selectedNodeIds.length; j++) {
-                    const data = await api.fetchShortestPath(selectedNodeIds[i], selectedNodeIds[j]);
-                    if (data) {
-                        for (const n of (data.nodes || [])) {
-                            const id = n.key;
-                            if (!seenNodes.has(id)) {
-                                seenNodes.add(id);
-                                allNodeIds.push(id);
-                            }
-                        }
-                        for (const e of (data.edges || [])) {
-                            const id = e.key || e.id;
-                            if (id && !seenEdges.has(id)) {
-                                seenEdges.add(id);
-                                allEdgeIds.push(id);
-                            }
-                        }
-                    }
-                }
+            const data = await api.fetchMultiShortestPaths(selectedNodeIds);
+            if (data) {
+                const nodeIds = (data.nodes || []).map((n: { key: string }) => n.key);
+                const edgeIds = (data.edges || []).map((e: { key?: string; id?: string }) => e.key || e.id).filter(Boolean);
+                set({ pathNodeIds: nodeIds, pathEdgeIds: edgeIds });
+            } else {
+                set({ pathNodeIds: [], pathEdgeIds: [] });
             }
-
-            set({ pathNodeIds: allNodeIds, pathEdgeIds: allEdgeIds });
         } catch (error) {
             console.error('Error fetching shortest path:', error);
             set({ pathNodeIds: [], pathEdgeIds: [] });
@@ -447,4 +466,10 @@ export const useStore = create<ExplorerState>((set) => ({
             set({ pathLoading: false });
         }
     },
+    pathViewOnly: localStorage.getItem('pathViewOnly') === 'true',
+    togglePathViewOnly: () => set(state => {
+        const next = !state.pathViewOnly;
+        localStorage.setItem('pathViewOnly', String(next));
+        return { pathViewOnly: next };
+    }),
 }));
