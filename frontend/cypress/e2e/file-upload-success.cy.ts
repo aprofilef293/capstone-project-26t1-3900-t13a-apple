@@ -4,7 +4,7 @@ describe('happy path for file upload', () => {
     cy.intercept('GET', '/api/graph/**').as('fetchGraph')
   })
 
-  it('loads the homepage and file is successfully uploaded', () => {
+  it('loads the homepage, file is uploaded and graph successfully shows in network graph page', () => {
     
     // go to homepage
     cy.visit('http://localhost:5173')
@@ -25,5 +25,9 @@ describe('happy path for file upload', () => {
     // check that upload file is successful
     cy.contains('Import Status').should('be.visible')
     cy.contains('Complete', { timeout: 120000 }).should('be.visible')
+
+    // check graph is uploaded / visible
+    cy.contains('a', 'Network Graph').click()
+    cy.get('canvas').should('be.visible')
   });
 });
