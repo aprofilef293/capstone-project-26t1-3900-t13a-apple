@@ -11,7 +11,7 @@ describe('happy path for file upload', () => {
     cy.intercept('GET', '/api/graph/**').as('fetchGraph')
   })
 
-  it('loads the homepage and file is successfully uploaded', () => {
+  it('loads the homepage, upload file, goes to heirarchy panel and tests successful interactions', () => {
     
     // go to homepage
     cy.visit('http://localhost:5173')
