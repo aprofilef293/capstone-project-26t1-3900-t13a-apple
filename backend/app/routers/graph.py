@@ -388,28 +388,22 @@ def search_graph(
 @router.get(
     "/semantic-search",
     response_model=SemanticSearchResponse,
-    summary="Semantic search via natural language",
-    description="Ask a natural-language question about the ontology graph. "
-    "Uses an LLM to translate the question into a Cypher query, "
-    "execute it against Memgraph, and return a natural-language answer.",
-    response_description="LLM-generated answer with the Cypher query and raw context.",
+    summary="Semantic search via embeddings",
+    description="Search ontology terms by semantic similarity using text embeddings. "
+    "Returns the top matching terms ranked by cosine similarity.",
+    response_description="List of matching terms with similarity scores.",
 )
 def semantic_search(
     request: Request,
     q: str = Query(
         ...,
         min_length=1,
-        description="Natural-language question about the ontology graph.",
+        description="Search query to match against ontology term embeddings.",
     ),
+    top_k: int = Query(20, ge=1, le=100, description="Number of results to return."),
 ):
-    search_service = getattr(request.app.state, "langchain_search", None)
-    if search_service is None:
-        raise HTTPException(
-            status_code=503,
-            detail="Semantic search is not configured. Set LLM_API_URL and LLM_API_KEY.",
-        )
-
     try:
-        return search_service.query(q)
+        results = request.app.state.embedding_service.search(q, top_k=top_k)
+        return SemanticSearchResponse(results=results)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Semantic search failed: {e}")
