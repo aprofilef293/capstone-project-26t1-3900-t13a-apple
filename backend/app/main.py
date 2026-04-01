@@ -6,7 +6,7 @@ from starlette.middleware.gzip import GZipMiddleware
 
 from app.config import Settings
 from app.routers import file_upload, graph
-from app.services.langchain_search import LangChainSearchService
+from app.services.embedding_service import EmbeddingService
 from app.services.memgraph import MemgraphService
 
 
@@ -24,10 +24,7 @@ async def lifespan(app: FastAPI):
     app.state.settings = settings
     app.state.memgraph = MemgraphService(settings)
 
-    if settings.llm_api_url and settings.llm_api_key:
-        app.state.langchain_search = LangChainSearchService(settings)
-    else:
-        app.state.langchain_search = None
+    app.state.embedding_service = EmbeddingService()
 
     yield
     # Shutdown
