@@ -25,8 +25,6 @@ def settings():
         memgraph_uri="bolt://localhost:7687",
         memgraph_user="",
         memgraph_password="",
-        llm_api_url="",
-        llm_api_key="",
     )
 
 
@@ -40,14 +38,13 @@ def mock_memgraph():
 
 
 @pytest.fixture
-def mock_langchain_search():
-    lcs = MagicMock()
-    lcs.query.return_value = {
-        "answer": "Apoptosis is programmed cell death.",
-        "cypher": "MATCH (n:OntologyTerm) WHERE n.name = 'apoptosis' RETURN n",
-        "context": "[{'n': {'id': 'GO:0006915', 'name': 'apoptosis'}}]",
-    }
-    return lcs
+def mock_embedding_service():
+    svc = MagicMock()
+    svc.search.return_value = [
+        {"id": "GO:0006915", "name": "apoptotic process", "namespace": "biological_process", "score": 0.92},
+        {"id": "GO:0012501", "name": "programmed cell death", "namespace": "biological_process", "score": 0.87},
+    ]
+    return svc
 
 
 @pytest.fixture
@@ -55,7 +52,8 @@ def client(settings, mock_memgraph):
     app = create_app()
     app.state.settings = settings
     app.state.memgraph = mock_memgraph
-    app.state.langchain_search = None
+    app.state.embedding_service = MagicMock()
+    app.state.embedding_service.search.return_value = []
     return TestClient(app, raise_server_exceptions=False)
 
 
