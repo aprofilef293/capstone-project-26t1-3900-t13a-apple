@@ -23,6 +23,7 @@ services:
       - MEMGRAPH_USER=memgraph
       - MEMGRAPH_PASSWORD=memgraph
       - CORS_ORIGINS=["http://localhost:5173"]
+      - EMBEDDING_HF_TOKEN=${EMBEDDING_HF_TOKEN}
     depends_on:
       - memgraph
     volumes:
