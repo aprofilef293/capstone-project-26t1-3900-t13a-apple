@@ -58,47 +58,13 @@ def _node_from_record(node_props: dict, index: int, total: int) -> SerializedNod
     )
 
 
-def _build_graph_data(node_records: list[dict], edge_records: list[dict]) -> GraphData:
-    """Build GraphData from raw Memgraph query results."""
-    seen_node_ids: set[str] = set()
-    all_node_props: list[dict] = []
-
-    for record in node_records:
-        props = dict(record["n"]) if hasattr(record["n"], "items") else record["n"]
-        if props["id"] not in seen_node_ids:
-            seen_node_ids.add(props["id"])
-            all_node_props.append(props)
-
-    total = len(all_node_props)
-    nodes = [_node_from_record(props, i, total) for i, props in enumerate(all_node_props)]
-
-    seen_edge_ids: set[str] = set()
-    edges: list[SerializedEdge] = []
-    for record in edge_records:
-        source = record["source"]
-        target = record["target"]
-        rel_type = record.get("sub_type") or record.get("rel_type", "RELATES_TO")
-        edge_id = f"{source}-{rel_type}-{target}"
-        if edge_id not in seen_edge_ids:
-            seen_edge_ids.add(edge_id)
-            edges.append(
-                SerializedEdge(
-                    key=edge_id,
-                    source=source,
-                    target=target,
-                    attributes={"color": "#334155", "type": rel_type, "label": rel_type},
-                )
-            )
-
-    return GraphData(nodes=nodes, edges=edges)
-
-
 def _build_graph_data_from_paths(records: list[dict]) -> GraphData:
     """Build GraphData from MATCH results that return n, r, m columns."""
     seen_node_ids: set[str] = set()
     all_node_props: list[dict] = []
     edge_tuples: list[tuple[str, str, str]] = []
 
+    # build graph from nodes and edges
     for record in records:
         n = record.get("n")
         m = record.get("m")
@@ -161,14 +127,10 @@ def get_graph(
         return cached
 
     mg = request.app.state.memgraph
-    node_records = mg.execute_read(
-        "MATCH (n:OntologyTerm) RETURN n",
+    records = mg.execute_read(
+        "MATCH (n:OntologyTerm) OPTIONAL MATCH (n)-[r]->(m:OntologyTerm) RETURN n, r, m",
     )
-    edge_records = mg.execute_read(
-        "MATCH (n:OntologyTerm)-[r]->(m:OntologyTerm) "
-        "RETURN n.id AS source, m.id AS target, type(r) AS rel_type, r.type AS sub_type",
-    )
-    result = _build_graph_data(node_records, edge_records)
+    result = _build_graph_data_from_paths(records)
     request.app.state.graph_cache = result
     return result
 
@@ -200,17 +162,16 @@ def get_node_neighborhood(
     """
     mg = request.app.state.memgraph
 
-    check = mg.execute_read("MATCH (n:OntologyTerm {id: $id}) RETURN n", {"id": node_id})
-    if not check:
-        raise HTTPException(status_code=404, detail=f"Node '{node_id}' not found")
-
     cypher = (
-        f"MATCH (n:OntologyTerm {{id: $id}})-[r*1..{depth}]-(m:OntologyTerm) "
+        "MATCH (n:OntologyTerm {id: $id}) "
+        f"OPTIONAL MATCH (n)-[r*1..{depth}]-(m:OntologyTerm) "
         "WITH n, m "
         "OPTIONAL MATCH (n)-[r2]-(m) "
         "RETURN n, r2 AS r, m"
     )
     records = mg.execute_read(cypher, {"id": node_id})
+    if not records:
+        raise HTTPException(status_code=404, detail=f"Node '{node_id}' not found")
     return _build_graph_data_from_paths(records)
 
 
@@ -240,21 +201,13 @@ def get_shortest_path(
     """
     mg = request.app.state.memgraph
 
-    check = mg.execute_read(
-        "MATCH (n:OntologyTerm) WHERE n.id IN [$source, $target] RETURN n.id AS id",
-        {"source": source, "target": target},
-    )
-    found_ids = {r["id"] for r in check}
-    if source not in found_ids:
-        raise HTTPException(status_code=404, detail=f"Node '{source}' not found")
-    if target not in found_ids:
-        raise HTTPException(status_code=404, detail=f"Node '{target}' not found")
-
     if source == target:
         records = mg.execute_read(
             "MATCH (n:OntologyTerm {id: $id}) RETURN n, null AS r, null AS m",
             {"id": source},
         )
+        if not records:
+            raise HTTPException(status_code=404, detail=f"Node '{source}' not found")
         return _build_graph_data_from_paths(records)
 
     cypher = (
@@ -268,6 +221,15 @@ def get_shortest_path(
     records = mg.execute_read(cypher, {"source": source, "target": target})
 
     if not records:
+        check = mg.execute_read(
+            "MATCH (n:OntologyTerm) WHERE n.id IN [$source, $target] RETURN n.id AS id",
+            {"source": source, "target": target},
+        )
+        found_ids = {r["id"] for r in check}
+        if source not in found_ids:
+            raise HTTPException(status_code=404, detail=f"Node '{source}' not found")
+        if target not in found_ids:
+            raise HTTPException(status_code=404, detail=f"Node '{target}' not found")
         raise HTTPException(
             status_code=404,
             detail=f"No path found between '{source}' and '{target}' within {max_depth} hops",
@@ -306,15 +268,6 @@ def get_multi_shortest_paths(
 
     mg = request.app.state.memgraph
 
-    check = mg.execute_read(
-        "MATCH (n:OntologyTerm) WHERE n.id IN $ids RETURN n.id AS id",
-        {"ids": ids},
-    )
-    found_ids = {r["id"] for r in check}
-    missing = [i for i in ids if i not in found_ids]
-    if missing:
-        raise HTTPException(status_code=404, detail=f"Nodes not found: {missing}")
-
     pairs = [[ids[i], ids[j]] for i in range(len(ids)) for j in range(i + 1, len(ids))]
 
     cypher = (
@@ -329,6 +282,14 @@ def get_multi_shortest_paths(
     records = mg.execute_read(cypher, {"pairs": pairs})
 
     if not records:
+        check = mg.execute_read(
+            "MATCH (n:OntologyTerm) WHERE n.id IN $ids RETURN n.id AS id",
+            {"ids": ids},
+        )
+        found_ids = {r["id"] for r in check}
+        missing = [i for i in ids if i not in found_ids]
+        if missing:
+            raise HTTPException(status_code=404, detail=f"Nodes not found: {missing}")
         raise HTTPException(
             status_code=404,
             detail=f"No paths found between any of the supplied nodes within {max_depth} hops",
