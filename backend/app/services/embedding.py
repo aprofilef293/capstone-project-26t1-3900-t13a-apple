@@ -107,16 +107,17 @@ class HuggingFaceEmbeddingModel:
 
 
 # Metadata fields in priority order with their search weights.
-# Primary label matches should dominate; identifiers and definitions are
-# strong signals; synonyms and comments are supporting evidence.
-# Weights are normalised at search time so their relative ratios matter,
-# not their absolute values.
+# Primary labels and definitions should dominate results; synonyms and
+# comments are weak supporting signals only.  Alphanumeric identifiers
+# (e.g. IAO:0000115) are excluded — they carry no semantic value for
+# natural-language queries.
+# Weights are applied as multipliers on raw cosine similarity at search
+# time so their relative ratios matter, not their absolute values.
 FIELD_WEIGHTS: dict[str, float] = {
     "name": 1.0,
-    "id": 0.8,
-    "definition": 0.6,
-    "synonyms": 0.4,
-    "comment": 0.2,
+    "definition": 0.7,
+    "synonyms": 0.15,
+    "comment": 0.1,
 }
 
 
@@ -125,15 +126,14 @@ def build_field_texts(term: dict) -> dict[str, str]:
 
     Each field that is present and non-empty gets its own text string so it
     can be embedded independently. This allows the search to weight primary
-    labels higher than definitions, synonyms, or comments.
+    labels and definitions higher than synonyms or comments.
 
-    Handles inconsistencies across ontologies — fields may be missing, empty,
-    or use alphanumeric codes (e.g. IAO:0000115 for definitions). The caller
-    decides what to do with missing fields; this function simply omits them.
+    Alphanumeric identifiers (``id``) are intentionally excluded — they carry
+    no semantic value for natural-language queries and add noise.
 
     Args:
         term: A dict (or Pydantic ``model_dump()``) with optional keys
-            ``name``, ``id``, ``definition``, ``synonyms`` (list[str]),
+            ``name``, ``definition``, ``synonyms`` (list[str]),
             and ``comment``.
 
     Returns:
@@ -143,8 +143,6 @@ def build_field_texts(term: dict) -> dict[str, str]:
     texts: dict[str, str] = {}
     if term.get("name"):
         texts["name"] = term["name"]
-    if term.get("id"):
-        texts["id"] = term["id"]
     if term.get("definition"):
         texts["definition"] = term["definition"]
     synonyms = term.get("synonyms") or []
@@ -281,11 +279,11 @@ class EmbeddingService:
 
         query_vec = self._model.encode([query])  # (1, dim)
         n = len(self._ids)
-        # Track the best (highest) raw cosine similarity per term across all
-        # fields.  The final score is simply the max per-field similarity so
-        # that an exact match on *any* field (especially name) yields ~1.0
-        # instead of being diluted by unrelated fields.
-        best_field_score = np.full(n, -np.inf, dtype=np.float32)
+        # Track the best *weighted* cosine similarity per term across all
+        # fields.  Each field's raw similarity is multiplied by its weight
+        # so that name matches dominate and low-weight fields (synonyms,
+        # comments) only surface when nothing better exists.
+        best_weighted_score = np.full(n, -np.inf, dtype=np.float32)
         best_field_name: list[str] = [""] * n
 
         for field, weight in FIELD_WEIGHTS.items():
@@ -293,15 +291,14 @@ class EmbeddingService:
                 continue
             mask = self._field_masks[field]
             raw_scores = (self._field_embeddings[field] @ query_vec.T).ravel()
-            # Update best matching field per term — prefer higher-weighted
-            # fields when raw scores are equal.
-            better = mask & (raw_scores > best_field_score)
+            weighted_scores = raw_scores * weight
+            better = mask & (weighted_scores > best_weighted_score)
             for i in np.where(better)[0]:
-                best_field_score[i] = raw_scores[i]
+                best_weighted_score[i] = weighted_scores[i]
                 best_field_name[i] = field
 
         # Terms with no fields at all keep -inf; clamp to 0.
-        final_scores = np.maximum(best_field_score, 0.0)
+        final_scores = np.maximum(best_weighted_score, 0.0)
 
         k = min(top_k, n)
         partitioned = np.argpartition(final_scores, -k)[-k:]
