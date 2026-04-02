@@ -109,6 +109,27 @@ describe('happy path for file upload', () => {
         cy.contains('div', 'Node name contains').should('not.exist')
     })
 
+    // click on slider in filter panel
+    cy.get('#graph-filter-panel').within(() => {
+        cy.get('#filter-min-importance')
+            .should('be.visible')
+            .then($el => {
+                const nativeInputValueSetter = Object.getOwnPropertyDescriptor(
+                    window.HTMLInputElement.prototype, 
+                    'value'
+                )?.set;
+
+                if (nativeInputValueSetter) {
+                    // slide the bar to 90%
+                    nativeInputValueSetter.call($el[0], 0.9);
+                    $el[0].dispatchEvent(new Event('input', { bubbles: true }));
+                }
+            })
+
+        // check that the 'ALL' label changes to '>= 90%'
+        cy.contains('span', '≥ 90%').should('be.visible')
+    })
+
     // click on the 'reset' btn in the filter panel
     cy.get('#graph-filter-panel').within(() => {
         cy.get('button[title="Reset all filters"]')
