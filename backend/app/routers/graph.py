@@ -64,6 +64,7 @@ def _build_graph_data_from_paths(records: list[dict]) -> GraphData:
     all_node_props: list[dict] = []
     edge_tuples: list[tuple[str, str, str]] = []
 
+    # build graph from nodes and edges
     for record in records:
         n = record.get("n")
         m = record.get("m")
