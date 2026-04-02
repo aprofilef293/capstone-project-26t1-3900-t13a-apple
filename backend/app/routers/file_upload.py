@@ -42,6 +42,9 @@ def _ingest_terms(
     mg.execute_write("DROP GRAPH")
     mg.execute_write("STORAGE MODE IN_MEMORY_TRANSACTIONAL")
     mg.execute_write("CREATE INDEX ON :OntologyTerm(id)")
+    mg.execute_write("CREATE INDEX ON :OntologyTerm(name)")
+    mg.execute_write("CREATE INDEX ON :OntologyTerm(namespace)")
+    mg.execute_write("CREATE INDEX ON :OntologyTerm(synonyms)")
     term_dicts = [{**t.model_dump(), "source_file": source_file} for t in terms if not t.is_obsolete]
     batch_size = 5000
     for i in range(0, len(term_dicts), batch_size):
