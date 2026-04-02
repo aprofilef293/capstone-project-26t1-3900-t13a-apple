@@ -474,9 +474,7 @@ def semantic_search(
 
     # Fetch top nodes with their neighbors (subclasses, other relationships)
     neighbor_records = mg.execute_read(
-        "MATCH (n:OntologyTerm) WHERE n.id IN $ids "
-        "OPTIONAL MATCH (n)-[r]-(m:OntologyTerm) "
-        "RETURN n, r, m",
+        "MATCH (n:OntologyTerm) WHERE n.id IN $ids OPTIONAL MATCH (n)-[r]-(m:OntologyTerm) RETURN n, r, m",
         {"ids": top_ids},
     )
 
