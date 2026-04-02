@@ -333,7 +333,6 @@ def search_graph(
     return _build_graph_data_from_paths(records)
 
 
-
 @router.get(
     "/semantic-search",
     response_model=GraphData,
@@ -367,8 +366,7 @@ def embedding_search(
 
     mg = request.app.state.memgraph
     neighbor_records = mg.execute_read(
-        "MATCH (n:OntologyTerm) WHERE n.id IN $ids "
-        "OPTIONAL MATCH (n)-[r]-(m:OntologyTerm) RETURN n, r, m",
+        "MATCH (n:OntologyTerm) WHERE n.id IN $ids OPTIONAL MATCH (n)-[r]-(m:OntologyTerm) RETURN n, r, m",
         {"ids": top_ids},
     )
 

@@ -63,7 +63,7 @@ class HuggingFaceEmbeddingModel:
         for attempt in range(max_retries):
             resp = self._client.post(self._url, json={"inputs": texts, "options": {"wait_for_model": True}})
             if resp.status_code in (429, 503):
-                wait = min(2 ** attempt, 30)
+                wait = min(2**attempt, 30)
                 logger.warning("HF API %d, retrying in %ds...", resp.status_code, wait)
                 time.sleep(wait)
                 continue
@@ -84,10 +84,7 @@ class HuggingFaceEmbeddingModel:
         n = len(texts)
         arr = np.empty((n, self._dimension_val), dtype=np.float32)
 
-        batches = [
-            (i, texts[i : i + self._BATCH_SIZE])
-            for i in range(0, n, self._BATCH_SIZE)
-        ]
+        batches = [(i, texts[i : i + self._BATCH_SIZE]) for i in range(0, n, self._BATCH_SIZE)]
 
         def _encode_batch(item: tuple[int, list[str]]) -> tuple[int, list[list[float]]]:
             offset, batch = item
@@ -260,7 +257,9 @@ class EmbeddingService:
         total_vecs = sum(int(m.sum()) for m in self._field_masks.values())
         logger.info(
             "Built embedding index: %d terms, %d field vectors across %d fields",
-            n, total_vecs, len(self._field_embeddings),
+            n,
+            total_vecs,
+            len(self._field_embeddings),
         )
 
     def search(self, query: str, top_k: int = 20) -> list[tuple[str, float, str]]:
@@ -309,10 +308,7 @@ class EmbeddingService:
         partitioned = np.argpartition(final_scores, -k)[-k:]
         top_indices = partitioned[np.argsort(final_scores[partitioned])[::-1]]
 
-        return [
-            (self._ids[i], float(final_scores[i]), best_field_name[i])
-            for i in top_indices
-        ]
+        return [(self._ids[i], float(final_scores[i]), best_field_name[i]) for i in top_indices]
 
     @property
     def is_ready(self) -> bool:

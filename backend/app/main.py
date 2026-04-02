@@ -47,7 +47,10 @@ def create_app() -> FastAPI:
         app.state.embedding_service = None
         if settings.embedding_enabled:
             try:
-                logger.info("Connecting to HuggingFace Inference API (token=%s...)", settings.embedding_hf_token[:10] if settings.embedding_hf_token else "NONE")
+                logger.info(
+                    "Connecting to HuggingFace Inference API (token=%s...)",
+                    settings.embedding_hf_token[:10] if settings.embedding_hf_token else "NONE",
+                )
                 model = HuggingFaceEmbeddingModel(settings.embedding_model_name, settings.embedding_hf_token)
                 app.state.embedding_service = EmbeddingService(model)
                 _rebuild_embedding_index(app.state.memgraph, app.state.embedding_service)
