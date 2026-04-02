@@ -7,7 +7,6 @@ from fastapi import APIRouter, File, HTTPException, Request, UploadFile
 from fastapi.responses import StreamingResponse
 
 from app.models.upload import OntologyRelation, OntologyTerm
-from app.services.embedding import build_embedding_text
 from app.services.graph_preprocessing import OntologyGraphPreprocessor
 from app.services.memgraph import MemgraphService
 from app.services.ontology_parser import parse_ontology
@@ -149,8 +148,8 @@ async def upload_ontology(request: Request, file: UploadFile = File(...)):
             if embedding_svc is not None:
                 active_terms = [t for t in terms if not t.is_obsolete]
                 ids = [t.id for t in active_terms]
-                texts = [build_embedding_text(t.model_dump()) for t in active_terms]
-                await asyncio.to_thread(embedding_svc.build_index, ids, texts)
+                term_dicts = [t.model_dump() for t in active_terms]
+                await asyncio.to_thread(embedding_svc.build_index, ids, term_dicts)
 
             yield f"data: {json.dumps({'progress': 100, 'stage': 'complete', 'filename': filename})}\n\n"
         except Exception as e:
