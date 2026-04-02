@@ -369,3 +369,124 @@ def search_graph(
         {"q": q},
     )
     return _build_graph_data_from_paths(records)
+
+
+@router.get(
+    "/semantic-search",
+    response_model=GraphData,
+    summary="Semantic search over graph nodes",
+    description=(
+        "Search OntologyTerm nodes across multiple fields with ranked results. "
+        "Matches on primary labels (name) rank highest, followed by identifiers, "
+        "definitions, synonyms, and comments.\n\n"
+        "**Searchable fields (by priority):**\n"
+        "1. **Primary label** (`name`) — the canonical term name (highest rank)\n"
+        "2. **Identifier** (`id`) — the unique term ID (e.g. GO:0008150)\n"
+        "3. **Definition** (`definition`) — formal textual definition of the term\n"
+        "4. **Synonyms** (`synonyms`) — alternative names for the term\n"
+        "5. **Comments** (`comment`) — informal notes, examples of usage (lowest rank)\n\n"
+        "**Returned data per node:**\n"
+        "- Primary label, identifier, definition, synonyms, comment\n"
+        "- Relationships including subclasses (`is_a`) and other relation types "
+        "(e.g. `part_of`, `regulates`)\n"
+        "- `matchFields` attribute listing which fields matched the query\n"
+        "- `searchScore` attribute indicating match quality\n"
+    ),
+)
+def semantic_search(
+    request: Request,
+    q: str = Query(
+        ...,
+        min_length=1,
+        description="Search term matched against node names, definitions, synonyms, and comments.",
+    ),
+    limit: int = Query(
+        20,
+        ge=1,
+        le=100,
+        description="Maximum number of matching nodes to return (1–100).",
+    ),
+):
+    """Search OntologyTerm nodes with ranked results across all metadata fields.
+
+    Performs a case-insensitive CONTAINS match across primary labels, identifiers,
+    definitions, synonyms, and comments. Results are ranked so that primary label
+    matches appear first, followed by identifier, definition, synonym, and comment
+    matches. Each matching node is returned with its immediate neighbors
+    (including subclasses and other relationships) and the edges between them.
+
+    The response includes ``matchFields`` and ``searchScore`` attributes on each
+    matching node so the frontend can distinguish primary label hits from metadata hits.
+    """
+    mg = request.app.state.memgraph
+
+    # Fetch all candidate nodes matching any searchable field
+    candidates = mg.execute_read(
+        "MATCH (n:OntologyTerm) "
+        "WHERE toLower(n.name) CONTAINS toLower($q) "
+        "   OR toLower(n.id) CONTAINS toLower($q) "
+        "   OR toLower(coalesce(n.definition, '')) CONTAINS toLower($q) "
+        "   OR ANY(s IN n.synonyms WHERE toLower(s) CONTAINS toLower($q)) "
+        "   OR toLower(coalesce(n.comment, '')) CONTAINS toLower($q) "
+        "RETURN n",
+        {"q": q},
+    )
+
+    if not candidates:
+        return GraphData()
+
+    # Score each candidate — primary label matches rank highest
+    q_lower = q.lower()
+    scored: list[tuple[dict, int, list[str]]] = []
+    for record in candidates:
+        props = dict(record["n"]) if hasattr(record["n"], "items") else record["n"]
+        score = 0
+        match_fields: list[str] = []
+
+        if q_lower in (props.get("name") or "").lower():
+            score += 100
+            match_fields.append("name")
+
+        if q_lower in (props.get("id") or "").lower():
+            score += 80
+            match_fields.append("id")
+
+        if q_lower in (props.get("definition") or "").lower():
+            score += 60
+            match_fields.append("definition")
+
+        if any(q_lower in s.lower() for s in (props.get("synonyms") or [])):
+            score += 40
+            match_fields.append("synonyms")
+
+        if q_lower in (props.get("comment") or "").lower():
+            score += 20
+            match_fields.append("comment")
+
+        scored.append((props, score, match_fields))
+
+    scored.sort(key=lambda x: x[1], reverse=True)
+    top = scored[:limit]
+
+    # Store score metadata keyed by node id
+    score_map = {t[0]["id"]: (t[1], t[2]) for t in top}
+    top_ids = list(score_map.keys())
+
+    # Fetch top nodes with their neighbors (subclasses, other relationships)
+    neighbor_records = mg.execute_read(
+        "MATCH (n:OntologyTerm) WHERE n.id IN $ids "
+        "OPTIONAL MATCH (n)-[r]-(m:OntologyTerm) "
+        "RETURN n, r, m",
+        {"ids": top_ids},
+    )
+
+    graph = _build_graph_data_from_paths(neighbor_records)
+
+    # Annotate matching nodes with score and match fields
+    for node in graph.nodes:
+        if node.key in score_map:
+            search_score, match_fields = score_map[node.key]
+            node.attributes["searchScore"] = search_score
+            node.attributes["matchFields"] = match_fields
+
+    return graph
