@@ -179,9 +179,9 @@ class EmbeddingService:
 
     Each term is embedded **per metadata field** (name, id, definition,
     synonyms, comment) so that queries can be scored against each field
-    independently. At search time, per-field cosine similarities are combined
-    using the weights in ``FIELD_WEIGHTS`` — primary label matches dominate,
-    followed by identifiers, definitions, synonyms, and comments.
+    independently. At search time, the final score is the **maximum** cosine
+    similarity across all fields — an exact match on the name yields ~1.0
+    without being diluted by other fields.
 
     The index is rebuilt from scratch each time ``build_index`` is called.
 
@@ -265,24 +265,26 @@ class EmbeddingService:
     def search(self, query: str, top_k: int = 20) -> list[tuple[str, float, str]]:
         """Find the *top_k* most similar terms to *query*.
 
-        Per-field cosine similarities are weighted by ``FIELD_WEIGHTS`` and
-        summed. Only fields present for a given term contribute to its score;
-        weights are normalised per-term so terms with fewer fields are not
-        penalised.
+        The query is compared against each metadata field independently. The
+        final score for a term is the **maximum** raw cosine similarity across
+        all its fields, so an exact match on name yields ~1.0 rather than being
+        diluted by unrelated fields. When two fields have equal raw scores, the
+        higher-weighted field (per ``FIELD_WEIGHTS``) is preferred as the
+        reported best-match field.
 
         Returns:
-            A list of ``(term_id, weighted_score, best_match_field)`` tuples
-            sorted by descending score, or an empty list if the index has not
-            been built.
+            A list of ``(term_id, score, best_match_field)`` tuples sorted by
+            descending score, or an empty list if the index has not been built.
         """
         if not self._ids or not self._field_embeddings:
             return []
 
         query_vec = self._model.encode([query])  # (1, dim)
         n = len(self._ids)
-        weighted_scores = np.zeros(n, dtype=np.float32)
-        weight_sums = np.zeros(n, dtype=np.float32)
-        # Track per-field raw scores to identify the best matching field.
+        # Track the best (highest) raw cosine similarity per term across all
+        # fields.  The final score is simply the max per-field similarity so
+        # that an exact match on *any* field (especially name) yields ~1.0
+        # instead of being diluted by unrelated fields.
         best_field_score = np.full(n, -np.inf, dtype=np.float32)
         best_field_name: list[str] = [""] * n
 
@@ -291,18 +293,15 @@ class EmbeddingService:
                 continue
             mask = self._field_masks[field]
             raw_scores = (self._field_embeddings[field] @ query_vec.T).ravel()
-            # Only count fields that are present for each term.
-            weighted_scores += np.where(mask, raw_scores * weight, 0.0)
-            weight_sums += np.where(mask, weight, 0.0)
-            # Update best matching field per term.
-            for i in np.where(mask & (raw_scores > best_field_score))[0]:
+            # Update best matching field per term — prefer higher-weighted
+            # fields when raw scores are equal.
+            better = mask & (raw_scores > best_field_score)
+            for i in np.where(better)[0]:
                 best_field_score[i] = raw_scores[i]
                 best_field_name[i] = field
 
-        # Normalise by the sum of active weights so terms with fewer fields
-        # are not penalised.
-        weight_sums[weight_sums == 0] = 1.0
-        final_scores = weighted_scores / weight_sums
+        # Terms with no fields at all keep -inf; clamp to 0.
+        final_scores = np.maximum(best_field_score, 0.0)
 
         k = min(top_k, n)
         partitioned = np.argpartition(final_scores, -k)[-k:]
