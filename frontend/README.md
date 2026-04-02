@@ -13,6 +13,9 @@ npm run dev
 
 # Build for production
 npm run build
+
+# Run e2e tests with Cypress
+npx cypress open
 ```
 
 
