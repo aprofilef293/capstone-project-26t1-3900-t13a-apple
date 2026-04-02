@@ -1,3 +1,4 @@
+import logging
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
@@ -6,7 +7,29 @@ from starlette.middleware.gzip import GZipMiddleware
 
 from app.config import Settings
 from app.routers import file_upload, graph
+from app.services.embedding import (
+    EmbeddingService,
+    HuggingFaceEmbeddingModel,
+    build_embedding_text,
+)
 from app.services.memgraph import MemgraphService
+
+logger = logging.getLogger(__name__)
+
+
+def _rebuild_embedding_index(mg: MemgraphService, embedding_svc: EmbeddingService) -> None:
+    """Populate the vector index from terms already stored in Memgraph."""
+    records = mg.execute_read(
+        "MATCH (n:OntologyTerm) "
+        "RETURN n.id AS id, n.name AS name, n.definition AS definition, "
+        "n.synonyms AS synonyms, n.comment AS comment"
+    )
+    if not records:
+        logger.info("No terms in Memgraph – embedding index left empty")
+        return
+    ids = [r["id"] for r in records]
+    texts = [build_embedding_text(r) for r in records]
+    embedding_svc.build_index(ids, texts)
 
 
 def create_app() -> FastAPI:
@@ -21,6 +44,18 @@ def create_app() -> FastAPI:
     async def lifespan(app: FastAPI):
         app.state.settings = settings
         app.state.memgraph = MemgraphService(settings)
+
+        app.state.embedding_service = None
+        if settings.embedding_enabled:
+            try:
+                logger.info("Connecting to HuggingFace Inference API (token=%s...)", settings.embedding_hf_token[:10] if settings.embedding_hf_token else "NONE")
+                model = HuggingFaceEmbeddingModel(settings.embedding_model_name, settings.embedding_hf_token)
+                app.state.embedding_service = EmbeddingService(model)
+                _rebuild_embedding_index(app.state.memgraph, app.state.embedding_service)
+            except Exception as e:
+                logger.warning("Embedding service failed to start, search will be unavailable: %s", e)
+                app.state.embedding_service = None
+
         yield
         app.state.memgraph.close()
 
