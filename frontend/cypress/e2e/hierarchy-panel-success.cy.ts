@@ -1,4 +1,4 @@
-describe('happy path for file upload', () => {
+describe('happy path for hierarchy panel', () => {
   beforeEach(() => {
     cy.on('uncaught:exception', (err) => {
         if (

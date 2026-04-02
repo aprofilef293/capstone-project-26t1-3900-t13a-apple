@@ -1,4 +1,4 @@
-describe('happy path for file upload', () => {
+describe('happy path for single-select', () => {
   beforeEach(() => {
     cy.intercept('POST', '/api/ontology/upload').as('uploadOntology')
     cy.intercept('GET', '/api/graph/**').as('fetchGraph')
