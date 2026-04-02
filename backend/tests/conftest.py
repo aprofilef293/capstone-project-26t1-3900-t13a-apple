@@ -25,8 +25,7 @@ def settings():
         memgraph_uri="bolt://localhost:7687",
         memgraph_user="",
         memgraph_password="",
-        medgemma_api_url="",
-        medgemma_api_key="",
+        embedding_enabled=False,
     )
 
 
