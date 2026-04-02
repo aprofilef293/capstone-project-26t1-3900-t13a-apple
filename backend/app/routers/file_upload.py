@@ -99,7 +99,16 @@ async def upload_ontology(request: Request, file: UploadFile = File(...)):
     if ext not in ALLOWED_EXTENSIONS:
         raise HTTPException(status_code=400, detail=f"Unsupported file type: {ext}. Use .obo or .owl")
 
-    content = await file.read()
+    max_size = request.app.state.settings.upload_max_size_mb * 1024 * 1024
+    content = bytearray()
+    while chunk := await file.read(8192):
+        content += chunk
+        if len(content) > max_size:
+            raise HTTPException(
+                status_code=413,
+                detail=f"File exceeds {request.app.state.settings.upload_max_size_mb}MB limit",
+            )
+    content = bytes(content)
     filename = file.filename or "unknown"
 
     async def event_stream():

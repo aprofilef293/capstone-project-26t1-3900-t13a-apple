@@ -9,24 +9,6 @@ from app.routers import file_upload, graph
 from app.services.memgraph import MemgraphService
 
 
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    """FastAPI lifespan context that owns shared singletons.
-
-    On startup: creates a ``Settings`` instance and a ``MemgraphService``,
-    storing both on ``app.state`` so route handlers can access them via
-    ``request.app.state.memgraph``.
-
-    On shutdown: closes the Memgraph Bolt driver to release the connection.
-    """
-    settings = Settings()
-    app.state.settings = settings
-    app.state.memgraph = MemgraphService(settings)
-    yield
-    # Shutdown
-    app.state.memgraph.close()
-
-
 def create_app() -> FastAPI:
     """Construct the FastAPI app, wire up CORS and the /api/graph router.
 
@@ -34,6 +16,14 @@ def create_app() -> FastAPI:
     frontend (default http://localhost:5173) can call the API during development.
     """
     settings = Settings()
+
+    @asynccontextmanager
+    async def lifespan(app: FastAPI):
+        app.state.settings = settings
+        app.state.memgraph = MemgraphService(settings)
+        yield
+        app.state.memgraph.close()
+
     app = FastAPI(
         title="OBO Explorer API",
         version="0.1.0",
