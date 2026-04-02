@@ -58,47 +58,13 @@ def _node_from_record(node_props: dict, index: int, total: int) -> SerializedNod
     )
 
 
-def _build_graph_data(node_records: list[dict], edge_records: list[dict]) -> GraphData:
-    """Build GraphData from raw Memgraph query results."""
-    seen_node_ids: set[str] = set()
-    all_node_props: list[dict] = []
-
-    for record in node_records:
-        props = dict(record["n"]) if hasattr(record["n"], "items") else record["n"]
-        if props["id"] not in seen_node_ids:
-            seen_node_ids.add(props["id"])
-            all_node_props.append(props)
-
-    total = len(all_node_props)
-    nodes = [_node_from_record(props, i, total) for i, props in enumerate(all_node_props)]
-
-    seen_edge_ids: set[str] = set()
-    edges: list[SerializedEdge] = []
-    for record in edge_records:
-        source = record["source"]
-        target = record["target"]
-        rel_type = record.get("sub_type") or record.get("rel_type", "RELATES_TO")
-        edge_id = f"{source}-{rel_type}-{target}"
-        if edge_id not in seen_edge_ids:
-            seen_edge_ids.add(edge_id)
-            edges.append(
-                SerializedEdge(
-                    key=edge_id,
-                    source=source,
-                    target=target,
-                    attributes={"color": "#334155", "type": rel_type, "label": rel_type},
-                )
-            )
-
-    return GraphData(nodes=nodes, edges=edges)
-
-
 def _build_graph_data_from_paths(records: list[dict]) -> GraphData:
     """Build GraphData from MATCH results that return n, r, m columns."""
     seen_node_ids: set[str] = set()
     all_node_props: list[dict] = []
     edge_tuples: list[tuple[str, str, str]] = []
 
+    # build graph from nodes and edges
     for record in records:
         n = record.get("n")
         m = record.get("m")
@@ -161,14 +127,10 @@ def get_graph(
         return cached
 
     mg = request.app.state.memgraph
-    node_records = mg.execute_read(
-        "MATCH (n:OntologyTerm) RETURN n",
+    records = mg.execute_read(
+        "MATCH (n:OntologyTerm) OPTIONAL MATCH (n)-[r]->(m:OntologyTerm) RETURN n, r, m",
     )
-    edge_records = mg.execute_read(
-        "MATCH (n:OntologyTerm)-[r]->(m:OntologyTerm) "
-        "RETURN n.id AS source, m.id AS target, type(r) AS rel_type, r.type AS sub_type",
-    )
-    result = _build_graph_data(node_records, edge_records)
+    result = _build_graph_data_from_paths(records)
     request.app.state.graph_cache = result
     return result
 
