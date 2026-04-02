@@ -10,7 +10,6 @@ from app.routers import file_upload, graph
 from app.services.embedding import (
     EmbeddingService,
     HuggingFaceEmbeddingModel,
-    build_embedding_text,
 )
 from app.services.memgraph import MemgraphService
 
@@ -28,8 +27,8 @@ def _rebuild_embedding_index(mg: MemgraphService, embedding_svc: EmbeddingServic
         logger.info("No terms in Memgraph – embedding index left empty")
         return
     ids = [r["id"] for r in records]
-    texts = [build_embedding_text(r) for r in records]
-    embedding_svc.build_index(ids, texts)
+    term_dicts = [dict(r) for r in records]
+    embedding_svc.build_index(ids, term_dicts)
 
 
 def create_app() -> FastAPI:
