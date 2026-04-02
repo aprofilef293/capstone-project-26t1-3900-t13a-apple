@@ -162,17 +162,16 @@ def get_node_neighborhood(
     """
     mg = request.app.state.memgraph
 
-    check = mg.execute_read("MATCH (n:OntologyTerm {id: $id}) RETURN n", {"id": node_id})
-    if not check:
-        raise HTTPException(status_code=404, detail=f"Node '{node_id}' not found")
-
     cypher = (
-        f"MATCH (n:OntologyTerm {{id: $id}})-[r*1..{depth}]-(m:OntologyTerm) "
+        "MATCH (n:OntologyTerm {id: $id}) "
+        f"OPTIONAL MATCH (n)-[r*1..{depth}]-(m:OntologyTerm) "
         "WITH n, m "
         "OPTIONAL MATCH (n)-[r2]-(m) "
         "RETURN n, r2 AS r, m"
     )
     records = mg.execute_read(cypher, {"id": node_id})
+    if not records:
+        raise HTTPException(status_code=404, detail=f"Node '{node_id}' not found")
     return _build_graph_data_from_paths(records)
 
 
@@ -202,21 +201,13 @@ def get_shortest_path(
     """
     mg = request.app.state.memgraph
 
-    check = mg.execute_read(
-        "MATCH (n:OntologyTerm) WHERE n.id IN [$source, $target] RETURN n.id AS id",
-        {"source": source, "target": target},
-    )
-    found_ids = {r["id"] for r in check}
-    if source not in found_ids:
-        raise HTTPException(status_code=404, detail=f"Node '{source}' not found")
-    if target not in found_ids:
-        raise HTTPException(status_code=404, detail=f"Node '{target}' not found")
-
     if source == target:
         records = mg.execute_read(
             "MATCH (n:OntologyTerm {id: $id}) RETURN n, null AS r, null AS m",
             {"id": source},
         )
+        if not records:
+            raise HTTPException(status_code=404, detail=f"Node '{source}' not found")
         return _build_graph_data_from_paths(records)
 
     cypher = (
@@ -230,6 +221,15 @@ def get_shortest_path(
     records = mg.execute_read(cypher, {"source": source, "target": target})
 
     if not records:
+        check = mg.execute_read(
+            "MATCH (n:OntologyTerm) WHERE n.id IN [$source, $target] RETURN n.id AS id",
+            {"source": source, "target": target},
+        )
+        found_ids = {r["id"] for r in check}
+        if source not in found_ids:
+            raise HTTPException(status_code=404, detail=f"Node '{source}' not found")
+        if target not in found_ids:
+            raise HTTPException(status_code=404, detail=f"Node '{target}' not found")
         raise HTTPException(
             status_code=404,
             detail=f"No path found between '{source}' and '{target}' within {max_depth} hops",
@@ -268,15 +268,6 @@ def get_multi_shortest_paths(
 
     mg = request.app.state.memgraph
 
-    check = mg.execute_read(
-        "MATCH (n:OntologyTerm) WHERE n.id IN $ids RETURN n.id AS id",
-        {"ids": ids},
-    )
-    found_ids = {r["id"] for r in check}
-    missing = [i for i in ids if i not in found_ids]
-    if missing:
-        raise HTTPException(status_code=404, detail=f"Nodes not found: {missing}")
-
     pairs = [[ids[i], ids[j]] for i in range(len(ids)) for j in range(i + 1, len(ids))]
 
     cypher = (
@@ -291,6 +282,14 @@ def get_multi_shortest_paths(
     records = mg.execute_read(cypher, {"pairs": pairs})
 
     if not records:
+        check = mg.execute_read(
+            "MATCH (n:OntologyTerm) WHERE n.id IN $ids RETURN n.id AS id",
+            {"ids": ids},
+        )
+        found_ids = {r["id"] for r in check}
+        missing = [i for i in ids if i not in found_ids]
+        if missing:
+            raise HTTPException(status_code=404, detail=f"Nodes not found: {missing}")
         raise HTTPException(
             status_code=404,
             detail=f"No paths found between any of the supplied nodes within {max_depth} hops",
