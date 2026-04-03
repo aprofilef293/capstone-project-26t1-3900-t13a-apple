@@ -28,8 +28,17 @@ export function ExplorerSearch({ viewMode = "graph" }: { viewMode?: "graph" | "h
         setSearchMode,
     } = useStore();
 
+    const [inputValue, setInputValue] = useState(searchQuery);
     const [isOpen, setIsOpen] = useState(false);
     const wrapperRef = useRef<HTMLDivElement>(null);
+
+    // Trigger search after 150ms of inactivity
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            setSearchQuery(inputValue);
+        }, 150);
+        return () => clearTimeout(timer);
+    }, [inputValue, setSearchQuery]);
 
     // Handle outside clicks to close the dropdown
     useEffect(() => {
@@ -118,7 +127,7 @@ export function ExplorerSearch({ viewMode = "graph" }: { viewMode?: "graph" | "h
                 <div className="flex-1 flex items-center gap-2 px-3 h-8">
                     <input
                         type="text"
-                        value={searchQuery}
+                        value={inputValue}
                         onFocus={() => setIsOpen(true)}
                         onKeyDown={(e) => {
                             if (e.key === 'Enter') {
@@ -126,7 +135,7 @@ export function ExplorerSearch({ viewMode = "graph" }: { viewMode?: "graph" | "h
                             }
                         }}
                         onChange={(e) => {
-                            setSearchQuery(e.target.value);
+                            setInputValue(e.target.value);
                             setIsOpen(true);
                             if (e.target.value) setViewLevel(1);
                         }}
@@ -134,9 +143,10 @@ export function ExplorerSearch({ viewMode = "graph" }: { viewMode?: "graph" | "h
                         className="w-full bg-transparent border-none text-sm text-sidebar-foreground placeholder:text-sidebar-foreground/50 focus:outline-none focus:ring-0"
                     />
                 </div>
-                {searchQuery && (
+                {inputValue && (
                     <Button
                         onClick={() => {
+                            setInputValue("");
                             setSearchQuery("");
                             setIsOpen(false);
                             setViewLevel(1);
@@ -182,11 +192,11 @@ export function ExplorerSearch({ viewMode = "graph" }: { viewMode?: "graph" | "h
             </div>
 
             {/* Render dropdown if open and query is not empty (not in hierarchy view) */}
-            {isOpen && searchQuery.trim() && viewMode !== "hierarchy" && searchMode === "keyword" && (
+            {isOpen && inputValue.trim() && viewMode !== "hierarchy" && searchMode === "keyword" && (
                 <div className="absolute top-full left-0 right-0 mt-2 bg-sidebar border border-sidebar-border rounded-lg shadow-lg overflow-hidden z-[100] max-h-[400px] flex flex-col pointer-events-auto">
                     {searchResults.length === 0 ? (
                         <div className="p-4 text-center text-sm text-sidebar-foreground/70">
-                            No quick matches for "{searchQuery}". Please try Advanced Search.
+                            No quick matches for "{inputValue}". Please try Advanced Search.
                         </div>
                     ) : (
                         <div className="overflow-y-auto py-2 custom-scrollbar">
