@@ -1,7 +1,7 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { MultiDirectedGraph } from "graphology";
-import { NodeDetailsPanel } from "@/components/explorer/NodeDetailsPanel";
+import { NodeDetailsPanel } from "../components/explorer/NodeDetailsPanel";
 
 const setSelectedNodeIdMock = vi.fn();
 const setInfoPanelModeMock = vi.fn();
