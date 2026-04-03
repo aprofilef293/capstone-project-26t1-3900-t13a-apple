@@ -62,7 +62,6 @@ describe("tests for left sidebar", () => {
     expect(screen.queryByText("Dashboard")).not.toBeInTheDocument();
     expect(screen.getByTitle("Dashboard")).toBeInTheDocument();
     expect(container.querySelector(".lucide-chevron-right")).toBeInTheDocument();
-
     fireEvent.click(buttons[buttons.length - 1]);
 
     expect(screen.getByText("OBO Explorer")).toBeInTheDocument();
