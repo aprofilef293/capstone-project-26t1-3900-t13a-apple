@@ -6,10 +6,12 @@ function SearchResults({
     items,
     icon: Icon,
     onSelect,
+    searchMode,
 }: {
     items: GraphNode[];
     icon: LucideIcon;
     onSelect: (id: string) => void;
+    searchMode?: string;
 }) {
     if (items.length === 0) return null;
 
@@ -30,7 +32,10 @@ function SearchResults({
                             <div className="text-[10px] text-sidebar-foreground/50">{item.type}</div>
                         </div>
                     </div>
-                    <ChevronRight className="w-3.5 h-3.5 text-sidebar-foreground/30 group-hover:text-sidebar-foreground/80" />
+                    <div className="flex items-center gap-2">
+                        {searchMode === "semantic" && <div className="p-1.5 rounded-md text-black text-xs font-medium text-sidebar-foreground/60 bg-sidebar-accent">{Math.round((item.attributes.searchScore as number) * 100) || ""}%</div>}
+                        <ChevronRight className="w-3.5 h-3.5 text-sidebar-foreground/30 group-hover:text-sidebar-foreground/80" />
+                    </div>
                 </div>
             ))}
         </div>
@@ -76,8 +81,7 @@ export function SearchResultsPanel() {
                     )}
                 </>}
                 {searchMode === "semantic" && !searchError && !searchResultsLoading && <>
-                    <h3 className="text-xs font-bold text-sidebar-foreground mb-4 uppercase tracking-wider flex items-center gap-2">Most Relevant</h3>
-                    <SearchResults items={searchResultsSemantic} icon={ArrowRight} onSelect={setSelectedNodeId} />
+                    <SearchResults items={searchResultsSemantic} icon={ArrowRight} onSelect={setSelectedNodeId} searchMode="semantic" />
                     {searchResultsSemantic.length == 0 && (
                         <div className="text-s text-sidebar-foreground/40 px-1">No results found.</div>
                     )}

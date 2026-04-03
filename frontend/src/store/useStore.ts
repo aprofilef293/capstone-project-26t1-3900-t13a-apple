@@ -228,8 +228,14 @@ export const useStore = create<ExplorerState>((set) => ({
                 color: (n.attributes?.color as string) || '#3b82f6',
                 attributes: n.attributes || {}
             }));
+            const sortedNodes = nodes.sort((a: GraphNode, b: GraphNode) => {
+                if (b.attributes.searchScore && a.attributes.searchScore) return parseFloat(b.attributes.searchScore as string) - parseFloat(a.attributes.searchScore as string);
+                if (b.attributes.searchScore) return 1;
+                if (a.attributes.searchScore) return -1;
+                return 0;
+            })
+            useStore.getState().setSearchResultsSemantic(sortedNodes);
             set({ searchResultsLoading: false });
-            useStore.getState().setSearchResultsSemantic(nodes);
         } catch (error) {
             set({ searchResultsLoading: false });
             console.error("Error fetching semantic search results:", error);
@@ -453,9 +459,12 @@ export const useStore = create<ExplorerState>((set) => ({
     infoPanelMode: (() => {
         try {
             const stored = localStorage.getItem('infoPanelMode');
-            if (stored === 'node-info' || stored === 'search-results' || stored === 'multi-select' || stored === 'closed') {
-                return stored;
-            }
+            if (stored === 'search-results') {
+                // search results don't persist after reload, so closing results panel
+                useStore.getState().setInfoPanelMode('closed');
+                return 'closed';
+            };
+            if (stored === 'node-info' || stored === 'multi-select' || stored === 'closed') return stored;
             // fallback to previous logic if not set
             return (
                 localStorage.getItem('isMultiSelect') === 'true' &&
