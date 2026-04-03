@@ -92,12 +92,12 @@ describe('happy path for multi-select', () => {
     // check the pathview btn is on the screen + click
     cy.contains('button', 'Path View').should('be.visible').click()
 
-    // click the select attribute dropdown + click the 'definition' field
+    // click the select attribute dropdown + click the 'colour' field
     cy.contains('button', 'Select attribute').click()
-    cy.contains('[data-slot="dropdown-menu-radio-item"]', 'definition').click()
+    cy.contains('[data-slot="dropdown-menu-radio-item"]', 'colour').click()
 
-    // check that each card on the multi-select side panel have a 'definition' field
-    cy.contains(/definition:/i).should('be.visible')
+    // check that each card on the multi-select side panel have a 'colour' field
+    cy.contains(/colour:/i).should('be.visible')
 
     // click any card in side panel
     cy.get('@pickedNodes').then((p: any) => {
