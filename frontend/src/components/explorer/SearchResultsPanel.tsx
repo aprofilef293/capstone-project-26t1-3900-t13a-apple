@@ -6,10 +6,12 @@ function SearchResults({
     items,
     icon: Icon,
     onSelect,
+    searchMode,
 }: {
     items: GraphNode[];
     icon: LucideIcon;
     onSelect: (id: string) => void;
+    searchMode?: string;
 }) {
     if (items.length === 0) return null;
 
@@ -30,7 +32,10 @@ function SearchResults({
                             <div className="text-[10px] text-sidebar-foreground/50">{item.type}</div>
                         </div>
                     </div>
-                    <ChevronRight className="w-3.5 h-3.5 text-sidebar-foreground/30 group-hover:text-sidebar-foreground/80" />
+                    <div className="flex items-center gap-2">
+                        {searchMode === "semantic" && <div className="p-1.5 rounded-md text-black text-xs font-medium text-sidebar-foreground/60 bg-sidebar-accent">{Math.round((item.attributes.searchScore as number) * 100) || ""}%</div>}
+                        <ChevronRight className="w-3.5 h-3.5 text-sidebar-foreground/30 group-hover:text-sidebar-foreground/80" />
+                    </div>
                 </div>
             ))}
         </div>
@@ -38,7 +43,9 @@ function SearchResults({
 }
 
 export function SearchResultsPanel() {
-    const { searchQuery, setSearchQuery, searchResultsFuzzyTitle, searchResultsDescription, setViewLevel, setSelectedNodeId, setInfoPanelMode } = useStore();
+    const { searchQuery, setSearchQuery, searchMode, searchResultsFuzzyTitle, searchResultsDescription, searchResultsSemantic,
+        searchError, setViewLevel, setSelectedNodeId, setInfoPanelMode, searchResultsLoading
+    } = useStore();
 
     return (
         <div className="w-[400px] border-l border-sidebar-border bg-sidebar flex flex-col h-full shadow-xl z-20 transition-colors">
@@ -62,16 +69,27 @@ export function SearchResultsPanel() {
             </div>
 
             <ScrollArea className="flex-1 min-h-0 pb-6 px-6 pt-4">
-                <h3 className="text-xs font-bold text-sidebar-foreground mb-4 uppercase tracking-wider flex items-center gap-2">Most Relevant</h3>
-                <SearchResults items={searchResultsFuzzyTitle} icon={ArrowRight} onSelect={setSelectedNodeId} />
-                {searchResultsDescription.length != 0 && (
-                    <h3 className="text-xs font-bold text-sidebar-foreground mt-4 mb-4 uppercase tracking-wider flex items-center gap-2">Suggested</h3>
-                )}
-                <SearchResults items={searchResultsDescription} icon={ArrowRight} onSelect={setSelectedNodeId} />
-                {searchResultsFuzzyTitle.length == 0 && searchResultsDescription.length == 0 && (
-                    <div className="text-s text-sidebar-foreground/40 px-1">No results found.</div>
-                )}
+                {searchMode === "keyword" && !searchError && !searchResultsLoading && <>
+                    <h3 className="text-xs font-bold text-sidebar-foreground mb-4 uppercase tracking-wider flex items-center gap-2">Most Relevant</h3>
+                    <SearchResults items={searchResultsFuzzyTitle} icon={ArrowRight} onSelect={setSelectedNodeId} />
+                    {searchResultsDescription.length != 0 && (
+                        <h3 className="text-xs font-bold text-sidebar-foreground mt-4 mb-4 uppercase tracking-wider flex items-center gap-2">Suggested</h3>
+                    )}
+                    <SearchResults items={searchResultsDescription} icon={ArrowRight} onSelect={setSelectedNodeId} />
+                    {searchResultsFuzzyTitle.length == 0 && searchResultsDescription.length == 0 && (
+                        <div className="text-s text-sidebar-foreground/40 px-1">No results found.</div>
+                    )}
+                </>}
+                {searchMode === "semantic" && !searchError && !searchResultsLoading && <>
+                    <SearchResults items={searchResultsSemantic} icon={ArrowRight} onSelect={setSelectedNodeId} searchMode="semantic" />
+                    {searchResultsSemantic.length == 0 && (
+                        <div className="text-s text-sidebar-foreground/40 px-1">No results found.</div>
+                    )}
+                </>}
+                {searchResultsLoading && <div className="text-s text-sidebar-foreground/70 px-1">Loading...</div>}
+                {searchError && <div className="text-s text-red-400/70 px-1">An error occurred. Please try again later.</div>}
             </ScrollArea>
+
         </div>
     );
 }

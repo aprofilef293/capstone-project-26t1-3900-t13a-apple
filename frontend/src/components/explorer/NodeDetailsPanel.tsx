@@ -227,7 +227,7 @@ function AttributesSection({
 
 /* ── Main panel ── */
 export function NodeDetailsPanel() {
-    const { selectedNodeId, nodes, graph, prevNodes, setPrevNodes, setSelectedNodeId, setInfoPanelMode, isMultiSelect, selectedNodeIds } = useStore();
+    const { selectedNodeId, nodes, graph, prevNodes, setPrevNodes, setSelectedNodeId, setInfoPanelMode, isMultiSelect, selectedNodeIds, setSearchQuery } = useStore();
     const node = nodes.find((n) => n.id === selectedNodeId);
 
     if (!node || !selectedNodeId) {
@@ -312,7 +312,10 @@ export function NodeDetailsPanel() {
                         <CircleChevronLeft className="w-4 h-5 mt-0.5"/>&nbsp;&nbsp;BACK
                     </button>
                     <button
-                        onClick={() => setInfoPanelMode('closed')}
+                        onClick={() => {
+                            setInfoPanelMode('closed');
+                            setSearchQuery("");
+                        }}
                         className="p-1 hover:bg-sidebar-accent border border-transparent hover:border-sidebar-border/50 rounded-md transition-all text-sidebar-foreground/50 hover:text-sidebar-foreground flex items-center justify-center cursor-pointer"
                         title="Close details"
                     >

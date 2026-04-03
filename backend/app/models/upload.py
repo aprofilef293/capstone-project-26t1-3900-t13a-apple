@@ -11,6 +11,7 @@ class OntologyTerm(BaseModel):
         definition: Textual definition of the term.
         synonyms: Alternative names for the term.
         xrefs: Cross-references to other databases or ontologies.
+        comment: Informal notes, examples of usage, or editorial remarks.
         is_obsolete: Whether the term has been marked obsolete.
     """
 
@@ -20,6 +21,7 @@ class OntologyTerm(BaseModel):
     definition: str | None = None
     synonyms: list[str] = []
     xrefs: list[str] = []
+    comment: str | None = None
     is_obsolete: bool = False
 
     # Preprocessing attributes
