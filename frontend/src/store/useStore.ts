@@ -60,6 +60,7 @@ interface ExplorerState {
     setSearchResultsDescription: (results: GraphNode[]) => void,
     searchResultsSemantic: GraphNode[],
     setSearchResultsSemantic: (results: GraphNode[]) => void,
+    searchResultsLoading: boolean;
     doSemanticSearch: () => void;
     searchResults: GraphNode[];
     searchMode: 'keyword' | 'semantic';
@@ -210,11 +211,12 @@ export const useStore = create<ExplorerState>((set) => ({
     searchResultsDescription: [],
     setSearchResultsDescription: (results) => set({ searchResultsDescription: results }),
     searchResultsSemantic: [],
-    setSearchResultsSemantic: (results) => {
-        set({ searchResultsSemantic: results });
-    },
+    setSearchResultsSemantic: (results) => set({ searchResultsSemantic: results }),
+    searchResultsLoading: false,
     doSemanticSearch: async () => {
         try {
+            useStore.getState().setSearchError(null);
+            set({ searchResultsLoading: true });
             const response = await api.fetchGraphData(`/api/graph/semantic-search?q=${useStore.getState().searchQuery}`);
             const nodes = (response.nodes || []).map((n: { key: string; attributes?: Record<string, unknown> }) => ({
                 id: n.key,
@@ -226,9 +228,12 @@ export const useStore = create<ExplorerState>((set) => ({
                 color: (n.attributes?.color as string) || '#3b82f6',
                 attributes: n.attributes || {}
             }));
+            set({ searchResultsLoading: false });
             useStore.getState().setSearchResultsSemantic(nodes);
         } catch (error) {
+            set({ searchResultsLoading: false });
             console.error("Error fetching semantic search results:", error);
+            useStore.getState().setSearchError("Error fetching semantic search results");
             useStore.getState().setSearchResultsSemantic([]);
         }
     },
