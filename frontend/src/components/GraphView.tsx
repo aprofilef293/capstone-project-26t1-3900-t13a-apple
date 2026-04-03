@@ -72,7 +72,8 @@ const GraphManager = forwardRef<GraphViewRef, unknown>((_, ref) => {
         toggleNodeSelection, selectedNodeId, setSelectedNodeId,
         searchQuery, viewLevel, setIsNodeSelecting, selectedNodeIds,
         pathNodeIds, pathEdgeIds,
-        infoPanelMode, graphFilters: rawFilters, pathViewOnly
+        infoPanelMode, graphFilters: rawFilters, pathViewOnly,
+        searchResultsFuzzyTitle, searchResultsDescription
     } = useStore();
     const graphFilters = rawFilters ?? DEFAULT_FILTERS;
     const lastClickedNodeRef = useRef(false);
@@ -153,6 +154,14 @@ const GraphManager = forwardRef<GraphViewRef, unknown>((_, ref) => {
         }
         return index;
     }, [nodes]);
+
+    const searchMatchIds = useMemo(() => {
+        if (!deferredSearchQuery) return null;
+        const ids = new Set<string>();
+        for (const n of searchResultsFuzzyTitle) ids.add(n.id as string);
+        for (const n of searchResultsDescription) ids.add(n.id as string);
+        return ids.size > 0 ? ids : null;
+    }, [deferredSearchQuery, searchResultsFuzzyTitle, searchResultsDescription]);
 
     // Isolation data
     const isolationData = useMemo(() => {
@@ -403,7 +412,7 @@ const GraphManager = forwardRef<GraphViewRef, unknown>((_, ref) => {
         stateRef.current.pathViewOnly = pathViewOnly;
         sigma.refresh();
     }, [selectedNodeId, isMultiSelect, selectedNodeIds, nodeStyles, isolationData, multiSelectPathData, isDark, pathViewOnly, sigma]);
-    
+
     useEffect(() => {
         const graph = sigma.getGraph();
         const cache = new Map<string, { source: string; target: string }>();
@@ -424,7 +433,8 @@ const GraphManager = forwardRef<GraphViewRef, unknown>((_, ref) => {
 
         graph.forEachNode((id: string, attrs: NodeAttributes) => {
             const label = String(attrs.label ?? "");
-            const matchesSearch = !!selectedNodeId || !query || label.toLowerCase().includes(query);
+            const matchesSearch = !!selectedNodeId || !query ||
+                (searchMatchIds ? searchMatchIds.has(id) : label.toLowerCase().includes(query));
             const level = ((attrs.attributes as Record<string, unknown>)?.viewLevel as number) ?? 1;
 
             const nodeAttrs = attrs.attributes as Record<string, unknown>;
@@ -460,7 +470,7 @@ const GraphManager = forwardRef<GraphViewRef, unknown>((_, ref) => {
         stateRef.current.visibleNodes = visibleNodes;
         // update graph (note: this does not perform a hard refresh on the browser)
         sigma.refresh();
-    }, [nodes, edges, deferredSearchQuery, viewLevel, selectedNodeId, isolationData, isMultiSelect, multiSelectPathData, selectedNodeIds, sigma, graphFilters]);
+    }, [nodes, edges, deferredSearchQuery, viewLevel, selectedNodeId, isolationData, isMultiSelect, multiSelectPathData, selectedNodeIds, sigma, graphFilters, searchMatchIds]);
 
     useEffect(() => {
         const graph = sigma.getGraph();
@@ -587,7 +597,7 @@ const GraphManager = forwardRef<GraphViewRef, unknown>((_, ref) => {
             }
             return res;
         });
-        
+
         sigma.refresh();
 
         return () => {
