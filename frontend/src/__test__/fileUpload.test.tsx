@@ -21,13 +21,13 @@ vi.mock("@/store/useStore", () => ({
     }),
 }));
 
-describe("UploadBox component tests", () => {
+describe("tests for uploading file", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     localStorage.clear();
   });
 
-  it("renders the upload box copy and button", () => {
+  it("make sure upload box renders", () => {
     render(<UploadBox />);
 
     expect(screen.getByText("Drop your OBO file here")).toBeInTheDocument();
@@ -36,7 +36,7 @@ describe("UploadBox component tests", () => {
     expect(screen.getByText("Supported: .obo, .owl")).toBeInTheDocument();
   });
 
-  it("clicking Select File triggers the hidden file input", () => {
+  it("click on select file btn and check that the button has been clicked once", () => {
     const clickSpy = vi.spyOn(HTMLInputElement.prototype, "click").mockImplementation(() => {});
 
     render(<UploadBox />);
@@ -47,17 +47,18 @@ describe("UploadBox component tests", () => {
     clickSpy.mockRestore();
   });
 
-  it("clears selection state, starts import, and navigates when a file is chosen", () => {
-    localStorage.setItem("selectedNodeId", "node-1");
-    localStorage.setItem("selectedNodeIds", JSON.stringify(["node-1"]));
+  it("mock file import and checks that we go to the manager page", () => {
+    localStorage.setItem("selectedNodeId", "test");
+    localStorage.setItem("selectedNodeIds", JSON.stringify(["test"]));
     localStorage.setItem("infoPanelMode", "node-info");
     localStorage.setItem("isMultiSelect", "true");
     localStorage.setItem("pathViewOnly", "true");
 
     render(<UploadBox />);
 
+    // mocking file input
     const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
-    const file = new File(["dummy ontology content"], "example.obo", {
+    const file = new File(["test content"], "test.obo", {
       type: "text/plain",
     });
 
@@ -65,19 +66,20 @@ describe("UploadBox component tests", () => {
       target: { files: [file] },
     });
 
+    // check localstorage
     expect(localStorage.getItem("selectedNodeId")).toBeNull();
     expect(localStorage.getItem("selectedNodeIds")).toBeNull();
     expect(localStorage.getItem("infoPanelMode")).toBeNull();
     expect(localStorage.getItem("isMultiSelect")).toBeNull();
     expect(localStorage.getItem("pathViewOnly")).toBeNull();
-
+    // chekc num times functions are called
     expect(clearSelectedNodesMock).toHaveBeenCalledTimes(1);
     expect(startFileImportMock).toHaveBeenCalledTimes(1);
     expect(startFileImportMock).toHaveBeenCalledWith(file);
     expect(navigateMock).toHaveBeenCalledWith({ to: "/manager" });
   });
 
-  it("does nothing if no file is selected", () => {
+  it("when no file is selected the system doesn't do anything", () => {
     render(<UploadBox />);
 
     const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
@@ -85,5 +87,5 @@ describe("UploadBox component tests", () => {
 
     expect(startFileImportMock).not.toHaveBeenCalled();
     expect(navigateMock).not.toHaveBeenCalled();
-  });
+  });  
 });
