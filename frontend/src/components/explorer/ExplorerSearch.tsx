@@ -1,9 +1,15 @@
 import { useState, useMemo, useRef, useEffect } from "react";
-import { Search, X } from "lucide-react";
+import { DatabaseSearch, Search, WholeWord, X, type LucideIcon } from "lucide-react";
 import Fuse from "fuse.js";
 import { useStore } from "../../store/useStore";
 import { Button } from "../ui/button";
 import { matchesGraphFilters } from "../../lib/filterUtils";
+import { cn } from "../../lib/utils";
+
+const SEARCH_MODES: { mode: 'keyword' | 'semantic'; label: string; Icon: LucideIcon; }[] = [
+    { mode: "keyword", label: "Keyword", Icon: WholeWord },
+    { mode: "semantic", label: "Advanced", Icon: DatabaseSearch },
+];
 
 export function ExplorerSearch({ viewMode = "graph" }: { viewMode?: "graph" | "hierarchy" }) {
     const {
@@ -14,8 +20,12 @@ export function ExplorerSearch({ viewMode = "graph" }: { viewMode?: "graph" | "h
         setSelectedNodeId,
         setSearchResultsFuzzyTitle,
         setSearchResultsDescription,
+        doSemanticSearch,
+        infoPanelMode,
         setInfoPanelMode,
-        graphFilters
+        graphFilters,
+        searchMode,
+        setSearchMode,
     } = useStore();
 
     const [inputValue, setInputValue] = useState(searchQuery);
@@ -59,6 +69,10 @@ export function ExplorerSearch({ viewMode = "graph" }: { viewMode?: "graph" | "h
 
     // Search Method: fuzzy on names, exact substring on descriptions/synonyms
     const { fuzzyResults, descriptionResults } = useMemo(() => {
+        if (searchMode === "semantic") {
+            return {fuzzyResults: [], descriptionResults: []};
+        }
+
         const q = searchQuery.trim();
         if (!q) {
             return { fuzzyResults: [], descriptionResults: [] };
@@ -101,6 +115,9 @@ export function ExplorerSearch({ viewMode = "graph" }: { viewMode?: "graph" | "h
         if (searchQuery.trim()) {
             setInfoPanelMode('search-results');
             setIsOpen(false);
+        }
+        if (searchMode === "semantic") {
+            doSemanticSearch();
         }
     };
 
@@ -150,14 +167,36 @@ export function ExplorerSearch({ viewMode = "graph" }: { viewMode?: "graph" | "h
                 >
                     <Search className="w-4 h-4 text-sidebar-foreground/70" />
                 </Button>
+
+                {/* Search Mode Toggles */}
+                <div className="flex shrink-0 bg-sidebar/95 backdrop-blur-sm rounded-lg shadow-sm pointer-events-auto">
+                    {SEARCH_MODES.map(({ mode, label, Icon }) => (
+                        <Button
+                            key={mode}
+                            variant="ghost"
+                            onClick={() => {
+                                setInfoPanelMode('closed');
+                                setSearchMode(mode);
+                            }}
+                            className={cn(
+                                "h-8 px-3 text-xs font-medium gap-2",
+                                searchMode === mode
+                                    ? "bg-blue-500/10 text-blue-600 dark:bg-blue-600/10 dark:text-blue-400"
+                                    : "text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent"
+                            )}
+                        >
+                            <Icon /> {infoPanelMode === "closed" && label}
+                        </Button>
+                    ))}
+                </div>
             </div>
 
             {/* Render dropdown if open and query is not empty (not in hierarchy view) */}
-            {isOpen && inputValue.trim() && viewMode !== "hierarchy" && (
+            {isOpen && inputValue.trim() && viewMode !== "hierarchy" && searchMode === "keyword" && (
                 <div className="absolute top-full left-0 right-0 mt-2 bg-sidebar border border-sidebar-border rounded-lg shadow-lg overflow-hidden z-[100] max-h-[400px] flex flex-col pointer-events-auto">
                     {searchResults.length === 0 ? (
                         <div className="p-4 text-center text-sm text-sidebar-foreground/70">
-                            No quick matches for "{inputValue}". Press Enter for deep search.
+                            No quick matches for "{inputValue}". Please try Advanced Search.
                         </div>
                     ) : (
                         <div className="overflow-y-auto py-2 custom-scrollbar">

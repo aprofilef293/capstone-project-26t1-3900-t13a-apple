@@ -17,7 +17,6 @@ export function GraphExplorer() {
     const [viewMode, setViewMode] = useState<'graph' | 'hierarchy'>('graph');
     const graphViewRef = useRef<GraphViewRef>(null);
     const isInitialGraphLoading = useStore(state => state.isInitialGraphLoading);
-    const isGraphLoading = useStore(state => state.isGraphLoading);
     const nodes = useStore(state => state.nodes);
     const hasFetchedRef = useRef(false);
 
@@ -58,7 +57,7 @@ export function GraphExplorer() {
                                     Path View
                                 </button>
                             )}
-                            
+
                             {/* Node size filter slider */}
                             <NodeSizeFilter />
 

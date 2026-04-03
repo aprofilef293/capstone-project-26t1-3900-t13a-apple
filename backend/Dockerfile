@@ -17,9 +17,7 @@ RUN pip install --no-cache-dir --upgrade pip && \
 
 COPY pyproject.toml poetry.lock* ./
 
-RUN poetry add "pyfftw@latest" "numba-kdtree@latest" && \
-    poetry update && \
-    poetry install --no-interaction --no-ansi
+RUN poetry install --no-interaction --no-ansi
 
 COPY . .
 EXPOSE 8000

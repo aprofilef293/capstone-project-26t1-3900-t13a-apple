@@ -58,7 +58,13 @@ interface ExplorerState {
     setSearchResultsFuzzyTitle: (results: GraphNode[]) => void,
     searchResultsDescription: GraphNode[],
     setSearchResultsDescription: (results: GraphNode[]) => void,
+    searchResultsSemantic: GraphNode[],
+    setSearchResultsSemantic: (results: GraphNode[]) => void,
+    searchResultsLoading: boolean;
+    doSemanticSearch: () => void;
     searchResults: GraphNode[];
+    searchMode: 'keyword' | 'semantic';
+    setSearchMode: (mode: 'keyword' | 'semantic') => void;
     setViewLevel: (level: number) => void;
     fetchGraphData: (isInitial?: boolean) => Promise<void>;
     isGraphLoading: boolean;
@@ -199,11 +205,48 @@ export const useStore = create<ExplorerState>((set) => ({
         graph: createGraph(nodes, edges)
     }),
     setSearchQuery: (query) => set({ searchQuery: query }),
+    // used to update results panel
     searchResultsFuzzyTitle: [],
     setSearchResultsFuzzyTitle: (results) => set({ searchResultsFuzzyTitle: results }),
     searchResultsDescription: [],
     setSearchResultsDescription: (results) => set({ searchResultsDescription: results }),
+    searchResultsSemantic: [],
+    setSearchResultsSemantic: (results) => set({ searchResultsSemantic: results }),
+    searchResultsLoading: false,
+    doSemanticSearch: async () => {
+        try {
+            useStore.getState().setSearchError(null);
+            set({ searchResultsLoading: true });
+            const response = await api.fetchGraphData(`/api/graph/semantic-search?q=${useStore.getState().searchQuery}`);
+            const nodes = (response.nodes || []).map((n: { key: string; attributes?: Record<string, unknown> }) => ({
+                id: n.key,
+                label: (n.attributes?.label as string) || n.key,
+                type: (n.attributes?.nodeType as string) || 'Data',
+                x: typeof n.attributes?.x === 'number' ? n.attributes.x : (Math.random() - 0.5) * 10,
+                y: typeof n.attributes?.y === 'number' ? n.attributes.y : (Math.random() - 0.5) * 10,
+                size: (n.attributes?.size as number) || 10,
+                color: (n.attributes?.color as string) || '#3b82f6',
+                attributes: n.attributes || {}
+            }));
+            const sortedNodes = nodes.sort((a: GraphNode, b: GraphNode) => {
+                if (b.attributes.searchScore && a.attributes.searchScore) return parseFloat(b.attributes.searchScore as string) - parseFloat(a.attributes.searchScore as string);
+                if (b.attributes.searchScore) return 1;
+                if (a.attributes.searchScore) return -1;
+                return 0;
+            })
+            useStore.getState().setSearchResultsSemantic(sortedNodes);
+            set({ searchResultsLoading: false });
+        } catch (error) {
+            set({ searchResultsLoading: false });
+            console.error("Error fetching semantic search results:", error);
+            useStore.getState().setSearchError("Error fetching semantic search results");
+            useStore.getState().setSearchResultsSemantic([]);
+        }
+    },
     searchResults: [],
+    // TODO: make this localstorage (save search mode)
+    searchMode: 'keyword',
+    setSearchMode: (mode) => set({ searchMode: mode }),
     setViewLevel: (level) => set({ viewLevel: level }),
     // graph filters
     graphFilters: DEFAULT_FILTERS,
@@ -256,7 +299,7 @@ export const useStore = create<ExplorerState>((set) => ({
     },
     // File import
     fileName: getPersistedFileInfo().fileName,
-    importStatus: getPersistedFileInfo().importStatus === 'loading' 
+    importStatus: getPersistedFileInfo().importStatus === 'loading'
         ? 'error'  // file upload interrupted by refresh
         : getPersistedFileInfo().importStatus,
     importProgress: 0,
@@ -267,9 +310,9 @@ export const useStore = create<ExplorerState>((set) => ({
         localStorage.setItem('importFileName', file.name);
         localStorage.setItem('importStatus', 'loading');
         localStorage.setItem('importDate', now.toISOString());
-        localStorage.setItem('importError', JSON.stringify(null)); 
-        set({ fileName: file.name, importStatus: 'loading', importProgress: 0, importDate: now, importError: null }); 
-        
+        localStorage.setItem('importError', JSON.stringify(null));
+        set({ fileName: file.name, importStatus: 'loading', importProgress: 0, importDate: now, importError: null });
+
         useStore.getState().setIsMultiSelect(false);
         // simulate progress bar slowly moving toward the ceiling between real events
         let ceiling = 24;
@@ -416,9 +459,12 @@ export const useStore = create<ExplorerState>((set) => ({
     infoPanelMode: (() => {
         try {
             const stored = localStorage.getItem('infoPanelMode');
-            if (stored === 'node-info' || stored === 'search-results' || stored === 'multi-select' || stored === 'closed') {
-                return stored;
-            }
+            if (stored === 'search-results') {
+                // search results don't persist after reload, so closing results panel
+                useStore.getState().setInfoPanelMode('closed');
+                return 'closed';
+            };
+            if (stored === 'node-info' || stored === 'multi-select' || stored === 'closed') return stored;
             // fallback to previous logic if not set
             return (
                 localStorage.getItem('isMultiSelect') === 'true' &&

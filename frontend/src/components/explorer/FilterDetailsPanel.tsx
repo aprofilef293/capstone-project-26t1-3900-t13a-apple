@@ -161,7 +161,7 @@ export function GraphFilterPanel() {
                 id="graph-filter-toggle"
                 onClick={() => setIsOpen((v) => !v)}
                 className={cn(
-                    "relative flex items-center justify-center w-[46px] h-[46px] rounded-lg border shadow-sm backdrop-blur-sm transition-all duration-200",
+                    "relative flex items-center justify-center w-[46px] h-[46px] rounded-lg border shadow-sm backdrop-blur-sm transition-all duration-200 cursor-pointer",
                     activeCount > 0
                         ? "bg-blue-500/15 border-blue-500/40 text-blue-600 dark:text-blue-400 hover:bg-blue-500/20"
                         : "bg-sidebar/95 border-sidebar-border text-sidebar-foreground/80 hover:text-sidebar-foreground hover:bg-sidebar-accent"

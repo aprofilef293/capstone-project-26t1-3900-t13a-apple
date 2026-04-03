@@ -1,0 +1,312 @@
+"""Embedding service for semantic vector search via HuggingFace Inference API."""
+
+from __future__ import annotations
+
+import logging
+import time
+from concurrent.futures import ThreadPoolExecutor
+
+import numpy as np
+
+logger = logging.getLogger(__name__)
+
+
+class HuggingFaceEmbeddingModel:
+    """Client for generating text embeddings via the HuggingFace Inference API.
+
+    Sends text to a remote sentence-transformer model and returns L2-normalised
+    embedding vectors. Handles batching, rate-limit retries with exponential
+    backoff, and caches the embedding dimension per model.
+
+    Args:
+        model_name: HuggingFace model identifier (e.g. ``"BAAI/bge-small-en-v1.5"``).
+        api_token: HuggingFace API token. Free tokens can be created at
+            https://huggingface.co/settings/tokens.
+    """
+
+    _BATCH_SIZE = 64
+    _MAX_WORKERS = 4
+    _DIMENSION_CACHE: dict[str, int] = {}
+
+    def __init__(self, model_name: str = "BAAI/bge-small-en-v1.5", api_token: str = "") -> None:
+        import httpx
+
+        self._model_name = model_name
+        self._url = f"https://router.huggingface.co/hf-inference/models/{model_name}"
+        headers = {"Content-Type": "application/json"}
+        if api_token:
+            headers["Authorization"] = f"Bearer {api_token}"
+        self._client = httpx.Client(timeout=120.0, headers=headers)
+
+        self._dimension_val = self._probe_dimension()
+        logger.info("Using HuggingFace Inference API for %s  (dim=%d)", model_name, self._dimension_val)
+
+    def _probe_dimension(self) -> int:
+        """Determine the embedding vector dimension by encoding a dummy input.
+
+        Results are cached per model name so subsequent instances skip the
+        network call.
+        """
+        if self._model_name in self._DIMENSION_CACHE:
+            return self._DIMENSION_CACHE[self._model_name]
+        resp = self._request_with_retry(["hello"])
+        dim = len(resp[0])
+        self._DIMENSION_CACHE[self._model_name] = dim
+        return dim
+
+    def _request_with_retry(self, texts: list[str], max_retries: int = 5) -> list[list[float]]:
+        """Send a batch of texts to the HF Inference API and return raw embeddings.
+
+        Retries up to *max_retries* times on 429 (rate-limit) and 503
+        (model loading) responses using exponential backoff capped at 30 s.
+        """
+        for attempt in range(max_retries):
+            resp = self._client.post(self._url, json={"inputs": texts, "options": {"wait_for_model": True}})
+            if resp.status_code in (429, 503):
+                wait = min(2**attempt, 30)
+                logger.warning("HF API %d, retrying in %ds...", resp.status_code, wait)
+                time.sleep(wait)
+                continue
+            resp.raise_for_status()
+            return resp.json()
+        resp.raise_for_status()
+        return []  # unreachable
+
+    def encode(self, texts: list[str]) -> np.ndarray:
+        """Encode a list of texts into L2-normalised embedding vectors.
+
+        Texts are sent in concurrent batches of ``_BATCH_SIZE`` using a thread
+        pool (up to ``_MAX_WORKERS`` in-flight requests). Progress is logged
+        every 640 texts. Returns an ``(N, dim)`` float32 numpy array where each
+        row is a unit-length embedding vector suitable for cosine similarity via
+        dot product.
+        """
+        n = len(texts)
+        arr = np.empty((n, self._dimension_val), dtype=np.float32)
+
+        batches = [(i, texts[i : i + self._BATCH_SIZE]) for i in range(0, n, self._BATCH_SIZE)]
+
+        def _encode_batch(item: tuple[int, list[str]]) -> tuple[int, list[list[float]]]:
+            offset, batch = item
+            return offset, self._request_with_retry(batch)
+
+        with ThreadPoolExecutor(max_workers=self._MAX_WORKERS) as pool:
+            for offset, result in pool.map(_encode_batch, batches):
+                arr[offset : offset + len(result)] = result
+                if offset > 0 and offset % (self._BATCH_SIZE * 10) == 0:
+                    logger.info("HF API: encoded %d / %d texts", offset, n)
+
+        norms = np.linalg.norm(arr, axis=1, keepdims=True)
+        norms[norms == 0] = 1
+        return arr / norms
+
+    @property
+    def dimension(self) -> int:
+        """Return the dimensionality of the embedding vectors produced by this model."""
+        return self._dimension_val
+
+
+# Metadata fields in priority order with their search weights.
+# Primary labels and definitions should dominate results; synonyms and
+# comments are weak supporting signals only.  Alphanumeric identifiers
+# (e.g. IAO:0000115) are excluded — they carry no semantic value for
+# natural-language queries.
+# Weights are applied as multipliers on raw cosine similarity at search
+# time so their relative ratios matter, not their absolute values.
+FIELD_WEIGHTS: dict[str, float] = {
+    "name": 1.0,
+    "definition": 0.7,
+    "synonyms": 0.15,
+    "comment": 0.1,
+}
+
+
+def build_field_texts(term: dict) -> dict[str, str]:
+    """Extract per-field text from an ontology term for separate embedding.
+
+    Each field that is present and non-empty gets its own text string so it
+    can be embedded independently. This allows the search to weight primary
+    labels and definitions higher than synonyms or comments.
+
+    Alphanumeric identifiers (``id``) are intentionally excluded — they carry
+    no semantic value for natural-language queries and add noise.
+
+    Args:
+        term: A dict (or Pydantic ``model_dump()``) with optional keys
+            ``name``, ``definition``, ``synonyms`` (list[str]),
+            and ``comment``.
+
+    Returns:
+        A dict mapping field names (from ``FIELD_WEIGHTS``) to their text.
+        Only fields with non-empty content are included.
+    """
+    texts: dict[str, str] = {}
+    if term.get("name"):
+        texts["name"] = term["name"]
+    if term.get("definition"):
+        texts["definition"] = term["definition"]
+    synonyms = term.get("synonyms") or []
+    if synonyms:
+        texts["synonyms"] = "; ".join(synonyms)
+    if term.get("comment"):
+        texts["comment"] = term["comment"]
+    return texts
+
+
+def build_embedding_text(term: dict) -> str:
+    """Build a single combined text string from an ontology term's metadata.
+
+    Convenience wrapper over ``build_field_texts`` that joins all available
+    fields into one string separated by ``" . "``. Useful when only a single
+    embedding per term is needed (e.g. for the startup index rebuild from
+    Memgraph records).
+
+    Args:
+        term: A dict (or Pydantic ``model_dump()``) with optional keys
+            ``name``, ``id``, ``definition``, ``synonyms`` (list[str]),
+            and ``comment``.
+
+    Returns:
+        A joined string ready to be passed to ``HuggingFaceEmbeddingModel.encode``.
+    """
+    return " . ".join(build_field_texts(term).values())
+
+
+class EmbeddingService:
+    """In-memory vector index for semantic search over ontology terms.
+
+    Each term is embedded **per metadata field** (name, id, definition,
+    synonyms, comment) so that queries can be scored against each field
+    independently. At search time, the final score is the **maximum** cosine
+    similarity across all fields — an exact match on the name yields ~1.0
+    without being diluted by other fields.
+
+    The index is rebuilt from scratch each time ``build_index`` is called.
+
+    Args:
+        model: The embedding model used to encode both index texts and queries.
+    """
+
+    def __init__(self, model: HuggingFaceEmbeddingModel) -> None:
+        self._model = model
+        self._ids: list[str] = []
+        # One embedding matrix per field, keyed by field name.
+        self._field_embeddings: dict[str, np.ndarray] = {}
+        # Track which terms have a value for each field (boolean mask).
+        self._field_masks: dict[str, np.ndarray] = {}
+
+    def build_index(self, term_ids: list[str], term_dicts: list[dict]) -> None:
+        """Encode per-field texts and store alongside their *term_ids*.
+
+        Replaces any existing index. If *term_ids* is empty the index is
+        cleared and ``is_ready`` will return ``False``.
+
+        Args:
+            term_ids: Ontology term identifiers (e.g. ``"HP:0001250"``),
+                one per term.
+            term_dicts: Dicts (or Pydantic ``model_dump()`` results) with
+                optional keys ``name``, ``id``, ``definition``,
+                ``synonyms`` (list[str]), and ``comment``.
+        """
+        if not term_ids:
+            self._ids = []
+            self._field_embeddings = {}
+            self._field_masks = {}
+            return
+
+        self._ids = list(term_ids)
+        n = len(term_ids)
+
+        # Extract per-field texts for every term.
+        all_field_texts: dict[str, list[str]] = {f: [] for f in FIELD_WEIGHTS}
+        all_field_present: dict[str, list[bool]] = {f: [] for f in FIELD_WEIGHTS}
+
+        for td in term_dicts:
+            fields = build_field_texts(td)
+            for field in FIELD_WEIGHTS:
+                if field in fields:
+                    all_field_texts[field].append(fields[field])
+                    all_field_present[field].append(True)
+                else:
+                    # Placeholder — will be masked out during search.
+                    all_field_texts[field].append("")
+                    all_field_present[field].append(False)
+
+        self._field_embeddings = {}
+        self._field_masks = {}
+
+        for field in FIELD_WEIGHTS:
+            mask = np.array(all_field_present[field], dtype=bool)
+            self._field_masks[field] = mask
+
+            if not mask.any():
+                # No terms have this field — skip encoding entirely.
+                continue
+
+            # Only encode texts that actually exist for this field.
+            present_texts = [t for t, m in zip(all_field_texts[field], mask) if m]
+            present_vecs = self._model.encode(present_texts)
+
+            # Expand back to full-size array with zeros for missing terms.
+            full_vecs = np.zeros((n, present_vecs.shape[1]), dtype=np.float32)
+            full_vecs[mask] = present_vecs
+            self._field_embeddings[field] = full_vecs
+
+        total_vecs = sum(int(m.sum()) for m in self._field_masks.values())
+        logger.info(
+            "Built embedding index: %d terms, %d field vectors across %d fields",
+            n,
+            total_vecs,
+            len(self._field_embeddings),
+        )
+
+    def search(self, query: str, top_k: int = 20) -> list[tuple[str, float, str]]:
+        """Find the *top_k* most similar terms to *query*.
+
+        The query is compared against each metadata field independently. The
+        final score for a term is the **maximum** raw cosine similarity across
+        all its fields, so an exact match on name yields ~1.0 rather than being
+        diluted by unrelated fields. When two fields have equal raw scores, the
+        higher-weighted field (per ``FIELD_WEIGHTS``) is preferred as the
+        reported best-match field.
+
+        Returns:
+            A list of ``(term_id, score, best_match_field)`` tuples sorted by
+            descending score, or an empty list if the index has not been built.
+        """
+        if not self._ids or not self._field_embeddings:
+            return []
+
+        query_vec = self._model.encode([query])  # (1, dim)
+        n = len(self._ids)
+        # Track the best *weighted* cosine similarity per term across all
+        # fields.  Each field's raw similarity is multiplied by its weight
+        # so that name matches dominate and low-weight fields (synonyms,
+        # comments) only surface when nothing better exists.
+        best_weighted_score = np.full(n, -np.inf, dtype=np.float32)
+        best_field_name: list[str] = [""] * n
+
+        for field, weight in FIELD_WEIGHTS.items():
+            if field not in self._field_embeddings:
+                continue
+            mask = self._field_masks[field]
+            raw_scores = (self._field_embeddings[field] @ query_vec.T).ravel()
+            weighted_scores = raw_scores * weight
+            better = mask & (weighted_scores > best_weighted_score)
+            for i in np.where(better)[0]:
+                best_weighted_score[i] = weighted_scores[i]
+                best_field_name[i] = field
+
+        # Terms with no fields at all keep -inf; clamp to 0.
+        final_scores = np.maximum(best_weighted_score, 0.0)
+
+        k = min(top_k, n)
+        partitioned = np.argpartition(final_scores, -k)[-k:]
+        top_indices = partitioned[np.argsort(final_scores[partitioned])[::-1]]
+
+        return [(self._ids[i], float(final_scores[i]), best_field_name[i]) for i in top_indices]
+
+    @property
+    def is_ready(self) -> bool:
+        """Return ``True`` if the index contains at least one embedded term."""
+        return len(self._ids) > 0 and len(self._field_embeddings) > 0

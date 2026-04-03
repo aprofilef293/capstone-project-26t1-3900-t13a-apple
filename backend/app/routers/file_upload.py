@@ -142,6 +142,15 @@ async def upload_ontology(request: Request, file: UploadFile = File(...)):
 
             await asyncio.to_thread(_ingest_relations, mg, relations)
             request.app.state.graph_cache = None
+
+            # Rebuild embedding index if the service is available
+            embedding_svc = getattr(request.app.state, "embedding_service", None)
+            if embedding_svc is not None:
+                active_terms = [t for t in terms if not t.is_obsolete]
+                ids = [t.id for t in active_terms]
+                term_dicts = [t.model_dump() for t in active_terms]
+                await asyncio.to_thread(embedding_svc.build_index, ids, term_dicts)
+
             yield f"data: {json.dumps({'progress': 100, 'stage': 'complete', 'filename': filename})}\n\n"
         except Exception as e:
             yield f"data: {json.dumps({'error': str(e), 'error_code': 503})}\n\n"

@@ -1,6 +1,7 @@
 import math
 
 from fastapi import APIRouter, HTTPException, Query, Request
+from fastapi.responses import JSONResponse
 
 from app.models.graph import GraphData, SerializedEdge, SerializedNode
 
@@ -330,3 +331,60 @@ def search_graph(
         {"q": q},
     )
     return _build_graph_data_from_paths(records)
+
+
+@router.get(
+    "/semantic-search",
+    response_model=GraphData,
+    summary="Vector semantic search over graph nodes",
+    description=(
+        "Search OntologyTerm nodes using dense vector embeddings. "
+        "The query is encoded with the same model used to embed term metadata "
+        "(name, definition, synonyms, comment) and ranked by cosine similarity. "
+        "Returns matching nodes with their immediate neighbors and edges."
+    ),
+)
+def embedding_search(
+    request: Request,
+    q: str = Query(..., min_length=1, description="Free-text search query."),
+    limit: int = Query(20, ge=1, le=100, description="Max results (1-100)."),
+    threshold: float = Query(0.3, ge=0.0, le=1.0, description="Minimum similarity score (0-1)."),
+):
+    """Semantic search powered by dense vector embeddings."""
+    embedding_svc = getattr(request.app.state, "embedding_service", None)
+    if embedding_svc is None or not embedding_svc.is_ready:
+        return JSONResponse(
+            status_code=503,
+            content={"detail": "Embedding index not available. Upload an ontology first."},
+        )
+
+    results = embedding_svc.search(q, top_k=limit)
+    if not results:
+        return GraphData()
+
+    # Filter results by threshold
+    results = [(tid, score, field) for tid, score, field in results if score >= threshold]
+    if not results:
+        return GraphData()
+
+    score_map = {term_id: (score, field) for term_id, score, field in results}
+    top_ids = list(score_map.keys())
+
+    mg = request.app.state.memgraph
+    neighbor_records = mg.execute_read(
+        "MATCH (n:OntologyTerm) WHERE n.id IN $ids OPTIONAL MATCH (n)-[r]-(m:OntologyTerm) RETURN n, r, m",
+        {"ids": top_ids},
+    )
+
+    graph = _build_graph_data_from_paths(neighbor_records)
+
+    for node in graph.nodes:
+        if node.key in score_map:
+            score, best_field = score_map[node.key]
+            node.attributes["searchScore"] = round(score, 4)
+            node.attributes["matchFields"] = [best_field]
+
+    # Return nodes sorted by score descending (matched nodes first, then neighbors)
+    graph.nodes.sort(key=lambda n: n.attributes.get("searchScore", -1), reverse=True)
+
+    return graph
