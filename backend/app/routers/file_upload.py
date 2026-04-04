@@ -13,7 +13,7 @@ from app.services.ontology_parser import parse_ontology
 
 router = APIRouter()
 
-ALLOWED_EXTENSIONS = {".obo", ".owl", ".cypher"}
+ALLOWED_EXTENSIONS = {".obo", ".owl", ".cypherl"}
 
 NAMESPACE_COLORS = {
     "biological_process": "#2563eb",
@@ -180,3 +180,32 @@ def list_ontologies(request: Request):
         "MATCH (n:OntologyTerm) RETURN DISTINCT n.source_file AS source_file, count(n) AS term_count"
     )
     return records
+
+@router.get("/export")
+def export_ontology(request: Request):
+    """Export an ontology as a .cypherl file.
+    """
+    mg = request.app.state.memgraph
+    file_name = "ontology_export.cypherl"
+    def build_dump():
+        try:
+            dump = mg.execute_read("DUMP DATABASE;")
+            for item in dump:
+                line = item.get("QUERY")
+                if line:
+                    yield line + "\n"
+        except Exception as e:
+            yield f"// Failed to export ontology: {str(e)}"
+    try:
+        return StreamingResponse(
+            build_dump(),
+            media_type="text/plain",
+            headers={
+                "Content-Disposition": f'attachment; filename="{file_name}"',
+            }
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to export ontology: {str(e)}",
+        )
