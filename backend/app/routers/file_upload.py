@@ -74,12 +74,26 @@ def _ingest_relations(mg: MemgraphService, relations: list[OntologyRelation]) ->
             {"rels": rel_dicts[i : i + batch_size]},
         )
 
+def _ingest_cypherl(mg: MemgraphService, file: str) -> None:
+    """Rebuild database from .cypherl file.
+    """
+    mg.execute_write("STORAGE MODE IN_MEMORY_ANALYTICAL")
+    mg.execute_write("DROP GRAPH")
+    mg.execute_write("STORAGE MODE IN_MEMORY_TRANSACTIONAL")
+    cypherl_file = open(file, "r", encoding = "utf-8")
+    try:
+        for line in cypherl_file:
+            query = line.strip()
+            if query:
+                mg.execute_write(query)
+    finally:
+        cypherl_file.close()
 
 @router.post("/upload")
 async def upload_ontology(request: Request, file: UploadFile = File(...)):
     """Upload and ingest an OBO/OWL ontology file via Server-Sent Events.
 
-    Accepts a .obo or .owl file, then returns an SSE stream that reports
+    Accepts a .obo, .owl or .cypherl file, then returns an SSE stream that reports
     progress as the file is parsed and ingested into Memgraph.
 
     SSE events:
@@ -90,14 +104,14 @@ async def upload_ontology(request: Request, file: UploadFile = File(...)):
 
     Args:
         request: FastAPI request (used to access app.state.memgraph).
-        file: The uploaded ontology file (.obo or .owl).
+        file: The uploaded ontology file (.obo, .owl or .cypherl).
 
     Raises:
-        HTTPException 400: If the file extension is not .obo or .owl.
+        HTTPException 400: If the file extension is not .obo, .owl or .cypherl.
     """
     ext = os.path.splitext(file.filename or "")[1].lower()
     if ext not in ALLOWED_EXTENSIONS:
-        raise HTTPException(status_code=400, detail=f"Unsupported file type: {ext}. Use .obo or .owl")
+        raise HTTPException(status_code=400, detail=f"Unsupported file type: {ext}. Use .obo, .owl or .cypherl")
 
     max_size = request.app.state.settings.upload_max_size_mb * 1024 * 1024
     content = bytearray()
@@ -117,6 +131,14 @@ async def upload_ontology(request: Request, file: UploadFile = File(...)):
             tmp_path = tmp.name
 
         try:
+            # Cypher file bypasses preprocessing
+            mg = request.app.state.memgraph
+            if ext == ".cypherl":
+                await asyncio.to_thread(_ingest_cypherl, mg, tmp_path)
+                request.app.state.graph_cache = None
+                yield f"data: {json.dumps({'progress': 100, 'stage': 'complete', 'filename': filename})}\n\n"
+                return
+
             terms, relations = await asyncio.to_thread(parse_ontology, tmp_path)
             yield f"data: {json.dumps({'progress': 25, 'stage': 'parsed'})}\n\n"
             await asyncio.sleep(0)
@@ -194,18 +216,15 @@ def export_ontology(request: Request):
                 line = item.get("QUERY")
                 if line:
                     yield line + "\n"
-        except Exception as e:
-            yield f"// Failed to export ontology: {str(e)}"
-    try:
-        return StreamingResponse(
-            build_dump(),
-            media_type="text/plain",
-            headers={
-                "Content-Disposition": f'attachment; filename="{file_name}"',
-            }
-        )
-    except Exception as e:
-        raise HTTPException(
-            status_code=500,
-            detail=f"Failed to export ontology: {str(e)}",
-        )
+        except Exception:
+            raise HTTPException(
+                status_code=500,
+                detail=f"Failed to export ontology.",
+            )
+    return StreamingResponse(
+        build_dump(),
+        media_type="text/plain",
+        headers={
+            "Content-Disposition": f'attachment; filename="{file_name}"',
+        }
+    )
