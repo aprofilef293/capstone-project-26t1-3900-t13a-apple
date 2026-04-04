@@ -10,7 +10,6 @@ from pathlib import Path
 
 import numpy as np
 
-# Directory used to cache computed embedding indices between restarts.
 _CACHE_DIR = Path("/app/.embedding_cache")
 
 logger = logging.getLogger(__name__)
