@@ -61,7 +61,7 @@ interface ExplorerState {
     searchResultsSemantic: GraphNode[],
     setSearchResultsSemantic: (results: GraphNode[]) => void,
     searchResultsLoading: boolean;
-    doSemanticSearch: () => void;
+    doSemanticSearch: (query: string) => void;
     searchResults: GraphNode[];
     searchMode: 'keyword' | 'semantic';
     setSearchMode: (mode: 'keyword' | 'semantic') => void;
@@ -213,11 +213,12 @@ export const useStore = create<ExplorerState>((set) => ({
     searchResultsSemantic: [],
     setSearchResultsSemantic: (results) => set({ searchResultsSemantic: results }),
     searchResultsLoading: false,
-    doSemanticSearch: async () => {
+    doSemanticSearch: async (query: string) => {
         try {
+            const queryStr = query ?? useStore.getState().searchQuery;
             useStore.getState().setSearchError(null);
             set({ searchResultsLoading: true });
-            const response = await api.fetchGraphData(`/api/graph/semantic-search?q=${useStore.getState().searchQuery}`);
+            const response = await api.fetchGraphData(`/api/graph/semantic-search?q=${encodeURIComponent(queryStr)}`);
             const nodes = (response.nodes || []).map((n: { key: string; attributes?: Record<string, unknown> }) => ({
                 id: n.key,
                 label: (n.attributes?.label as string) || n.key,
