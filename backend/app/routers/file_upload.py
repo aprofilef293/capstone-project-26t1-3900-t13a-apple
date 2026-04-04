@@ -13,7 +13,7 @@ from app.services.ontology_parser import parse_ontology
 
 router = APIRouter()
 
-ALLOWED_EXTENSIONS = {".obo", ".owl"}
+ALLOWED_EXTENSIONS = {".obo", ".owl", ".cypher"}
 
 NAMESPACE_COLORS = {
     "biological_process": "#2563eb",
