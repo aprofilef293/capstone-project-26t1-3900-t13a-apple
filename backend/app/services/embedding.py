@@ -2,11 +2,16 @@
 
 from __future__ import annotations
 
+import hashlib
 import logging
 import time
 from concurrent.futures import ThreadPoolExecutor
+from pathlib import Path
 
 import numpy as np
+
+# Directory used to cache computed embedding indices between restarts.
+_CACHE_DIR = Path("/app/.embedding_cache")
 
 logger = logging.getLogger(__name__)
 
@@ -24,8 +29,8 @@ class HuggingFaceEmbeddingModel:
             https://huggingface.co/settings/tokens.
     """
 
-    _BATCH_SIZE = 64
-    _MAX_WORKERS = 4
+    _BATCH_SIZE = 256
+    _MAX_WORKERS = 16
     _DIMENSION_CACHE: dict[str, int] = {}
 
     def __init__(self, model_name: str = "BAAI/bge-small-en-v1.5", api_token: str = "") -> None:
@@ -195,23 +200,66 @@ class EmbeddingService:
         # Track which terms have a value for each field (boolean mask).
         self._field_masks: dict[str, np.ndarray] = {}
 
+    @staticmethod
+    def _content_hash(term_ids: list[str], term_dicts: list[dict]) -> str:
+        """Compute a fast hash of term content for cache invalidation."""
+        h = hashlib.sha256()
+        for tid, td in zip(term_ids, term_dicts):
+            h.update(tid.encode())
+            for key in ("name", "definition", "synonyms", "comment"):
+                val = td.get(key)
+                if val is not None:
+                    h.update(str(val).encode())
+        return h.hexdigest()[:16]
+
+    def _try_load_cache(self, content_hash: str) -> bool:
+        """Attempt to load a previously saved index from disk."""
+        cache_file = _CACHE_DIR / f"index_{content_hash}.npz"
+        if not cache_file.exists():
+            return False
+        try:
+            data = np.load(cache_file, allow_pickle=True)
+            self._ids = list(data["ids"])
+            self._field_embeddings = {k: data[f"emb_{k}"] for k in FIELD_WEIGHTS if f"emb_{k}" in data}
+            self._field_masks = {k: data[f"mask_{k}"] for k in FIELD_WEIGHTS if f"mask_{k}" in data}
+            logger.info("Loaded embedding index from cache (%s)", cache_file.name)
+            return True
+        except Exception as e:
+            logger.warning("Cache load failed, will recompute: %s", e)
+            return False
+
+    def _save_cache(self, content_hash: str) -> None:
+        """Persist the current index to disk for fast restarts."""
+        try:
+            _CACHE_DIR.mkdir(parents=True, exist_ok=True)
+            arrays: dict[str, np.ndarray] = {"ids": np.array(self._ids, dtype=object)}
+            for field in FIELD_WEIGHTS:
+                if field in self._field_embeddings:
+                    arrays[f"emb_{field}"] = self._field_embeddings[field]
+                if field in self._field_masks:
+                    arrays[f"mask_{field}"] = self._field_masks[field]
+            cache_file = _CACHE_DIR / f"index_{content_hash}.npz"
+            np.savez(cache_file, **arrays)
+            logger.info("Saved embedding index cache (%s)", cache_file.name)
+        except Exception as e:
+            logger.warning("Failed to save embedding cache: %s", e)
+
     def build_index(self, term_ids: list[str], term_dicts: list[dict]) -> None:
         """Encode per-field texts and store alongside their *term_ids*.
 
-        Replaces any existing index. If *term_ids* is empty the index is
-        cleared and ``is_ready`` will return ``False``.
-
-        Args:
-            term_ids: Ontology term identifiers (e.g. ``"HP:0001250"``),
-                one per term.
-            term_dicts: Dicts (or Pydantic ``model_dump()`` results) with
-                optional keys ``name``, ``id``, ``definition``,
-                ``synonyms`` (list[str]), and ``comment``.
+        Uses a disk cache keyed by content hash — if the terms haven't
+        changed since the last run, the index loads from disk in
+        milliseconds instead of re-encoding via the HF API.
         """
         if not term_ids:
             self._ids = []
             self._field_embeddings = {}
             self._field_masks = {}
+            return
+
+        # Check disk cache first.
+        content_hash = self._content_hash(term_ids, term_dicts)
+        if self._try_load_cache(content_hash):
             return
 
         self._ids = list(term_ids)
@@ -228,29 +276,34 @@ class EmbeddingService:
                     all_field_texts[field].append(fields[field])
                     all_field_present[field].append(True)
                 else:
-                    # Placeholder — will be masked out during search.
                     all_field_texts[field].append("")
                     all_field_present[field].append(False)
 
-        self._field_embeddings = {}
         self._field_masks = {}
+        # Collect all present texts across all fields into one flat list
+        # so we can encode them in a single call with maximum parallelism.
+        combined_texts: list[str] = []
+        field_slices: dict[str, tuple[int, int]] = {}
 
         for field in FIELD_WEIGHTS:
             mask = np.array(all_field_present[field], dtype=bool)
             self._field_masks[field] = mask
-
             if not mask.any():
-                # No terms have this field — skip encoding entirely.
                 continue
-
-            # Only encode texts that actually exist for this field.
             present_texts = [t for t, m in zip(all_field_texts[field], mask) if m]
-            present_vecs = self._model.encode(present_texts)
+            start = len(combined_texts)
+            combined_texts.extend(present_texts)
+            field_slices[field] = (start, len(combined_texts))
 
-            # Expand back to full-size array with zeros for missing terms.
-            full_vecs = np.zeros((n, present_vecs.shape[1]), dtype=np.float32)
-            full_vecs[mask] = present_vecs
-            self._field_embeddings[field] = full_vecs
+        # Single encode call for all fields — maximises batching and concurrency.
+        self._field_embeddings = {}
+        if combined_texts:
+            all_vecs = self._model.encode(combined_texts)
+            for field, (start, end) in field_slices.items():
+                mask = self._field_masks[field]
+                full_vecs = np.zeros((n, all_vecs.shape[1]), dtype=np.float32)
+                full_vecs[mask] = all_vecs[start:end]
+                self._field_embeddings[field] = full_vecs
 
         total_vecs = sum(int(m.sum()) for m in self._field_masks.values())
         logger.info(
@@ -259,6 +312,9 @@ class EmbeddingService:
             total_vecs,
             len(self._field_embeddings),
         )
+
+        # Persist to disk for next restart.
+        self._save_cache(content_hash)
 
     def search(self, query: str, top_k: int = 20) -> list[tuple[str, float, str]]:
         """Find the *top_k* most similar terms to *query*.
