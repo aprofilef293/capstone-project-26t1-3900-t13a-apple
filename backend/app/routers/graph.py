@@ -344,7 +344,7 @@ def search_graph(
         "Returns matching nodes with their immediate neighbors and edges."
     ),
 )
-def embedding_search(
+async def embedding_search(
     request: Request,
     q: str = Query(..., min_length=1, description="Free-text search query."),
     limit: int = Query(20, ge=1, le=100, description="Max results (1-100)."),
@@ -358,7 +358,7 @@ def embedding_search(
             content={"detail": "Embedding index not available. Upload an ontology first."},
         )
 
-    results = embedding_svc.search(q, top_k=limit)
+    results = await embedding_svc.search(q, top_k=limit)
     if not results:
         return GraphData()
 

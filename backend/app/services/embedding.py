@@ -2,10 +2,9 @@
 
 from __future__ import annotations
 
+import asyncio
 import hashlib
 import logging
-import time
-from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 import numpy as np
@@ -28,8 +27,8 @@ class HuggingFaceEmbeddingModel:
             https://huggingface.co/settings/tokens.
     """
 
-    _BATCH_SIZE = 256
-    _MAX_WORKERS = 16
+    _BATCH_SIZE = 1024
+    _MAX_CONCURRENT = 16
     _DIMENSION_CACHE: dict[str, int] = {}
 
     def __init__(self, model_name: str = "BAAI/bge-small-en-v1.5", api_token: str = "") -> None:
@@ -40,12 +39,20 @@ class HuggingFaceEmbeddingModel:
         headers = {"Content-Type": "application/json"}
         if api_token:
             headers["Authorization"] = f"Bearer {api_token}"
-        self._client = httpx.Client(timeout=120.0, headers=headers)
+        self._async_client = httpx.AsyncClient(timeout=120.0, headers=headers)
+        self._semaphore = asyncio.Semaphore(self._MAX_CONCURRENT)
 
-        self._dimension_val = self._probe_dimension()
-        logger.info("Using HuggingFace Inference API for %s  (dim=%d)", model_name, self._dimension_val)
+        self._dimension_val: int | None = None
+        logger.info("Prepared HuggingFace Inference API client for %s", model_name)
 
-    def _probe_dimension(self) -> int:
+    async def ensure_ready(self) -> None:
+        """Probe the model dimension if not already known. Must be awaited once before encode."""
+        if self._dimension_val is not None:
+            return
+        self._dimension_val = await self._probe_dimension()
+        logger.info("HuggingFace model %s ready (dim=%d)", self._model_name, self._dimension_val)
+
+    async def _probe_dimension(self) -> int:
         """Determine the embedding vector dimension by encoding a dummy input.
 
         Results are cached per model name so subsequent instances skip the
@@ -53,52 +60,59 @@ class HuggingFaceEmbeddingModel:
         """
         if self._model_name in self._DIMENSION_CACHE:
             return self._DIMENSION_CACHE[self._model_name]
-        resp = self._request_with_retry(["hello"])
+        resp = await self._request_with_retry(["hello"])
         dim = len(resp[0])
         self._DIMENSION_CACHE[self._model_name] = dim
         return dim
 
-    def _request_with_retry(self, texts: list[str], max_retries: int = 5) -> list[list[float]]:
+    async def _request_with_retry(self, texts: list[str], max_retries: int = 5) -> list[list[float]]:
         """Send a batch of texts to the HF Inference API and return raw embeddings.
 
         Retries up to *max_retries* times on 429 (rate-limit) and 503
         (model loading) responses using exponential backoff capped at 30 s.
         """
         for attempt in range(max_retries):
-            resp = self._client.post(self._url, json={"inputs": texts, "options": {"wait_for_model": True}})
+            resp = await self._async_client.post(
+                self._url, json={"inputs": texts, "options": {"wait_for_model": True}}
+            )
             if resp.status_code in (429, 503):
                 wait = min(2**attempt, 30)
                 logger.warning("HF API %d, retrying in %ds...", resp.status_code, wait)
-                time.sleep(wait)
+                await asyncio.sleep(wait)
                 continue
             resp.raise_for_status()
             return resp.json()
         resp.raise_for_status()
         return []  # unreachable
 
-    def encode(self, texts: list[str]) -> np.ndarray:
+    async def encode(self, texts: list[str]) -> np.ndarray:
         """Encode a list of texts into L2-normalised embedding vectors.
 
-        Texts are sent in concurrent batches of ``_BATCH_SIZE`` using a thread
-        pool (up to ``_MAX_WORKERS`` in-flight requests). Progress is logged
-        every 640 texts. Returns an ``(N, dim)`` float32 numpy array where each
-        row is a unit-length embedding vector suitable for cosine similarity via
-        dot product.
+        Texts are sent as concurrent batches of ``_BATCH_SIZE`` using
+        ``asyncio.gather`` with a semaphore limiting to ``_MAX_CONCURRENT``
+        in-flight requests. Returns an ``(N, dim)`` float32 numpy array where
+        each row is a unit-length embedding vector suitable for cosine
+        similarity via dot product.
         """
+        await self.ensure_ready()
+        assert self._dimension_val is not None
+
         n = len(texts)
         arr = np.empty((n, self._dimension_val), dtype=np.float32)
 
         batches = [(i, texts[i : i + self._BATCH_SIZE]) for i in range(0, n, self._BATCH_SIZE)]
 
-        def _encode_batch(item: tuple[int, list[str]]) -> tuple[int, list[list[float]]]:
-            offset, batch = item
-            return offset, self._request_with_retry(batch)
-
-        with ThreadPoolExecutor(max_workers=self._MAX_WORKERS) as pool:
-            for offset, result in pool.map(_encode_batch, batches):
-                arr[offset : offset + len(result)] = result
+        async def _encode_batch(offset: int, batch: list[str]) -> tuple[int, list[list[float]]]:
+            async with self._semaphore:
+                result = await self._request_with_retry(batch)
                 if offset > 0 and offset % (self._BATCH_SIZE * 10) == 0:
                     logger.info("HF API: encoded %d / %d texts", offset, n)
+                return offset, result
+
+        results = await asyncio.gather(*[_encode_batch(off, batch) for off, batch in batches])
+
+        for offset, result in results:
+            arr[offset : offset + len(result)] = result
 
         norms = np.linalg.norm(arr, axis=1, keepdims=True)
         norms[norms == 0] = 1
@@ -120,8 +134,6 @@ class HuggingFaceEmbeddingModel:
 FIELD_WEIGHTS: dict[str, float] = {
     "name": 1.0,
     "definition": 0.7,
-    "synonyms": 0.15,
-    "comment": 0.1,
 }
 
 
@@ -205,7 +217,7 @@ class EmbeddingService:
         h = hashlib.sha256()
         for tid, td in zip(term_ids, term_dicts):
             h.update(tid.encode())
-            for key in ("name", "definition", "synonyms", "comment"):
+            for key in FIELD_WEIGHTS:
                 val = td.get(key)
                 if val is not None:
                     h.update(str(val).encode())
@@ -243,7 +255,7 @@ class EmbeddingService:
         except Exception as e:
             logger.warning("Failed to save embedding cache: %s", e)
 
-    def build_index(self, term_ids: list[str], term_dicts: list[dict]) -> None:
+    async def build_index(self, term_ids: list[str], term_dicts: list[dict]) -> None:
         """Encode per-field texts and store alongside their *term_ids*.
 
         Uses a disk cache keyed by content hash — if the terms haven't
@@ -297,7 +309,7 @@ class EmbeddingService:
         # Single encode call for all fields — maximises batching and concurrency.
         self._field_embeddings = {}
         if combined_texts:
-            all_vecs = self._model.encode(combined_texts)
+            all_vecs = await self._model.encode(combined_texts)
             for field, (start, end) in field_slices.items():
                 mask = self._field_masks[field]
                 full_vecs = np.zeros((n, all_vecs.shape[1]), dtype=np.float32)
@@ -315,7 +327,7 @@ class EmbeddingService:
         # Persist to disk for next restart.
         self._save_cache(content_hash)
 
-    def search(self, query: str, top_k: int = 20) -> list[tuple[str, float, str]]:
+    async def search(self, query: str, top_k: int = 20) -> list[tuple[str, float, str]]:
         """Find the *top_k* most similar terms to *query*.
 
         The query is compared against each metadata field independently. The
@@ -332,7 +344,7 @@ class EmbeddingService:
         if not self._ids or not self._field_embeddings:
             return []
 
-        query_vec = self._model.encode([query])  # (1, dim)
+        query_vec = await self._model.encode([query])  # (1, dim)
         n = len(self._ids)
         # Track the best *weighted* cosine similarity per term across all
         # fields.  Each field's raw similarity is multiplied by its weight
