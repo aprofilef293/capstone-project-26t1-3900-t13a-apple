@@ -124,6 +124,16 @@ async def upload_ontology(request: Request, file: UploadFile = File(...)):
             yield f"data: {json.dumps({'error': str(e), 'error_code': 422})}\n\n"
             return
 
+        # Kick off embedding computation early — it only needs the parsed
+        # terms and is independent of preprocessing / Memgraph ingestion.
+        embedding_svc = getattr(request.app.state, "embedding_service", None)
+        embedding_task: asyncio.Task | None = None
+        if embedding_svc is not None:
+            active_terms = [t for t in terms if not t.is_obsolete]
+            ids = [t.id for t in active_terms]
+            term_dicts = [t.model_dump() for t in active_terms]
+            embedding_task = asyncio.create_task(embedding_svc.build_index(ids, term_dicts))
+
         try:
             # Preprocessing step
             preprocessor = OntologyGraphPreprocessor()
@@ -131,6 +141,8 @@ async def upload_ontology(request: Request, file: UploadFile = File(...)):
             yield f"data: {json.dumps({'progress': 50, 'stage': 'preprocessed'})}\n\n"
             await asyncio.sleep(0)
         except Exception as e:
+            if embedding_task:
+                embedding_task.cancel()
             yield f"data: {json.dumps({'error': str(e), 'error_code': 500})}\n\n"
             return
 
@@ -143,13 +155,9 @@ async def upload_ontology(request: Request, file: UploadFile = File(...)):
             await asyncio.to_thread(_ingest_relations, mg, relations)
             request.app.state.graph_cache = None
 
-            # Rebuild embedding index if the service is available
-            embedding_svc = getattr(request.app.state, "embedding_service", None)
-            if embedding_svc is not None:
-                active_terms = [t for t in terms if not t.is_obsolete]
-                ids = [t.id for t in active_terms]
-                term_dicts = [t.model_dump() for t in active_terms]
-                await asyncio.to_thread(embedding_svc.build_index, ids, term_dicts)
+            # Wait for embeddings to finish (may already be done).
+            if embedding_task:
+                await embedding_task
 
             yield f"data: {json.dumps({'progress': 100, 'stage': 'complete', 'filename': filename})}\n\n"
         except Exception as e:
