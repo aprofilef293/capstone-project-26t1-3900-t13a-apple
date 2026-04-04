@@ -348,7 +348,7 @@ def embedding_search(
     request: Request,
     q: str = Query(..., min_length=1, description="Free-text search query."),
     limit: int = Query(20, ge=1, le=100, description="Max results (1-100)."),
-    threshold: float = Query(0.3, ge=0.0, le=1.0, description="Minimum similarity score (0-1)."),
+    threshold: float = Query(0.5, ge=0.0, le=1.0, description="Minimum similarity score (0-1)."),
 ):
     """Semantic search powered by dense vector embeddings."""
     embedding_svc = getattr(request.app.state, "embedding_service", None)
