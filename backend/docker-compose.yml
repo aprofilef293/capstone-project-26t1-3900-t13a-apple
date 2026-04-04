@@ -31,12 +31,14 @@ services:
     volumes:
       - .:/app
       - /app/.venv
+      - embedding-cache:/app/.embedding_cache
     networks:
       - capstone
 
 volumes:
   memgraph-data:
   memgraph-log:
+  embedding-cache:
 
 networks:
   capstone:
