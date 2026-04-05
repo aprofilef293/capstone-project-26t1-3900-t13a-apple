@@ -1,3 +1,5 @@
+export {};
+
 type PickedNodes = {
   firstId: string;
   firstLabel: string;
@@ -23,8 +25,10 @@ type StoreWindow = Window & {
 
 const getStoreState = (win: Window): AppStoreState => {
   const store = (win as unknown as StoreWindow).__STORE__;
-  expect(store, "__STORE__ should be available").to.exist;
-  return store!.getState();
+  if (!store) {
+    throw new Error("__STORE__ should be available");
+  }
+  return store.getState();
 };
 
 describe('happy path for multi-select', () => {

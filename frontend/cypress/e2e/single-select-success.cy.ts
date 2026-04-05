@@ -1,3 +1,28 @@
+export {};
+
+type GraphNode = {
+    id: string;
+};
+
+type AppStoreState = {
+    nodes: GraphNode[];
+    setSelectedNodeId: (id: string | null) => void;
+};
+
+type StoreWindow = Window & {
+    STORE?: {
+        getState: () => AppStoreState;
+    };
+};
+
+const getStoreState = (win: Window): AppStoreState => {
+    const store = (win as unknown as StoreWindow).STORE;
+    if (!store) {
+        throw new Error("STORE should be available");
+    }
+    return store.getState();
+};
+
 describe('happy path for single-select', () => {
   beforeEach(() => {
     cy.intercept('POST', '/api/ontology/upload').as('uploadOntology')
@@ -31,11 +56,11 @@ describe('happy path for single-select', () => {
     cy.get('canvas').should('be.visible')
     
     // click on node in network graph page
-    cy.window().then((win: any) => {
-        const { nodes, setSelectedNodeId } = win.__STORE__.getState()
-        expect(nodes.length, "Graph has at least one node").to.be.greaterThan(0)
-        setSelectedNodeId(nodes[0].id)
-    })
+    cy.window().then((win) => {
+        const { nodes, setSelectedNodeId } = getStoreState(win);
+        expect(nodes.length, "Graph has at least one node").to.be.greaterThan(0);
+        setSelectedNodeId(nodes[0].id);
+    });
 
     // check side panel appears
     cy.contains("Node Data", { timeout: 10000 }).should("be.visible")

@@ -336,7 +336,7 @@ export const useStore = create<ExplorerState>((set) => ({
 
             if (!response.ok || !response.body) {
                 let errorMsg = response.statusText;
-                let errorCode = response.status;
+                const errorCode = response.status;
                 try {
                     const errorBody = await response.json();
                     // Try to extract a message from the error body
@@ -347,7 +347,7 @@ export const useStore = create<ExplorerState>((set) => ({
                             errorMsg = errorBody.detail;
                         }
                     }
-                } catch (e) {
+                } catch {
                     // fallback to statusText (ie. errorMsg)
                 }
                 localStorage.setItem('importStatus', 'error');
