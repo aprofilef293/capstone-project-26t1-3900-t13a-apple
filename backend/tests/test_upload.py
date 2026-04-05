@@ -1,10 +1,13 @@
-# tests/test_upload.py
+"""Integration tests for ontology upload endpoints against a real Memgraph instance."""
+
 import io
 import json
 
 import pytest
 
-sample_data_2 = b"""format-version: 1.2
+SAMPLE_OBO = b"""\
+format-version: 1.2
+ontology: test
 
 [Typedef]
 id: part_of
@@ -12,40 +15,50 @@ name: part_of
 is_transitive: true
 
 [Term]
-id: TEST:0000001
-name: test1
+id: TEST:0001
+name: root term
 namespace: testing_space
+def: "The root of everything" [REF:001]
 
 [Term]
-id: TEST:0000002
-name: test2
+id: TEST:0002
+name: child term
 namespace: testing_space
-is_a: TEST:0000001
+def: "A child of root" [REF:002]
+synonym: "kid term" EXACT []
+is_a: TEST:0001
 
 [Term]
-id: TEST:0000003
-name: test3
+id: TEST:0003
+name: related term
 namespace: testing_space
-relationship: part_of TEST:0000002
+relationship: part_of TEST:0002
 """
 
-sample_data_3 = b"""format-version: 1.2
-
-[Typedef]
-id: part_of
-name: part_of
-is_transitive: true
+SAMPLE_OBO_SMALL = b"""\
+format-version: 1.2
+ontology: test
 
 [Term]
-id: TEST:0000001
-name: test1
+id: TEST:0001
+name: only term
+namespace: testing_space
+"""
+
+SAMPLE_OBO_WITH_OBSOLETE = b"""\
+format-version: 1.2
+ontology: test
+
+[Term]
+id: TEST:0001
+name: active term
 namespace: testing_space
 
 [Term]
-id: TEST:0000002
-name: test2
+id: TEST:0002
+name: dead term
 namespace: testing_space
-is_a: TEST:0000001
+is_obsolete: true
 """
 
 
@@ -59,79 +72,256 @@ def _parse_sse_events(response_text):
     return events
 
 
-@pytest.mark.integration
-def test_file_sent(real_client):
-    response = real_client.post("/api/ontology/upload", files={})
-
-    assert response.status_code == 422
+# ---------------------------------------------------------------------------
+# Upload validation
+# ---------------------------------------------------------------------------
 
 
 @pytest.mark.integration
-def test_unsupported_format(real_client):
-    response = real_client.post(
-        "/api/ontology/upload",
-        files={"file": ("test.txt", sample_data_2, "text/plain")},
-    )
+class TestUploadValidation:
+    def test_no_file_returns_422(self, real_client):
+        resp = real_client.post("/api/ontology/upload", files={})
+        assert resp.status_code == 422
 
-    assert response.status_code == 400
+    def test_unsupported_extension_returns_400(self, real_client):
+        resp = real_client.post(
+            "/api/ontology/upload",
+            files={"file": ("data.txt", SAMPLE_OBO, "text/plain")},
+        )
+        assert resp.status_code == 400
+        assert "Unsupported file type" in resp.json()["detail"]
+
+    def test_csv_rejected(self, real_client):
+        resp = real_client.post(
+            "/api/ontology/upload",
+            files={"file": ("data.csv", b"a,b,c", "text/csv")},
+        )
+        assert resp.status_code == 400
+
+    def test_obo_extension_accepted(self, real_client):
+        resp = real_client.post(
+            "/api/ontology/upload",
+            files={"file": ("test.obo", io.BytesIO(SAMPLE_OBO), "text/plain")},
+        )
+        assert resp.status_code == 200
+
+    def test_owl_extension_accepted(self, real_client):
+        resp = real_client.post(
+            "/api/ontology/upload",
+            files={"file": ("test.owl", io.BytesIO(SAMPLE_OBO), "text/plain")},
+        )
+        # OWL extension is allowed even if content is OBO-formatted
+        assert resp.status_code != 400 or "Unsupported file type" not in resp.text
 
 
-@pytest.mark.integration
-def test_obo_integration(real_client):
-    response = real_client.post(
-        "/api/ontology/upload",
-        files={"file": ("test.obo", io.BytesIO(sample_data_2), "text/plain")},
-    )
-    assert response.status_code == 200
-
-    events = _parse_sse_events(response.text)
-    assert any(e.get("stage") == "complete" for e in events)
-
-    mg = real_client.app.state.memgraph
-    total_nodes = mg.execute_read("MATCH (n) RETURN n")
-    assert len(total_nodes) == 3
-
-    response = real_client.post(
-        "/api/ontology/upload",
-        files={"file": ("test.obo", io.BytesIO(sample_data_3), "text/plain")},
-    )
-    assert response.status_code == 200
-
-    total_nodes = mg.execute_read("MATCH (n) RETURN n")
-    assert len(total_nodes) == 2
-
-
-@pytest.mark.integration
-def test_corrupted_file(real_client):
-    response = real_client.post(
-        "/api/ontology/upload",
-        files={"file": ("bad.obo", io.BytesIO(b"not a valid ontology"), "text/plain")},
-    )
-    assert response.status_code == 200  # SSE stream still returns 200
-
-    events = _parse_sse_events(response.text)
-    assert any("error" in e for e in events)
+# ---------------------------------------------------------------------------
+# SSE progress stream
+# ---------------------------------------------------------------------------
 
 
 @pytest.mark.integration
-def test_list_ontologies(real_client):
-    real_client.post(
-        "/api/ontology/upload",
-        files={"file": ("test.obo", io.BytesIO(sample_data_3), "text/plain")},
-    )
+class TestUploadSSEStream:
+    def test_successful_upload_stages(self, real_client):
+        resp = real_client.post(
+            "/api/ontology/upload",
+            files={"file": ("test.obo", io.BytesIO(SAMPLE_OBO), "text/plain")},
+        )
+        events = _parse_sse_events(resp.text)
+        stages = [e.get("stage") for e in events if "stage" in e]
+        assert "parsed" in stages
+        assert "preprocessed" in stages
+        assert "terms_ingested" in stages
+        assert "complete" in stages
 
-    response = real_client.get("/api/ontology/list")
-    assert response.status_code == 200
-    data = response.json()
-    assert len(data) >= 1
+    def test_complete_event_includes_filename(self, real_client):
+        resp = real_client.post(
+            "/api/ontology/upload",
+            files={"file": ("myfile.obo", io.BytesIO(SAMPLE_OBO), "text/plain")},
+        )
+        events = _parse_sse_events(resp.text)
+        complete = next(e for e in events if e.get("stage") == "complete")
+        assert complete["filename"] == "myfile.obo"
+
+    def test_progress_increases(self, real_client):
+        resp = real_client.post(
+            "/api/ontology/upload",
+            files={"file": ("test.obo", io.BytesIO(SAMPLE_OBO), "text/plain")},
+        )
+        events = _parse_sse_events(resp.text)
+        progress_values = [e["progress"] for e in events if "progress" in e]
+        assert progress_values == sorted(progress_values)
+        assert progress_values[-1] == 100
+
+    def test_corrupted_file_returns_error_event(self, real_client):
+        resp = real_client.post(
+            "/api/ontology/upload",
+            files={"file": ("bad.obo", io.BytesIO(b"not valid ontology data"), "text/plain")},
+        )
+        assert resp.status_code == 200  # SSE stream always returns 200
+        events = _parse_sse_events(resp.text)
+        assert any("error" in e for e in events)
+
+
+# ---------------------------------------------------------------------------
+# Data ingestion verification
+# ---------------------------------------------------------------------------
 
 
 @pytest.mark.integration
-def test_owl_upload(real_client):
-    response = real_client.post(
-        "/api/ontology/upload",
-        files={"file": ("test.owl", io.BytesIO(sample_data_2), "text/plain")},
-    )
+class TestDataIngestion:
+    def test_correct_node_count(self, real_client):
+        real_client.post(
+            "/api/ontology/upload",
+            files={"file": ("test.obo", io.BytesIO(SAMPLE_OBO), "text/plain")},
+        )
+        mg = real_client.app.state.memgraph
+        nodes = mg.execute_read("MATCH (n:OntologyTerm) RETURN n.id AS id")
+        assert len(nodes) == 3
 
-    # owl parsing may fail on obo-formatted data, but it should not reject the extension
-    assert response.status_code != 400 or "Unsupported file type" not in response.text
+    def test_term_properties_stored(self, real_client):
+        real_client.post(
+            "/api/ontology/upload",
+            files={"file": ("test.obo", io.BytesIO(SAMPLE_OBO), "text/plain")},
+        )
+        mg = real_client.app.state.memgraph
+        rows = mg.execute_read(
+            "MATCH (n:OntologyTerm {id: 'TEST:0001'}) "
+            "RETURN n.name AS name, n.namespace AS namespace, n.definition AS definition"
+        )
+        assert len(rows) == 1
+        assert rows[0]["name"] == "root term"
+        assert rows[0]["namespace"] == "testing_space"
+        assert "root" in rows[0]["definition"].lower()
+
+    def test_synonyms_stored(self, real_client):
+        real_client.post(
+            "/api/ontology/upload",
+            files={"file": ("test.obo", io.BytesIO(SAMPLE_OBO), "text/plain")},
+        )
+        mg = real_client.app.state.memgraph
+        rows = mg.execute_read("MATCH (n:OntologyTerm {id: 'TEST:0002'}) RETURN n.synonyms AS synonyms")
+        assert len(rows) == 1
+        assert "kid term" in rows[0]["synonyms"]
+
+    def test_relations_created(self, real_client):
+        real_client.post(
+            "/api/ontology/upload",
+            files={"file": ("test.obo", io.BytesIO(SAMPLE_OBO), "text/plain")},
+        )
+        mg = real_client.app.state.memgraph
+        rels = mg.execute_read(
+            "MATCH (s:OntologyTerm)-[r:RELATES_TO]->(o:OntologyTerm) RETURN s.id AS src, r.type AS type, o.id AS tgt"
+        )
+        rel_tuples = {(r["src"], r["type"], r["tgt"]) for r in rels}
+        assert ("TEST:0002", "is_a", "TEST:0001") in rel_tuples
+        assert ("TEST:0003", "part_of", "TEST:0002") in rel_tuples
+
+    def test_source_file_stored(self, real_client):
+        real_client.post(
+            "/api/ontology/upload",
+            files={"file": ("provenance.obo", io.BytesIO(SAMPLE_OBO), "text/plain")},
+        )
+        mg = real_client.app.state.memgraph
+        rows = mg.execute_read("MATCH (n:OntologyTerm) RETURN DISTINCT n.source_file AS sf")
+        assert any(r["sf"] == "provenance.obo" for r in rows)
+
+    def test_obsolete_terms_excluded(self, real_client):
+        real_client.post(
+            "/api/ontology/upload",
+            files={"file": ("test.obo", io.BytesIO(SAMPLE_OBO_WITH_OBSOLETE), "text/plain")},
+        )
+        mg = real_client.app.state.memgraph
+        nodes = mg.execute_read("MATCH (n:OntologyTerm) RETURN n.id AS id")
+        ids = {n["id"] for n in nodes}
+        assert "TEST:0001" in ids
+        assert "TEST:0002" not in ids
+
+    def test_preprocessing_attributes_set(self, real_client):
+        real_client.post(
+            "/api/ontology/upload",
+            files={"file": ("test.obo", io.BytesIO(SAMPLE_OBO), "text/plain")},
+        )
+        mg = real_client.app.state.memgraph
+        rows = mg.execute_read(
+            "MATCH (n:OntologyTerm {id: 'TEST:0001'}) "
+            "RETURN n.x AS x, n.y AS y, n.size AS size, "
+            "n.colour AS colour, n.viewLevel AS viewLevel, "
+            "n.pagerank_score AS pr"
+        )
+        assert len(rows) == 1
+        row = rows[0]
+        assert row["x"] is not None
+        assert row["y"] is not None
+        assert row["size"] is not None
+        assert row["colour"] is not None
+        assert row["viewLevel"] is not None
+        assert row["pr"] is not None
+
+
+# ---------------------------------------------------------------------------
+# Re-upload replaces data
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.integration
+class TestReUpload:
+    def test_reupload_replaces_graph(self, real_client):
+        # Upload 3-term file
+        real_client.post(
+            "/api/ontology/upload",
+            files={"file": ("test.obo", io.BytesIO(SAMPLE_OBO), "text/plain")},
+        )
+        mg = real_client.app.state.memgraph
+        assert len(mg.execute_read("MATCH (n:OntologyTerm) RETURN n")) == 3
+
+        # Re-upload 1-term file — should replace, not append
+        real_client.post(
+            "/api/ontology/upload",
+            files={"file": ("test.obo", io.BytesIO(SAMPLE_OBO_SMALL), "text/plain")},
+        )
+        assert len(mg.execute_read("MATCH (n:OntologyTerm) RETURN n")) == 1
+
+    def test_reupload_clears_graph_cache(self, real_client):
+        real_client.post(
+            "/api/ontology/upload",
+            files={"file": ("test.obo", io.BytesIO(SAMPLE_OBO), "text/plain")},
+        )
+        # Populate the graph cache
+        real_client.get("/api/graph/")
+        assert real_client.app.state.graph_cache is not None
+
+        # Re-upload should clear the cache
+        real_client.post(
+            "/api/ontology/upload",
+            files={"file": ("test.obo", io.BytesIO(SAMPLE_OBO_SMALL), "text/plain")},
+        )
+        assert real_client.app.state.graph_cache is None
+
+
+# ---------------------------------------------------------------------------
+# List ontologies
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.integration
+class TestListOntologies:
+    def test_list_after_upload(self, real_client):
+        real_client.post(
+            "/api/ontology/upload",
+            files={"file": ("listed.obo", io.BytesIO(SAMPLE_OBO), "text/plain")},
+        )
+        resp = real_client.get("/api/ontology/list")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert len(data) >= 1
+        assert any(r["source_file"] == "listed.obo" for r in data)
+
+    def test_list_shows_term_count(self, real_client):
+        real_client.post(
+            "/api/ontology/upload",
+            files={"file": ("counted.obo", io.BytesIO(SAMPLE_OBO), "text/plain")},
+        )
+        resp = real_client.get("/api/ontology/list")
+        data = resp.json()
+        entry = next(r for r in data if r["source_file"] == "counted.obo")
+        assert entry["term_count"] == 3
