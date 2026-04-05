@@ -8,11 +8,6 @@ import pytest
 from app.models.upload import OntologyRelation, OntologyTerm
 from app.services.graph_preprocessing import OntologyGraphPreprocessor
 
-# ---------------------------------------------------------------------------
-# _generate_distinct_colours
-# ---------------------------------------------------------------------------
-
-
 class TestGenerateDistinctColours:
     def test_zero_returns_empty(self):
         assert OntologyGraphPreprocessor._generate_distinct_colours(0) == []
@@ -31,11 +26,6 @@ class TestGenerateDistinctColours:
     def test_single_colour(self):
         colours = OntologyGraphPreprocessor._generate_distinct_colours(1)
         assert len(colours) == 1
-
-
-# ---------------------------------------------------------------------------
-# _resolve_overlaps
-# ---------------------------------------------------------------------------
 
 
 class TestResolveOverlaps:
@@ -70,11 +60,6 @@ class TestResolveOverlaps:
         assert dist > 0
 
 
-# ---------------------------------------------------------------------------
-# _content_hash
-# ---------------------------------------------------------------------------
-
-
 class TestPreprocessorContentHash:
     def test_deterministic(self):
         terms = [OntologyTerm(id="T:1", name="t1"), OntologyTerm(id="T:2", name="t2")]
@@ -97,11 +82,6 @@ class TestPreprocessorContentHash:
         h1 = OntologyGraphPreprocessor._content_hash(terms_a, [])
         h2 = OntologyGraphPreprocessor._content_hash(terms_b, [])
         assert h1 != h2
-
-
-# ---------------------------------------------------------------------------
-# preprocess  (mocked tFDP)
-# ---------------------------------------------------------------------------
 
 
 class TestPreprocess:

@@ -14,11 +14,6 @@ from app.services.embedding import (
     build_field_texts,
 )
 
-# ---------------------------------------------------------------------------
-# build_field_texts
-# ---------------------------------------------------------------------------
-
-
 class TestBuildFieldTexts:
     def test_all_fields_present(self):
         term = {
@@ -58,11 +53,6 @@ class TestBuildFieldTexts:
         assert result == {"name": "x"}
 
 
-# ---------------------------------------------------------------------------
-# build_embedding_text
-# ---------------------------------------------------------------------------
-
-
 class TestBuildEmbeddingText:
     def test_joins_fields(self):
         term = {"name": "apoptosis", "definition": "Programmed cell death"}
@@ -76,11 +66,6 @@ class TestBuildEmbeddingText:
 
     def test_single_field(self):
         assert build_embedding_text({"name": "foo"}) == "foo"
-
-
-# ---------------------------------------------------------------------------
-# EmbeddingService._content_hash
-# ---------------------------------------------------------------------------
 
 
 class TestContentHash:
@@ -109,11 +94,6 @@ class TestContentHash:
         int(h, 16)  # should not raise
 
 
-# ---------------------------------------------------------------------------
-# EmbeddingService.is_ready
-# ---------------------------------------------------------------------------
-
-
 class TestIsReady:
     def test_not_ready_initially(self):
         model = MagicMock()
@@ -126,11 +106,6 @@ class TestIsReady:
         svc._ids = ["A:1"]
         svc._field_embeddings = {"name": np.array([[1.0, 0.0]])}
         assert svc.is_ready is True
-
-
-# ---------------------------------------------------------------------------
-# EmbeddingService.build_index  (mocked model)
-# ---------------------------------------------------------------------------
 
 
 def _make_mock_model(dim: int = 4):
@@ -184,11 +159,6 @@ class TestBuildIndex:
         model.encode.assert_not_called()
 
 
-# ---------------------------------------------------------------------------
-# EmbeddingService.search  (mocked model)
-# ---------------------------------------------------------------------------
-
-
 class TestSearch:
     @pytest.mark.asyncio
     async def test_search_empty_index(self):
@@ -233,11 +203,6 @@ class TestSearch:
 
         results = await svc.search("term", top_k=5)
         assert len(results) == 5
-
-
-# ---------------------------------------------------------------------------
-# HuggingFaceEmbeddingModel (mocked httpx)
-# ---------------------------------------------------------------------------
 
 
 class TestHuggingFaceEmbeddingModel:

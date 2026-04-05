@@ -6,9 +6,6 @@ from pydantic import ValidationError
 from app.models.graph import GraphData, SerializedEdge, SerializedNode
 from app.models.upload import OntologyRelation, OntologyTerm, OntologyUploadResponse
 
-# ---------------------------------------------------------------------------
-# OntologyTerm
-# ---------------------------------------------------------------------------
 
 
 class TestOntologyTerm:
@@ -72,9 +69,6 @@ class TestOntologyTerm:
         assert d["synonyms"] == ["a", "b"]
 
 
-# ---------------------------------------------------------------------------
-# OntologyRelation
-# ---------------------------------------------------------------------------
 
 
 class TestOntologyRelation:
@@ -89,9 +83,6 @@ class TestOntologyRelation:
             OntologyRelation(subject_id="T:1", relation_type="is_a")
 
 
-# ---------------------------------------------------------------------------
-# OntologyUploadResponse
-# ---------------------------------------------------------------------------
 
 
 class TestOntologyUploadResponse:
@@ -108,9 +99,6 @@ class TestOntologyUploadResponse:
         assert resp.namespaces == ["biological_process"]
 
 
-# ---------------------------------------------------------------------------
-# SerializedNode
-# ---------------------------------------------------------------------------
 
 
 class TestSerializedNode:
@@ -124,9 +112,6 @@ class TestSerializedNode:
         assert node.attributes["label"] == "test"
 
 
-# ---------------------------------------------------------------------------
-# SerializedEdge
-# ---------------------------------------------------------------------------
 
 
 class TestSerializedEdge:
@@ -146,9 +131,6 @@ class TestSerializedEdge:
         assert edge.attributes["type"] == "is_a"
 
 
-# ---------------------------------------------------------------------------
-# GraphData
-# ---------------------------------------------------------------------------
 
 
 class TestGraphData:

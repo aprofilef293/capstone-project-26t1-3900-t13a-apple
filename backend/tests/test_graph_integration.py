@@ -91,9 +91,7 @@ def seeded_client(request):
         yield client
 
 
-# ---------------------------------------------------------------------------
 # GET /api/graph/
-# ---------------------------------------------------------------------------
 
 
 @pytest.mark.integration
@@ -131,9 +129,7 @@ class TestGetGraph:
         assert data["options"]["type"] == "directed"
 
 
-# ---------------------------------------------------------------------------
 # GET /api/graph/node/{node_id}
-# ---------------------------------------------------------------------------
 
 
 @pytest.mark.integration
@@ -168,9 +164,7 @@ class TestGetNodeNeighborhood:
         assert "TEST:0002" in node_ids
 
 
-# ---------------------------------------------------------------------------
 # GET /api/graph/search
-# ---------------------------------------------------------------------------
 
 
 @pytest.mark.integration
@@ -212,9 +206,7 @@ class TestSearchGraph:
         assert len(node_ids) >= 1
 
 
-# ---------------------------------------------------------------------------
 # GET /api/graph/path
-# ---------------------------------------------------------------------------
 
 
 @pytest.mark.integration
@@ -261,9 +253,7 @@ class TestShortestPath:
         assert "TEST:0005" in node_ids
 
 
-# ---------------------------------------------------------------------------
 # GET /api/graph/paths
-# ---------------------------------------------------------------------------
 
 
 @pytest.mark.integration
@@ -293,9 +283,7 @@ class TestMultiShortestPaths:
         assert resp.status_code == 404
 
 
-# ---------------------------------------------------------------------------
 # GET /api/graph/semantic-search (disabled — returns 503)
-# ---------------------------------------------------------------------------
 
 
 @pytest.mark.integration

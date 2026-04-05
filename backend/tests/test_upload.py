@@ -72,9 +72,7 @@ def _parse_sse_events(response_text):
     return events
 
 
-# ---------------------------------------------------------------------------
 # Upload validation
-# ---------------------------------------------------------------------------
 
 
 @pytest.mark.integration
@@ -114,9 +112,7 @@ class TestUploadValidation:
         assert resp.status_code != 400 or "Unsupported file type" not in resp.text
 
 
-# ---------------------------------------------------------------------------
 # SSE progress stream
-# ---------------------------------------------------------------------------
 
 
 @pytest.mark.integration
@@ -162,9 +158,7 @@ class TestUploadSSEStream:
         assert any("error" in e for e in events)
 
 
-# ---------------------------------------------------------------------------
 # Data ingestion verification
-# ---------------------------------------------------------------------------
 
 
 @pytest.mark.integration
@@ -258,9 +252,7 @@ class TestDataIngestion:
         assert row["pr"] is not None
 
 
-# ---------------------------------------------------------------------------
 # Re-upload replaces data
-# ---------------------------------------------------------------------------
 
 
 @pytest.mark.integration
@@ -298,9 +290,7 @@ class TestReUpload:
         assert real_client.app.state.graph_cache is None
 
 
-# ---------------------------------------------------------------------------
 # List ontologies
-# ---------------------------------------------------------------------------
 
 
 @pytest.mark.integration
