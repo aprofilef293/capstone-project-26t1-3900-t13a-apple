@@ -4,10 +4,17 @@ import './index.css'
 import App from './App.tsx'
 
 // for testing with cypress - to click on node in network graph page
-if ((window as any).Cypress) {
-  import('./store/useStore').then(({ useStore }) => {
-    (window as any).__STORE__ = useStore
-  })
+type CypressWindow = Window & {
+  Cypress?: unknown;
+  __STORE__?: typeof import("./store/useStore").useStore;
+};
+
+const cypressWindow = window as CypressWindow;
+
+if (cypressWindow.Cypress) {
+  import("./store/useStore").then(({ useStore }) => {
+    cypressWindow.__STORE__ = useStore;
+  });
 }
 
 createRoot(document.getElementById('root')!).render(
