@@ -24,6 +24,7 @@ const setSearchResultsDescriptionMock = vi.fn();
 const doSemanticSearchMock = vi.fn();
 const setInfoPanelModeMock = vi.fn();
 const setSearchModeMock = vi.fn();
+const setSearchResultsExactTitleMock = vi.fn();
 
 // mocked data for graph (3 nodes)
 const baseNodes: MockNode[] = [
@@ -61,6 +62,7 @@ const mockState = {
   setSelectedNodeId: setSelectedNodeIdMock,
   setSearchResultsFuzzyTitle: setSearchResultsFuzzyTitleMock,
   setSearchResultsDescription: setSearchResultsDescriptionMock,
+  setSearchResultsExactTitle: setSearchResultsExactTitleMock,
   doSemanticSearch: doSemanticSearchMock,
   infoPanelMode: "closed" as "closed" | "search-results" | "node-info" | "multi-select",
   setInfoPanelMode: setInfoPanelModeMock,
