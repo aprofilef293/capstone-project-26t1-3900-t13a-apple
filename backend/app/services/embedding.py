@@ -72,9 +72,7 @@ class HuggingFaceEmbeddingModel:
         (model loading) responses using exponential backoff capped at 30 s.
         """
         for attempt in range(max_retries):
-            resp = await self._async_client.post(
-                self._url, json={"inputs": texts, "options": {"wait_for_model": True}}
-            )
+            resp = await self._async_client.post(self._url, json={"inputs": texts, "options": {"wait_for_model": True}})
             if resp.status_code in (429, 503):
                 wait = min(2**attempt, 30)
                 logger.warning("HF API %d, retrying in %ds...", resp.status_code, wait)
