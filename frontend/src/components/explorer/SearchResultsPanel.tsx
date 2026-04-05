@@ -1,7 +1,6 @@
 import { X, ChevronRight, type LucideIcon, ArrowRight } from "lucide-react";
 import { ScrollArea } from "../ui/scroll-area";
 import { useStore, type GraphNode } from "../../store/useStore";
-import { cn } from "@/lib/utils";
 
 function SearchResults({
     items,
@@ -18,41 +17,27 @@ function SearchResults({
 
     return (
         <div className="space-y-3">
-            {items.map((item) => {
-                const searchScore = Math.round((item.attributes.searchScore as number) * 100);
-                let searchScoreStyle = "";
-                if (!searchScore) {
-                    searchScoreStyle = "text-sidebar-foreground/40";
-                } else if (searchScore >= 70) {
-                    searchScoreStyle = "text-sidebar-foreground/100";
-                } else if (searchScore >= 50) {
-                    searchScoreStyle = "text-sidebar-foreground/80";
-                } else {
-                    searchScoreStyle = "text-sidebar-foreground/60";
-                }
-
-                return (
-                    <div
-                        key={item.id}
-                        onClick={() => onSelect(item.id)}
-                        className="flex items-center justify-between p-2.5 rounded-lg border border-sidebar-border/50 bg-sidebar-accent/30 hover:bg-sidebar-accent/80 hover:border-sidebar-border cursor-pointer group transition-all"
-                    >
-                        <div className="flex items-center gap-3">
-                            <div className="p-1.5 rounded-md text-black" style={{ backgroundColor: item.color }}>
-                                <Icon className="w-3.5 h-3.5"/>
-                            </div>
-                            <div>
-                                <div className="text-xs font-medium text-sidebar-foreground group-hover:text-blue-500 transition-colors truncate max-w-[200px]">{item.label}</div>
-                                <div className="text-[10px] text-sidebar-foreground/50">{item.type}</div>
-                            </div>
+            {items.map((item) => (
+                <div
+                    key={item.id}
+                    onClick={() => onSelect(item.id)}
+                    className="flex items-center justify-between p-2.5 rounded-lg border border-sidebar-border/50 bg-sidebar-accent/30 hover:bg-sidebar-accent/80 hover:border-sidebar-border cursor-pointer group transition-all"
+                >
+                    <div className="flex items-center gap-3">
+                        <div className="p-1.5 rounded-md text-black" style={{ backgroundColor: item.color }}>
+                            <Icon className="w-3.5 h-3.5"/>
                         </div>
-                        <div className="flex items-center gap-2">
-                            {searchMode === "semantic" && <div className={cn("p-1.5 rounded-md text-black text-xs font-medium bg-sidebar-accent", searchScoreStyle)}>{searchScore || ""}%</div>}
-                            <ChevronRight className="w-3.5 h-3.5 text-sidebar-foreground/30 group-hover:text-sidebar-foreground/80" />
+                        <div>
+                            <div className="text-xs font-medium text-sidebar-foreground group-hover:text-blue-500 transition-colors truncate max-w-[200px]">{item.label}</div>
+                            <div className="text-[10px] text-sidebar-foreground/50">{item.type}</div>
                         </div>
                     </div>
-                )
-            })}
+                    <div className="flex items-center gap-2">
+                        {searchMode === "semantic" && <div className="p-1.5 rounded-md text-black text-xs font-medium text-sidebar-foreground/60 bg-sidebar-accent">{Math.round((item.attributes.searchScore as number) * 100) || ""}%</div>}
+                        <ChevronRight className="w-3.5 h-3.5 text-sidebar-foreground/30 group-hover:text-sidebar-foreground/80" />
+                    </div>
+                </div>
+            ))}
         </div>
     );
 }
