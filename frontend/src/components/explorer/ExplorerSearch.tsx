@@ -76,7 +76,7 @@ export function ExplorerSearch({ viewMode = "graph" }: { viewMode?: "graph" | "h
 
         const q = searchQuery.trim();
         if (!q) {
-            return { fuzzyResults: [], descriptionResults: [] };
+            return { fuzzyResults: [], descriptionResults: []};
         }
 
         const exactTitleHits = filteredNodes.filter(node => node.label.toLowerCase().includes(q.toLowerCase())).slice(0, 50);
@@ -102,14 +102,14 @@ export function ExplorerSearch({ viewMode = "graph" }: { viewMode?: "graph" | "h
             : [];
 
         return { exactResults: exactTitleHits, fuzzyResults: fuzzyTitleHits, descriptionResults: descHits };
-    }, [fuse, filteredNodes, searchQuery]);
+    }, [fuse, filteredNodes, searchQuery, searchMode]);
 
     // Sync results to store in an effect (not during render)
     useEffect(() => {
         setSearchResultsExactTitle(exactResults ?? []);
         setSearchResultsFuzzyTitle(fuzzyResults);
         setSearchResultsDescription(descriptionResults);
-    }, [exactResults, fuzzyResults, descriptionResults, setSearchResultsFuzzyTitle, setSearchResultsDescription]);
+    }, [exactResults, fuzzyResults, descriptionResults, setSearchResultsExactTitle, setSearchResultsFuzzyTitle, setSearchResultsDescription]);
 
     const searchResults = useMemo(
         () => [...exactResults ?? [], ...fuzzyResults, ...descriptionResults],
