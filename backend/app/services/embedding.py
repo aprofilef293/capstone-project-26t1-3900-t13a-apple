@@ -1,10 +1,13 @@
-"""Embedding service for semantic vector search via HuggingFace Inference API."""
+"""Embedding service for semantic vector search via HuggingFace Inference API.
+Developing support for local embeddings...
+"""
 
 from __future__ import annotations
 
 import asyncio
 import hashlib
 import logging
+from sentence_transformers import SentenceTransformer
 from pathlib import Path
 
 import numpy as np
@@ -13,6 +16,25 @@ _CACHE_DIR = Path("/app/.embedding_cache")
 
 logger = logging.getLogger(__name__)
 
+class LocalEmbeddingModel:
+    _BATCH_SIZE = 64
+    _MAX_CONCURRENT = 16
+    _DIMENSION_CACHE: dict[str, int] = {}
+    
+    def __init__(self, model_name: str = "BAAI/bge-small-en-v1.5"):
+        self._model_name = model_name
+        self._model = SentenceTransformer(model_name, device='cpu')
+        
+    async def encode(self, texts: list[str]) -> np.ndarray:
+        if not texts:
+            return np.array([], dtype = np.float32)
+        return (await asyncio.to_thread(
+            self._model.encode, 
+            texts, 
+            batch_size = self._BATCH_SIZE, 
+            normalize_embeddings=True, 
+            convert_to_numpy=True
+        )).astype(np.float32)
 
 class HuggingFaceEmbeddingModel:
     """Client for generating text embeddings via the HuggingFace Inference API.
@@ -201,8 +223,8 @@ class EmbeddingService:
         model: The embedding model used to encode both index texts and queries.
     """
 
-    def __init__(self, model: HuggingFaceEmbeddingModel) -> None:
-        self._model = model
+    def __init__(self) -> None:
+        self._model = LocalEmbeddingModel()
         self._ids: list[str] = []
         # One embedding matrix per field, keyed by field name.
         self._field_embeddings: dict[str, np.ndarray] = {}
