@@ -7,10 +7,10 @@ from __future__ import annotations
 import asyncio
 import hashlib
 import logging
-from sentence_transformers import SentenceTransformer
 from pathlib import Path
 
 import numpy as np
+from sentence_transformers import SentenceTransformer
 
 _CACHE_DIR = Path("/app/.embedding_cache")
 
@@ -20,19 +20,19 @@ class LocalEmbeddingModel:
     _BATCH_SIZE = 64
     _MAX_CONCURRENT = 16
     _DIMENSION_CACHE: dict[str, int] = {}
-    
+
     def __init__(self, model_name: str = "BAAI/bge-small-en-v1.5"):
         self._model_name = model_name
         self._model = SentenceTransformer(model_name, device='cpu')
-        
+
     async def encode(self, texts: list[str]) -> np.ndarray:
         if not texts:
             return np.array([], dtype = np.float32)
         return (await asyncio.to_thread(
-            self._model.encode, 
-            texts, 
-            batch_size = self._BATCH_SIZE, 
-            normalize_embeddings=True, 
+            self._model.encode,
+            texts,
+            batch_size = self._BATCH_SIZE,
+            normalize_embeddings=True,
             convert_to_numpy=True
         )).astype(np.float32)
 

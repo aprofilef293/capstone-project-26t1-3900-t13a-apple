@@ -9,7 +9,6 @@ from app.config import Settings
 from app.routers import file_upload, graph
 from app.services.embedding import (
     EmbeddingService,
-    HuggingFaceEmbeddingModel,
 )
 from app.services.memgraph import MemgraphService
 
