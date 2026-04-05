@@ -98,7 +98,7 @@ export function ExplorerSearch({ viewMode = "graph" }: { viewMode?: "graph" | "h
             : [];
 
         return { fuzzyResults: fuzzyHits, descriptionResults: descHits };
-    }, [fuse, filteredNodes, searchQuery]);
+    }, [fuse, filteredNodes, searchQuery, searchMode]);
 
     // Sync results to store in an effect (not during render)
     useEffect(() => {
