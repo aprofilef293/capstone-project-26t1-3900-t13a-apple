@@ -2,6 +2,7 @@ import { X, ChevronRight, type LucideIcon, ArrowRight } from "lucide-react";
 import { ScrollArea } from "../ui/scroll-area";
 import { useStore, type GraphNode } from "../../store/useStore";
 import { cn } from "@/lib/utils";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "../ui/accordion";
 
 function SearchResults({
     items,
@@ -57,8 +58,35 @@ function SearchResults({
     );
 }
 
+function ResultsSection({
+    value,
+    sectionTitle,
+    items,
+    onSelect,
+}: {
+    value: string;
+    sectionTitle: string;
+    items: GraphNode[];
+    onSelect: (id: string) => void;
+}) {
+    if (items.length != 0) {
+        return (
+            <AccordionItem value={value}>
+                <AccordionTrigger className="cursor-pointer mt-2">
+                    <h3 className="text-xs font-bold text-sidebar-foreground mb-2 uppercase tracking-wider flex items-center gap-2">{sectionTitle}</h3>
+                </AccordionTrigger>
+                <AccordionContent className="mb-2">
+                    <SearchResults items={items} icon={ArrowRight} onSelect={onSelect} />
+                </AccordionContent>
+            </AccordionItem>
+        )
+    } else {
+        return <></>;
+    }
+}
+
 export function SearchResultsPanel() {
-    const { searchQuery, setSearchQuery, searchMode, searchResultsFuzzyTitle, searchResultsDescription, searchResultsSemantic,
+    const { searchQuery, setSearchQuery, searchMode, searchResultsExactTitle, searchResultsFuzzyTitle, searchResultsDescription, searchResultsSemantic,
         searchError, setViewLevel, setSelectedNodeId, setInfoPanelMode, searchResultsLoading
     } = useStore();
 
@@ -83,18 +111,18 @@ export function SearchResultsPanel() {
                 <span className="text-[12px] text-sidebar-foreground/70 font-mono tracking-wider mr-auto">Query: {searchQuery}</span>
             </div>
 
-            <ScrollArea className="flex-1 min-h-0 pb-6 px-6 pt-4">
-                {searchMode === "keyword" && !searchError && !searchResultsLoading && <>
-                    <h3 className="text-xs font-bold text-sidebar-foreground mb-4 uppercase tracking-wider flex items-center gap-2">Most Relevant</h3>
-                    <SearchResults items={searchResultsFuzzyTitle} icon={ArrowRight} onSelect={setSelectedNodeId} />
-                    {searchResultsDescription.length != 0 && (
-                        <h3 className="text-xs font-bold text-sidebar-foreground mt-4 mb-4 uppercase tracking-wider flex items-center gap-2">Suggested</h3>
-                    )}
-                    <SearchResults items={searchResultsDescription} icon={ArrowRight} onSelect={setSelectedNodeId} />
-                    {searchResultsFuzzyTitle.length == 0 && searchResultsDescription.length == 0 && (
-                        <div className="text-s text-sidebar-foreground/40 px-1">No results found.</div>
-                    )}
-                </>}
+            <ScrollArea className="flex-1 min-h-0 pb-6 px-6 pt-2">
+                {/* Keyword Search results */}
+                {searchMode === "keyword" && !searchError && !searchResultsLoading && <Accordion type="multiple" className="max-w-lg min-w-0" defaultValue={["title-exact", "title-fuzzy", "description"]}>
+                    {/* Exact title match */}
+                    <ResultsSection value="title-exact" sectionTitle="Most Relevant" items={searchResultsExactTitle} onSelect={setSelectedNodeId} />
+                    {/* Description match */}
+                    <ResultsSection value="description" sectionTitle="Related" items={searchResultsDescription} onSelect={setSelectedNodeId} />
+                    {/* Fuzzy title match */}
+                    <ResultsSection value="title-fuzzy" sectionTitle="Suggested" items={searchResultsFuzzyTitle} onSelect={setSelectedNodeId} />
+                </Accordion>}
+
+                {/* Semantic Search results */}
                 {searchMode === "semantic" && !searchError && !searchResultsLoading && <>
                     <SearchResults items={searchResultsSemantic} icon={ArrowRight} onSelect={setSelectedNodeId} searchMode="semantic" />
                     {searchResultsSemantic.length == 0 && (

@@ -18,6 +18,7 @@ export function ExplorerSearch({ viewMode = "graph" }: { viewMode?: "graph" | "h
         setViewLevel,
         nodes,
         setSelectedNodeId,
+        setSearchResultsExactTitle,
         setSearchResultsFuzzyTitle,
         setSearchResultsDescription,
         doSemanticSearch,
@@ -68,7 +69,7 @@ export function ExplorerSearch({ viewMode = "graph" }: { viewMode?: "graph" | "h
     }), [filteredNodes]);
 
     // Search Method: fuzzy on names, exact substring on descriptions/synonyms
-    const { fuzzyResults, descriptionResults } = useMemo(() => {
+    const { exactResults, fuzzyResults, descriptionResults } = useMemo(() => {
         if (searchMode === "semantic") {
             return {fuzzyResults: [], descriptionResults: []};
         }
@@ -78,15 +79,18 @@ export function ExplorerSearch({ viewMode = "graph" }: { viewMode?: "graph" | "h
             return { fuzzyResults: [], descriptionResults: [] };
         }
 
+        const exactTitleHits = filteredNodes.filter(node => node.label.toLowerCase().includes(q.toLowerCase())).slice(0, 50);
+        const exactIds = new Set(exactTitleHits.map(n => n.id));
+
         // Fuzzy search on label / id - ie can have typos
-        const fuzzyHits = fuse.search(q).slice(0, 50).map(r => r.item);
-        const fuzzyIds = new Set(fuzzyHits.map(n => n.id));
+        const fuzzyTitleHits = fuse.search(q).filter(node => !exactIds.has(node.item.id)).slice(0, 20).map(r => r.item);
+        const fuzzyIds = new Set(fuzzyTitleHits.map(n => n.id));
 
         // Exact substring search on definition + synonyms
         // Only runs if query is at least 3 chars to reduce matches
         const descHits = q.length >= 3
             ? filteredNodes.filter(node => {
-                if (fuzzyIds.has(node.id)) return false; // already in fuzzy results
+                if (fuzzyIds.has(node.id) || exactIds.has(node.id)) return false; // already in fuzzy results
                 const ql = q.toLowerCase();
                 const def = ((node.attributes.definition as string) ?? "").toLowerCase();
                 const syns: string[] = (node.attributes.synonyms as string[]) ?? [];
@@ -97,18 +101,19 @@ export function ExplorerSearch({ viewMode = "graph" }: { viewMode?: "graph" | "h
             }).slice(0, 20)
             : [];
 
-        return { fuzzyResults: fuzzyHits, descriptionResults: descHits };
+        return { exactResults: exactTitleHits, fuzzyResults: fuzzyTitleHits, descriptionResults: descHits };
     }, [fuse, filteredNodes, searchQuery]);
 
     // Sync results to store in an effect (not during render)
     useEffect(() => {
+        setSearchResultsExactTitle(exactResults ?? []);
         setSearchResultsFuzzyTitle(fuzzyResults);
         setSearchResultsDescription(descriptionResults);
-    }, [fuzzyResults, descriptionResults, setSearchResultsFuzzyTitle, setSearchResultsDescription]);
+    }, [exactResults, fuzzyResults, descriptionResults, setSearchResultsFuzzyTitle, setSearchResultsDescription]);
 
     const searchResults = useMemo(
-        () => [...fuzzyResults, ...descriptionResults],
-        [fuzzyResults, descriptionResults]
+        () => [...exactResults ?? [], ...fuzzyResults, ...descriptionResults],
+        [exactResults, fuzzyResults, descriptionResults]
     );
 
     const handleSearchTrigger = () => {
