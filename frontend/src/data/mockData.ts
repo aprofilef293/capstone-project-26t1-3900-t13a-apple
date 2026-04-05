@@ -15,12 +15,13 @@ export const INITIAL_NODES: GraphNode[] = [
             "Experiment ID": "EXP-00124",
             "Operator": "Dr. S. Chen",
             "Quality Check": "Passed",
-            "Notes": "Reaction proceeded slightly faster than expected. Viscosity increase observed at T+30m mark."
+            "Notes": "Reaction proceeded slightly faster than expected. Viscosity increase observed at T+30m mark.",
+            "searchScore": "0.834257"
         }
     },
-    { id: "n2", label: "Monomer A", type: "Material", x: -2, y: -2, size: 12, color: "#9333ea", attributes: { "Vol": "500ml" } },
+    { id: "n2", label: "Monomer A", type: "Material", x: -2, y: -2, size: 12, color: "#9333ea", attributes: { "Vol": "500ml", "searchScore": "0.3" } },
     { id: "n3", label: "Catalyst B", type: "Material", x: 2, y: -2, size: 12, color: "#9333ea", attributes: { "Mass": "5g" } },
-    { id: "n4", label: "Polymer X", type: "Outcome", x: 0, y: 3, size: 15, color: "#10b981", attributes: { "Yield": "98%" } },
+    { id: "n4", label: "Polymer X", type: "Outcome", x: 0, y: 3, size: 15, color: "#10b981", attributes: { "Yield": "98%", "searchScore": "0.6" } },
     { id: "n5", label: "Input Config", type: "Material", x: -3, y: -1, size: 10, color: "#eab308", attributes: {} },
     { id: "n6", label: "Heat Source", type: "Process", x: -2, y: -4, size: 10, color: "#ef4444", attributes: {} },
     { id: "n7", label: "Coolant", type: "Material", x: 3, y: -1, size: 10, color: "#eab308", attributes: {} }
