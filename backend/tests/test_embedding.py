@@ -14,6 +14,7 @@ from app.services.embedding import (
     build_field_texts,
 )
 
+
 class TestBuildFieldTexts:
     def test_all_fields_present(self):
         term = {

@@ -8,6 +8,7 @@ import pytest
 from app.models.upload import OntologyRelation, OntologyTerm
 from app.services.graph_preprocessing import OntologyGraphPreprocessor
 
+
 class TestGenerateDistinctColours:
     def test_zero_returns_empty(self):
         assert OntologyGraphPreprocessor._generate_distinct_colours(0) == []

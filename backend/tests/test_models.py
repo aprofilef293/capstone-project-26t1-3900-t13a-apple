@@ -7,7 +7,6 @@ from app.models.graph import GraphData, SerializedEdge, SerializedNode
 from app.models.upload import OntologyRelation, OntologyTerm, OntologyUploadResponse
 
 
-
 class TestOntologyTerm:
     def test_minimal(self):
         term = OntologyTerm(id="GO:001", name="test")
@@ -69,8 +68,6 @@ class TestOntologyTerm:
         assert d["synonyms"] == ["a", "b"]
 
 
-
-
 class TestOntologyRelation:
     def test_creation(self):
         rel = OntologyRelation(subject_id="T:1", relation_type="is_a", object_id="T:2")
@@ -81,8 +78,6 @@ class TestOntologyRelation:
     def test_missing_fields(self):
         with pytest.raises(ValidationError):
             OntologyRelation(subject_id="T:1", relation_type="is_a")
-
-
 
 
 class TestOntologyUploadResponse:
@@ -99,8 +94,6 @@ class TestOntologyUploadResponse:
         assert resp.namespaces == ["biological_process"]
 
 
-
-
 class TestSerializedNode:
     def test_minimal(self):
         node = SerializedNode(key="GO:001")
@@ -110,8 +103,6 @@ class TestSerializedNode:
     def test_with_attributes(self):
         node = SerializedNode(key="GO:001", attributes={"label": "test", "x": 1.0})
         assert node.attributes["label"] == "test"
-
-
 
 
 class TestSerializedEdge:
@@ -129,8 +120,6 @@ class TestSerializedEdge:
             attributes={"type": "is_a", "color": "#000"},
         )
         assert edge.attributes["type"] == "is_a"
-
-
 
 
 class TestGraphData:
