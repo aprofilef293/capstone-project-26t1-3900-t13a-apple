@@ -113,7 +113,7 @@ export function SearchResultsPanel() {
 
             <ScrollArea className="flex-1 min-h-0 pb-6 px-6 pt-2">
                 {/* Keyword Search results */}
-                {searchMode === "keyword" && !searchError && !searchResultsLoading && <Accordion type="multiple" className="max-w-lg min-w-0" defaultValue={["title-exact", "title-fuzzy", "description"]}>
+                {searchMode === "keyword" && !searchResultsLoading && <Accordion type="multiple" className="max-w-lg min-w-0" defaultValue={["title-exact", "title-fuzzy", "description"]}>
                     {/* Exact title match */}
                     <ResultsSection value="title-exact" sectionTitle="Most Relevant" items={searchResultsExactTitle} onSelect={setSelectedNodeId} />
                     {/* Description match */}
@@ -123,14 +123,14 @@ export function SearchResultsPanel() {
                 </Accordion>}
 
                 {/* Semantic Search results */}
-                {searchMode === "semantic" && !searchError && !searchResultsLoading && <>
+                {searchMode === "semantic" && !searchResultsLoading && <>
                     <SearchResults items={searchResultsSemantic} icon={ArrowRight} onSelect={setSelectedNodeId} searchMode="semantic" />
-                    {searchResultsSemantic.length == 0 && (
+                    {searchResultsSemantic.length == 0 && !searchError && (
                         <div className="text-s text-sidebar-foreground/40 px-1">No results found.</div>
                     )}
+                    {searchError && <div className="text-s text-red-400/70 px-1">An error occurred. Please try again later.</div>}
                 </>}
                 {searchResultsLoading && <div className="text-s text-sidebar-foreground/70 px-1">Loading...</div>}
-                {searchError && <div className="text-s text-red-400/70 px-1">An error occurred. Please try again later.</div>}
             </ScrollArea>
 
         </div>

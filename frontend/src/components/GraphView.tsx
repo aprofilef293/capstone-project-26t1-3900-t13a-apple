@@ -435,7 +435,7 @@ const GraphManager = forwardRef<GraphViewRef, unknown>((_, ref) => {
             const label = String(attrs.label ?? "");
             const matchesSearch = !!selectedNodeId
                                 || !query
-                                || (searchMode === "keyword" && searchMatchIds ? searchMatchIds.has(id) : label.toLowerCase().includes(query))
+                                || (searchMode === "keyword" && (searchMatchIds ? searchMatchIds.has(id) : label.toLowerCase().includes(query)))
                                 || (searchMode === "semantic" && (infoPanelMode === "closed" || searchResultsSemantic.filter(n => n.id == id).length > 0));
             const level = ((attrs.attributes as Record<string, unknown>)?.viewLevel as number) ?? 1;
 
