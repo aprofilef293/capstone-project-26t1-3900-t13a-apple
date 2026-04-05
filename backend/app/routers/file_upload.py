@@ -19,6 +19,20 @@ router = APIRouter()
 
 ALLOWED_EXTENSIONS = {".obo", ".owl"}
 
+# User-friendly error messages keyed by error code / pipeline stage.
+# The raw exception is still logged for debugging.
+USER_FRIENDLY_ERRORS: dict[int, str] = {
+    400: ("The file type you uploaded is not supported. Please upload a .obo or .owl file."),
+    413: ("The file is too large to process. Please reduce the file size and try again."),
+    422: (
+        "The file could not be parsed."
+        " It may be malformed or contain unsupported syntax."
+        " Please check the file and try again."
+    ),
+    500: ("Something went wrong while processing the ontology structure. Please try again or contact support."),
+    503: ("The database could not store the ontology data. Please try again later or contact support."),
+}
+
 NAMESPACE_COLORS = {
     "biological_process": "#2563eb",
     "molecular_function": "#9333ea",
@@ -101,7 +115,7 @@ async def upload_ontology(request: Request, file: UploadFile = File(...)):
     """
     ext = os.path.splitext(file.filename or "")[1].lower()
     if ext not in ALLOWED_EXTENSIONS:
-        raise HTTPException(status_code=400, detail=f"Unsupported file type: {ext}. Use .obo or .owl")
+        raise HTTPException(status_code=400, detail=USER_FRIENDLY_ERRORS[400])
 
     max_size = request.app.state.settings.upload_max_size_mb * 1024 * 1024
     content = bytearray()
@@ -110,7 +124,7 @@ async def upload_ontology(request: Request, file: UploadFile = File(...)):
         if len(content) > max_size:
             raise HTTPException(
                 status_code=413,
-                detail=f"File exceeds {request.app.state.settings.upload_max_size_mb}MB limit",
+                detail=USER_FRIENDLY_ERRORS[413],
             )
     content = bytes(content)
     filename = file.filename or "unknown"
@@ -134,7 +148,8 @@ async def upload_ontology(request: Request, file: UploadFile = File(...)):
             yield f"data: {json.dumps({'progress': 25, 'stage': 'parsed'})}\n\n"
             await asyncio.sleep(0)
         except Exception as e:
-            yield f"data: {json.dumps({'error': str(e), 'error_code': 422})}\n\n"
+            logger.error("Parse error for %s: %s", filename, e, exc_info=True)
+            yield f"data: {json.dumps({'error': USER_FRIENDLY_ERRORS[422], 'error_code': 422})}\n\n"
             return
 
         # Kick off embedding computation early — it only needs the parsed
@@ -160,7 +175,8 @@ async def upload_ontology(request: Request, file: UploadFile = File(...)):
         except Exception as e:
             if embedding_task:
                 embedding_task.cancel()
-            yield f"data: {json.dumps({'error': str(e), 'error_code': 500})}\n\n"
+            logger.error("Preprocessing error for %s: %s", filename, e, exc_info=True)
+            yield f"data: {json.dumps({'error': USER_FRIENDLY_ERRORS[500], 'error_code': 500})}\n\n"
             return
 
         try:
@@ -188,7 +204,8 @@ async def upload_ontology(request: Request, file: UploadFile = File(...)):
             logger.info("Total upload pipeline completed in %.3fs", time.perf_counter() - pipeline_start)
             yield f"data: {json.dumps({'progress': 100, 'stage': 'complete', 'filename': filename})}\n\n"
         except Exception as e:
-            yield f"data: {json.dumps({'error': str(e), 'error_code': 503})}\n\n"
+            logger.error("Ingestion error for %s: %s", filename, e, exc_info=True)
+            yield f"data: {json.dumps({'error': USER_FRIENDLY_ERRORS[503], 'error_code': 503})}\n\n"
         finally:
             os.unlink(tmp_path)
 
