@@ -50,8 +50,9 @@ def client(settings, mock_memgraph):
 def real_client(monkeypatch):
     if not _memgraph_running:
         pytest.skip("Memgraph is not running on localhost:7687")
-    monkeypatch.setenv("MEMGRAPH_USER", "memgraph")
-    monkeypatch.setenv("MEMGRAPH_PASSWORD", "memgraph")
+    monkeypatch.setenv("MEMGRAPH_USER", "")
+    monkeypatch.setenv("MEMGRAPH_PASSWORD", "")
+    monkeypatch.setenv("EMBEDDING_ENABLED", "false")
     app = create_app()
     with TestClient(app, raise_server_exceptions=True) as client:
         yield client

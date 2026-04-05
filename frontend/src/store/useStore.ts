@@ -54,6 +54,8 @@ interface ExplorerState {
     setSelectedNodeId: (id: string | null) => void;
     setGraphData: (nodes: GraphNode[], edges: GraphEdge[]) => void;
     setSearchQuery: (query: string) => void;
+    searchResultsExactTitle: GraphNode[],
+    setSearchResultsExactTitle: (results: GraphNode[]) => void,
     searchResultsFuzzyTitle: GraphNode[],
     setSearchResultsFuzzyTitle: (results: GraphNode[]) => void,
     searchResultsDescription: GraphNode[],
@@ -206,6 +208,8 @@ export const useStore = create<ExplorerState>((set) => ({
     }),
     setSearchQuery: (query) => set({ searchQuery: query }),
     // used to update results panel
+    searchResultsExactTitle: [],
+    setSearchResultsExactTitle: (results) => set({ searchResultsExactTitle: results }),
     searchResultsFuzzyTitle: [],
     setSearchResultsFuzzyTitle: (results) => set({ searchResultsFuzzyTitle: results }),
     searchResultsDescription: [],
