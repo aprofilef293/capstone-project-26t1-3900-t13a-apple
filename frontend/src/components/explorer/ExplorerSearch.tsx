@@ -112,12 +112,14 @@ export function ExplorerSearch({ viewMode = "graph" }: { viewMode?: "graph" | "h
     );
 
     const handleSearchTrigger = () => {
-        if (searchQuery.trim()) {
+        const queryStr = inputValue.trim();
+        if (queryStr) {
+            setSearchQuery(queryStr);
             setInfoPanelMode('search-results');
             setIsOpen(false);
         }
-        if (searchMode === "semantic") {
-            doSemanticSearch();
+        if (searchMode === "semantic" && queryStr) {
+            doSemanticSearch(queryStr);
         }
     };
 
