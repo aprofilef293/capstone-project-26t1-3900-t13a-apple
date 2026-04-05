@@ -31,8 +31,18 @@ jobs:
       - name: Install Poetry
         run: pip install poetry
 
+      - name: Cache Poetry virtualenv
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/pypoetry
+            backend/.venv
+          key: poetry-${{ hashFiles('backend/poetry.lock') }}
+
       - name: Install dependencies
-        run: poetry install --no-interaction
+        run: |
+          poetry config virtualenvs.in-project true
+          poetry install --no-interaction
 
       - name: Check formatting
         run: poetry run ruff format --check .
@@ -61,8 +71,18 @@ jobs:
       - name: Install Poetry
         run: pip install poetry
 
+      - name: Cache Poetry virtualenv
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/pypoetry
+            backend/.venv
+          key: poetry-${{ hashFiles('backend/poetry.lock') }}
+
       - name: Install dependencies
-        run: poetry install --no-interaction
+        run: |
+          poetry config virtualenvs.in-project true
+          poetry install --no-interaction
 
       - name: Run tests
         run: poetry run pytest --tb=short
