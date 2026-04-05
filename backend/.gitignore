@@ -1,6 +1,8 @@
 __pycache__/
 *.py[cod]
 
+.embedding_cache/
+
 *.egg-info/
 dist/
 

@@ -13,10 +13,11 @@ from app.services.embedding import (
 )
 from app.services.memgraph import MemgraphService
 
+logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(levelname)s %(message)s")
 logger = logging.getLogger(__name__)
 
 
-def _rebuild_embedding_index(mg: MemgraphService, embedding_svc: EmbeddingService) -> None:
+async def _rebuild_embedding_index(mg: MemgraphService, embedding_svc: EmbeddingService) -> None:
     """Populate the vector index from terms already stored in Memgraph."""
     records = mg.execute_read(
         "MATCH (n:OntologyTerm) "
@@ -28,7 +29,7 @@ def _rebuild_embedding_index(mg: MemgraphService, embedding_svc: EmbeddingServic
         return
     ids = [r["id"] for r in records]
     term_dicts = [dict(r) for r in records]
-    embedding_svc.build_index(ids, term_dicts)
+    await embedding_svc.build_index(ids, term_dicts)
 
 
 def create_app() -> FastAPI:
@@ -53,7 +54,7 @@ def create_app() -> FastAPI:
                 )
                 model = HuggingFaceEmbeddingModel(settings.embedding_model_name, settings.embedding_hf_token)
                 app.state.embedding_service = EmbeddingService(model)
-                _rebuild_embedding_index(app.state.memgraph, app.state.embedding_service)
+                await _rebuild_embedding_index(app.state.memgraph, app.state.embedding_service)
             except Exception as e:
                 logger.warning("Embedding service failed to start, search will be unavailable: %s", e)
                 app.state.embedding_service = None
