@@ -179,8 +179,11 @@ async def upload_ontology(request: Request, file: UploadFile = File(...)):
 
             # Wait for embeddings to finish (may already be done).
             if embedding_task:
-                await embedding_task
-                logger.info("Embedding index built in %.3fs", time.perf_counter() - embedding_start)
+                try:
+                    await embedding_task
+                    logger.info("Embedding index built in %.3fs", time.perf_counter() - embedding_start)
+                except Exception as emb_err:
+                    logger.warning("Embedding index failed (non-fatal): %s", emb_err)
 
             logger.info("Total upload pipeline completed in %.3fs", time.perf_counter() - pipeline_start)
             yield f"data: {json.dumps({'progress': 100, 'stage': 'complete', 'filename': filename})}\n\n"
