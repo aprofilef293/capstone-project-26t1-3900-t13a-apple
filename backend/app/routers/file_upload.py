@@ -1,7 +1,9 @@
 import asyncio
 import json
+import logging
 import os
 import tempfile
+import time
 
 from fastapi import APIRouter, File, HTTPException, Request, UploadFile
 from fastapi.responses import StreamingResponse
@@ -10,6 +12,8 @@ from app.models.upload import OntologyRelation, OntologyTerm
 from app.services.graph_preprocessing import OntologyGraphPreprocessor
 from app.services.memgraph import MemgraphService
 from app.services.ontology_parser import parse_ontology
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -116,41 +120,72 @@ async def upload_ontology(request: Request, file: UploadFile = File(...)):
             tmp.write(content)
             tmp_path = tmp.name
 
+        pipeline_start = time.perf_counter()
+
         try:
+            t0 = time.perf_counter()
             terms, relations = await asyncio.to_thread(parse_ontology, tmp_path)
+            logger.info(
+                "Parsing completed in %.3fs (%d terms, %d relations)",
+                time.perf_counter() - t0,
+                len(terms),
+                len(relations),
+            )
             yield f"data: {json.dumps({'progress': 25, 'stage': 'parsed'})}\n\n"
             await asyncio.sleep(0)
         except Exception as e:
             yield f"data: {json.dumps({'error': str(e), 'error_code': 422})}\n\n"
             return
 
+        # Kick off embedding computation early — it only needs the parsed
+        # terms and is independent of preprocessing / Memgraph ingestion.
+        embedding_svc = getattr(request.app.state, "embedding_service", None)
+        embedding_task: asyncio.Task | None = None
+        embedding_start: float | None = None
+        if embedding_svc is not None:
+            active_terms = [t for t in terms if not t.is_obsolete]
+            ids = [t.id for t in active_terms]
+            term_dicts = [t.model_dump() for t in active_terms]
+            embedding_start = time.perf_counter()
+            embedding_task = asyncio.create_task(embedding_svc.build_index(ids, term_dicts))
+
         try:
             # Preprocessing step
+            t0 = time.perf_counter()
             preprocessor = OntologyGraphPreprocessor()
             terms = await asyncio.to_thread(preprocessor.preprocess, terms, relations)
+            logger.info("Preprocessing completed in %.3fs", time.perf_counter() - t0)
             yield f"data: {json.dumps({'progress': 50, 'stage': 'preprocessed'})}\n\n"
             await asyncio.sleep(0)
         except Exception as e:
+            if embedding_task:
+                embedding_task.cancel()
             yield f"data: {json.dumps({'error': str(e), 'error_code': 500})}\n\n"
             return
 
         try:
             mg = request.app.state.memgraph
+
+            t0 = time.perf_counter()
             await asyncio.to_thread(_ingest_terms, mg, terms, filename)
+            logger.info("Term ingestion completed in %.3fs", time.perf_counter() - t0)
             yield f"data: {json.dumps({'progress': 75, 'stage': 'terms_ingested'})}\n\n"
             await asyncio.sleep(0)
 
+            t0 = time.perf_counter()
             await asyncio.to_thread(_ingest_relations, mg, relations)
+            logger.info("Relation ingestion completed in %.3fs", time.perf_counter() - t0)
             request.app.state.graph_cache = None
 
-            # Rebuild embedding index if the service is available
-            embedding_svc = getattr(request.app.state, "embedding_service", None)
-            if embedding_svc is not None:
-                active_terms = [t for t in terms if not t.is_obsolete]
-                ids = [t.id for t in active_terms]
-                term_dicts = [t.model_dump() for t in active_terms]
-                await asyncio.to_thread(embedding_svc.build_index, ids, term_dicts)
+            # Wait for embeddings to finish (may already be done).
+            if embedding_task:
+                try:
+                    await embedding_task
+                    logger.info("Embedding index built in %.3fs", time.perf_counter() - embedding_start)
+                except Exception as emb_err:
+                    logger.warning("Embedding index failed (non-fatal): %s", emb_err)
 
+            logger.info("Total upload pipeline completed in %.3fs", time.perf_counter() - pipeline_start)
             yield f"data: {json.dumps({'progress': 100, 'stage': 'complete', 'filename': filename})}\n\n"
         except Exception as e:
             yield f"data: {json.dumps({'error': str(e), 'error_code': 503})}\n\n"

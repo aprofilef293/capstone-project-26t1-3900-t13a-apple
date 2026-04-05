@@ -1,9 +1,12 @@
 import colorsys
+import hashlib
+import json
 import logging
 import math
 import os
 import random
 import sys
+from pathlib import Path
 
 import networkx as nx
 import numpy as np
@@ -12,6 +15,8 @@ import scipy.spatial
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
+
+_CACHE_DIR = Path("/app/.preprocessing_cache")
 
 
 # Sample usage
@@ -122,10 +127,75 @@ class OntologyGraphPreprocessor:
 
         return pos
 
+    @staticmethod
+    def _content_hash(terms: list[OntologyTerm], relations: list[OntologyRelation]) -> str:
+        """Hash graph topology (node IDs + edges) for cache keying."""
+        h = hashlib.sha256()
+        for t in sorted(terms, key=lambda t: t.id):
+            h.update(t.id.encode())
+        for r in sorted(relations, key=lambda r: (r.subject_id, r.object_id, r.relation_type)):
+            h.update(f"{r.subject_id}:{r.relation_type}:{r.object_id}".encode())
+        return h.hexdigest()[:16]
+
+    def _try_load_cache(self, content_hash: str, term_map: dict[str, OntologyTerm]) -> bool:
+        """Load cached preprocessing results if available."""
+        cache_file = _CACHE_DIR / f"preprocess_{content_hash}.npz"
+        if not cache_file.exists():
+            return False
+        try:
+            data = np.load(cache_file, allow_pickle=True)
+            node_ids = list(data["node_ids"])
+            attrs = json.loads(str(data["attrs"]))
+            for nid in node_ids:
+                if nid not in term_map or nid not in attrs:
+                    return False
+                a = attrs[nid]
+                term = term_map[nid]
+                term.x = a["x"]
+                term.y = a["y"]
+                term.size = a["size"]
+                term.colour = a["colour"]
+                term.viewLevel = a["viewLevel"]
+                term.pagerank_score = a["pagerank_score"]
+                term.percentile_rank = a["percentile_rank"]
+            logger.info("[Preprocessor] Loaded from cache (%s)", cache_file.name)
+            return True
+        except Exception as e:
+            logger.warning("[Preprocessor] Cache load failed, will recompute: %s", e)
+            return False
+
+    def _save_cache(self, content_hash: str, terms: list[OntologyTerm]) -> None:
+        """Persist preprocessing results to disk."""
+        try:
+            _CACHE_DIR.mkdir(parents=True, exist_ok=True)
+            node_ids = [t.id for t in terms]
+            attrs = {}
+            for t in terms:
+                attrs[t.id] = {
+                    "x": t.x,
+                    "y": t.y,
+                    "size": t.size,
+                    "colour": t.colour,
+                    "viewLevel": t.viewLevel,
+                    "pagerank_score": t.pagerank_score,
+                    "percentile_rank": t.percentile_rank,
+                }
+            cache_file = _CACHE_DIR / f"preprocess_{content_hash}.npz"
+            np.savez(cache_file, node_ids=np.array(node_ids, dtype=object), attrs=json.dumps(attrs))
+            logger.info("[Preprocessor] Saved cache (%s)", cache_file.name)
+        except Exception as e:
+            logger.warning("[Preprocessor] Failed to save cache: %s", e)
+
     def preprocess(self, terms: list[OntologyTerm], relations: list[OntologyRelation]) -> list[OntologyTerm]:
         logger.info("[Preprocessor] Building graph structures...")
-        G = nx.Graph()
         term_map = {term.id: term for term in terms}
+
+        # Check cache first
+        content_hash = self._content_hash(terms, relations)
+        if self._try_load_cache(content_hash, term_map):
+            terms.sort(key=lambda t: t.size, reverse=True)
+            return terms
+        G = nx.Graph()
 
         G.add_edges_from((rel.subject_id, rel.object_id) for rel in relations)
         G.add_nodes_from(term_map.keys())
@@ -238,5 +308,6 @@ class OntologyGraphPreprocessor:
                 orbit_r += spacing
 
         logger.info("[Preprocessor] Graph preprocessing complete.")
+        self._save_cache(content_hash, terms)
         terms.sort(key=lambda t: t.size, reverse=True)
         return terms
