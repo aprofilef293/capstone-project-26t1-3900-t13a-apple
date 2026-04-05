@@ -87,7 +87,7 @@ class TestUploadValidation:
             files={"file": ("data.txt", SAMPLE_OBO, "text/plain")},
         )
         assert resp.status_code == 400
-        assert "Unsupported file type" in resp.json()["detail"]
+        assert "not supported" in resp.json()["detail"]
 
     def test_csv_rejected(self, real_client):
         resp = real_client.post(
@@ -109,7 +109,7 @@ class TestUploadValidation:
             files={"file": ("test.owl", io.BytesIO(SAMPLE_OBO), "text/plain")},
         )
         # OWL extension is allowed even if content is OBO-formatted
-        assert resp.status_code != 400 or "Unsupported file type" not in resp.text
+        assert resp.status_code != 400 or "not supported" not in resp.text
 
 
 # SSE progress stream
