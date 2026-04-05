@@ -1,9 +1,13 @@
+import logging
 import math
+import time
 
 from fastapi import APIRouter, HTTPException, Query, Request
 from fastapi.responses import JSONResponse
 
 from app.models.graph import GraphData, SerializedEdge, SerializedNode
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -125,14 +129,22 @@ def get_graph(
     """
     cached = getattr(request.app.state, "graph_cache", None)
     if cached is not None:
+        logger.info("GET /graph served from cache")
         return cached
 
+    t0 = time.perf_counter()
     mg = request.app.state.memgraph
     records = mg.execute_read(
         "MATCH (n:OntologyTerm) OPTIONAL MATCH (n)-[r]->(m:OntologyTerm) RETURN n, r, m",
     )
     result = _build_graph_data_from_paths(records)
     request.app.state.graph_cache = result
+    logger.info(
+        "GET /graph completed in %.3fs (%d nodes, %d edges)",
+        time.perf_counter() - t0,
+        len(result.nodes),
+        len(result.edges),
+    )
     return result
 
 
@@ -161,6 +173,7 @@ def get_node_neighborhood(
     hops to collect neighboring nodes and the edges that connect them.
     Returns **404** if no node with the given ID exists in the graph.
     """
+    t0 = time.perf_counter()
     mg = request.app.state.memgraph
 
     cypher = (
@@ -173,7 +186,9 @@ def get_node_neighborhood(
     records = mg.execute_read(cypher, {"id": node_id})
     if not records:
         raise HTTPException(status_code=404, detail=f"Node '{node_id}' not found")
-    return _build_graph_data_from_paths(records)
+    result = _build_graph_data_from_paths(records)
+    logger.info("GET /node/%s (depth=%d) completed in %.3fs", node_id, depth, time.perf_counter() - t0)
+    return result
 
 
 @router.get(
@@ -200,6 +215,7 @@ def get_shortest_path(
     Uses Memgraph's ``shortestPath`` to find the shortest undirected path
     between *source* and *target*, bounded by *max_depth* hops.
     """
+    t0 = time.perf_counter()
     mg = request.app.state.memgraph
 
     if source == target:
@@ -236,7 +252,9 @@ def get_shortest_path(
             detail=f"No path found between '{source}' and '{target}' within {max_depth} hops",
         )
 
-    return _build_graph_data_from_paths(records)
+    result = _build_graph_data_from_paths(records)
+    logger.info("GET /path %s -> %s completed in %.3fs", source, target, time.perf_counter() - t0)
+    return result
 
 
 @router.get(
@@ -267,6 +285,7 @@ def get_multi_shortest_paths(
     if len(ids) > 10:
         raise HTTPException(status_code=422, detail="At most 10 node IDs are allowed")
 
+    t0 = time.perf_counter()
     mg = request.app.state.memgraph
 
     pairs = [[ids[i], ids[j]] for i in range(len(ids)) for j in range(i + 1, len(ids))]
@@ -296,7 +315,9 @@ def get_multi_shortest_paths(
             detail=f"No paths found between any of the supplied nodes within {max_depth} hops",
         )
 
-    return _build_graph_data_from_paths(records)
+    result = _build_graph_data_from_paths(records)
+    logger.info("GET /paths (%d nodes, %d pairs) completed in %.3fs", len(ids), len(pairs), time.perf_counter() - t0)
+    return result
 
 
 @router.get(
@@ -323,6 +344,7 @@ def search_graph(
     immediate neighbors and the edges between them. The total number of
     result rows is limited to 100.
     """
+    t0 = time.perf_counter()
     mg = request.app.state.memgraph
     records = mg.execute_read(
         "MATCH (n:OntologyTerm) WHERE toLower(n.name) CONTAINS toLower($q) "
@@ -330,7 +352,9 @@ def search_graph(
         "RETURN n, r, m LIMIT 100",
         {"q": q},
     )
-    return _build_graph_data_from_paths(records)
+    result = _build_graph_data_from_paths(records)
+    logger.info("GET /search q=%r completed in %.3fs (%d results)", q, time.perf_counter() - t0, len(result.nodes))
+    return result
 
 
 @router.get(
@@ -351,6 +375,7 @@ async def embedding_search(
     threshold: float = Query(0.5, ge=0.0, le=1.0, description="Minimum similarity score (0-1)."),
 ):
     """Semantic search powered by dense vector embeddings."""
+    t0 = time.perf_counter()
     embedding_svc = getattr(request.app.state, "embedding_service", None)
     if embedding_svc is None or not embedding_svc.is_ready:
         return JSONResponse(
@@ -387,4 +412,5 @@ async def embedding_search(
     # Return nodes sorted by score descending (matched nodes first, then neighbors)
     graph.nodes.sort(key=lambda n: n.attributes.get("searchScore", -1), reverse=True)
 
+    logger.info("GET /semantic-search q=%r completed in %.3fs (%d matches)", q, time.perf_counter() - t0, len(top_ids))
     return graph

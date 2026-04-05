@@ -31,6 +31,7 @@ services:
       - ./backend:/app
       - /app/.venv
       - embedding-cache:/app/.embedding_cache
+      - preprocessing-cache:/app/.preprocessing_cache
 
   frontend:
     build:
@@ -50,3 +51,4 @@ volumes:
   memgraph-data:
   memgraph-log:
   embedding-cache:
+  preprocessing-cache:
