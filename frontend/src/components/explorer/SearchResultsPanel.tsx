@@ -90,16 +90,16 @@ export function SearchResultsPanel() {
                     {/* Title match */}
                     {searchResultsFuzzyTitle.length != 0 && (<AccordionItem value="title">
                         <AccordionTrigger className="cursor-pointer">
-                            <h3 className="text-xs font-bold text-sidebar-foreground mb-4 uppercase tracking-wider flex items-center gap-2">Most Relevant</h3>
+                            <h3 className="text-xs font-bold text-sidebar-foreground mb-2 uppercase tracking-wider flex items-center gap-2">Most Relevant</h3>
                         </AccordionTrigger>
                         <AccordionContent>
                             <SearchResults items={searchResultsFuzzyTitle} icon={ArrowRight} onSelect={setSelectedNodeId} />
                         </AccordionContent>
                     </AccordionItem>)}
                     {/* Description match */}
-                    {searchResultsDescription.length != 0 && (<AccordionItem value="description">
+                    {searchResultsDescription.length != 0 && (<AccordionItem value="description" className="mt-2">
                         <AccordionTrigger className="cursor-pointer">
-                            <h3 className="text-xs font-bold text-sidebar-foreground mt-4 mb-4 uppercase tracking-wider flex items-center gap-2">Suggested</h3>
+                            <h3 className="text-xs font-bold text-sidebar-foreground mb-2 uppercase tracking-wider flex items-center gap-2">Suggested</h3>
                         </AccordionTrigger>
                         <AccordionContent>
                             <SearchResults items={searchResultsDescription} icon={ArrowRight} onSelect={setSelectedNodeId} />
