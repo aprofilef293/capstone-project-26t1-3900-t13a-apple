@@ -53,7 +53,6 @@ def create_app() -> FastAPI:
                     settings.embedding_hf_token[:10] if settings.embedding_hf_token else "NONE",
                 )
                 model = HuggingFaceEmbeddingModel(settings.embedding_model_name, settings.embedding_hf_token)
-                await model.ensure_ready()
                 app.state.embedding_service = EmbeddingService(model)
                 await _rebuild_embedding_index(app.state.memgraph, app.state.embedding_service)
             except Exception as e:
