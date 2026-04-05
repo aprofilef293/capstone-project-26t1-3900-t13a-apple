@@ -8,12 +8,12 @@ import time
 from fastapi import APIRouter, File, HTTPException, Request, UploadFile
 from fastapi.responses import StreamingResponse
 
-logger = logging.getLogger(__name__)
-
 from app.models.upload import OntologyRelation, OntologyTerm
 from app.services.graph_preprocessing import OntologyGraphPreprocessor
 from app.services.memgraph import MemgraphService
 from app.services.ontology_parser import parse_ontology
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -125,7 +125,12 @@ async def upload_ontology(request: Request, file: UploadFile = File(...)):
         try:
             t0 = time.perf_counter()
             terms, relations = await asyncio.to_thread(parse_ontology, tmp_path)
-            logger.info("Parsing completed in %.3fs (%d terms, %d relations)", time.perf_counter() - t0, len(terms), len(relations))
+            logger.info(
+                "Parsing completed in %.3fs (%d terms, %d relations)",
+                time.perf_counter() - t0,
+                len(terms),
+                len(relations),
+            )
             yield f"data: {json.dumps({'progress': 25, 'stage': 'parsed'})}\n\n"
             await asyncio.sleep(0)
         except Exception as e:

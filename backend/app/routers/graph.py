@@ -5,9 +5,9 @@ import time
 from fastapi import APIRouter, HTTPException, Query, Request
 from fastapi.responses import JSONResponse
 
-logger = logging.getLogger(__name__)
-
 from app.models.graph import GraphData, SerializedEdge, SerializedNode
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -139,7 +139,12 @@ def get_graph(
     )
     result = _build_graph_data_from_paths(records)
     request.app.state.graph_cache = result
-    logger.info("GET /graph completed in %.3fs (%d nodes, %d edges)", time.perf_counter() - t0, len(result.nodes), len(result.edges))
+    logger.info(
+        "GET /graph completed in %.3fs (%d nodes, %d edges)",
+        time.perf_counter() - t0,
+        len(result.nodes),
+        len(result.edges),
+    )
     return result
 
 
