@@ -22,11 +22,15 @@ ALLOWED_EXTENSIONS = {".obo", ".owl"}
 # User-friendly error messages keyed by error code / pipeline stage.
 # The raw exception is still logged for debugging.
 USER_FRIENDLY_ERRORS: dict[int, str] = {
-    400: "The file type you uploaded is not supported. Please upload a .obo or .owl file.",
-    413: "The file is too large to process. Please reduce the file size and try again.",
-    422: "The file could not be parsed. It may be malformed or contain unsupported syntax. Please check the file and try again.",
-    500: "Something went wrong while processing the ontology structure. Please try again or contact support.",
-    503: "The database could not store the ontology data. Please try again later or contact support.",
+    400: ("The file type you uploaded is not supported. Please upload a .obo or .owl file."),
+    413: ("The file is too large to process. Please reduce the file size and try again."),
+    422: (
+        "The file could not be parsed."
+        " It may be malformed or contain unsupported syntax."
+        " Please check the file and try again."
+    ),
+    500: ("Something went wrong while processing the ontology structure. Please try again or contact support."),
+    503: ("The database could not store the ontology data. Please try again later or contact support."),
 }
 
 NAMESPACE_COLORS = {
