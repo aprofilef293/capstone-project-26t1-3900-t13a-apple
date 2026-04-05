@@ -43,7 +43,7 @@ export function FileImportStatusInfo() {
                         </div>
                         {importError && (
                             <span
-                                className="text-xs text-red-400 line-clamp-2 cursor-default"
+                                className="text-xs text-red-400 whitespace-pre-wrap break-words max-h-28 overflow-y-auto cursor-default"
                                 title={typeof importError === "string" ? importError : importError.message}
                             >
                                 {typeof importError === "string" ? importError : importError.message}
