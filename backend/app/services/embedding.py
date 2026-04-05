@@ -213,7 +213,8 @@ class EmbeddingService:
     def _content_hash(term_ids: list[str], term_dicts: list[dict]) -> str:
         """Compute a fast hash of term content for cache invalidation."""
         h = hashlib.sha256()
-        for tid, td in zip(term_ids, term_dicts):
+        # Sort by term ID so the hash is stable regardless of input order.
+        for tid, td in sorted(zip(term_ids, term_dicts), key=lambda x: x[0]):
             h.update(tid.encode())
             for key in FIELD_WEIGHTS:
                 val = td.get(key)
