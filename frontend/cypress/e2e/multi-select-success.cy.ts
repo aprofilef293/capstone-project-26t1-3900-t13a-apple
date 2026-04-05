@@ -1,3 +1,32 @@
+type PickedNodes = {
+  firstId: string;
+  firstLabel: string;
+  secondId: string;
+  secondLabel: string;
+}
+
+type GraphNode = {
+  id: string;
+  label: string;
+};
+
+type AppStoreState = {
+  nodes: GraphNode[];
+  toggleNodeSelection: (id: string) => void;
+};
+
+type StoreWindow = Window & {
+  __STORE__?: {
+    getState: () => AppStoreState;
+  };
+};
+
+const getStoreState = (win: Window): AppStoreState => {
+  const store = (win as unknown as StoreWindow).__STORE__;
+  expect(store, "__STORE__ should be available").to.exist;
+  return store!.getState();
+};
+
 describe('happy path for multi-select', () => {
   beforeEach(() => {
     cy.intercept('POST', '/api/ontology/upload').as('uploadOntology')
@@ -32,20 +61,20 @@ describe('happy path for multi-select', () => {
     cy.get('canvas').should('be.visible')
 
     // pick which nodes from the graph we want to click first
-    cy.window().then((win: any) => {
-        const state = win.__STORE__.getState()
-        expect(state.nodes.length).to.be.greaterThan(1)
+    cy.window().then((win) => {
+      const state = getStoreState(win);
+      expect(state.nodes.length).to.be.greaterThan(1);
 
-        const first = state.nodes[0]
-        const second = state.nodes[1]
+      const first = state.nodes[0];
+      const second = state.nodes[1];
 
-        cy.wrap({
-            firstId: first.id,
-            firstLabel: first.label,
-            secondId: second.id,
-            secondLabel: second.label,
-        }).as('pickedNodes')
-    })
+      cy.wrap({
+        firstId: first.id,
+        firstLabel: first.label,
+        secondId: second.id,
+        secondLabel: second.label,
+      }).as("pickedNodes");
+    });
 
     // click on multi-select toggle swithc
     cy.get('[aria-label="Toggle multi-select mode"]')
@@ -54,40 +83,44 @@ describe('happy path for multi-select', () => {
         .should('have.attr', 'data-state', 'checked')
 
         // click first node in graph 
-        cy.get('@pickedNodes').then((p: any) => {
-        cy.window().then((win: any) => {
-            win.__STORE__.getState().toggleNodeSelection(p.firstId)
-        })
-    })
+        cy.get("@pickedNodes").then((p) => {
+          const picked = p as unknown as PickedNodes;
+          cy.window().then((win) => {
+            getStoreState(win).toggleNodeSelection(picked.firstId);
+          });
+        });
 
     // check multi-select side panel appears 
     cy.contains('h2', 'Selected Nodes', { timeout: 10000 }).should('be.visible')
     
     // check we have the correct node clicked
-    cy.get('@pickedNodes').then((p: any) => {
-        cy.contains('span', p.firstLabel).should('be.visible')
-    })
+    cy.get("@pickedNodes").then((p) => {
+      const picked = p as unknown as PickedNodes;
+      cy.contains("span", picked.firstLabel).should("be.visible");
+    });
 
     // check we havethe select attribute dropdown + the clear selection button in the side panel 
     cy.contains('button', 'Select attribute').should('be.visible')
     cy.get('button[title="Clear selection"]').should('be.visible')
 
     // click second node
-    cy.get('@pickedNodes').then((p: any) => {
-        cy.window().then((win: any) => {
-            win.__STORE__.getState().toggleNodeSelection(p.secondId)
-        })
-    })
+    cy.get("@pickedNodes").then((p) => {
+      const picked = p as unknown as PickedNodes;
+      cy.window().then((win) => {
+        getStoreState(win).toggleNodeSelection(picked.secondId);
+      });
+    });
 
     // wait for the paths to appear on graph
     cy.wait('@fetchPaths', { timeout: 5000 }) 
 
     // check side panel has both selected nodes
     cy.contains('h2', 'Path between Nodes', { timeout: 10000 }).should('be.visible')
-    cy.get('@pickedNodes').then((p: any) => {
-        cy.contains('span', p.firstLabel).should('exist')
-        cy.contains('span', p.secondLabel).should('exist')
-    })
+    cy.get("@pickedNodes").then((p) => {
+      const picked = p as unknown as PickedNodes;
+      cy.contains("span", picked.firstLabel).should("exist");
+      cy.contains("span", picked.secondLabel).should("exist");
+    });
 
     // check the pathview btn is on the screen + click
     cy.contains('button', 'Path View').should('be.visible').click()
@@ -100,18 +133,20 @@ describe('happy path for multi-select', () => {
     cy.contains(/colour:/i).should('be.visible')
 
     // click any card in side panel
-    cy.get('@pickedNodes').then((p: any) => {
-        cy.contains('span', p.firstLabel).click()
-    })
+    cy.get("@pickedNodes").then((p) => {
+      const picked = p as unknown as PickedNodes;
+      cy.contains("span", picked.firstLabel).click();
+    });
 
     // check that we're back in single-select mode
     cy.get('[aria-label="Toggle multi-select mode"]').should('have.attr', 'data-state', 'unchecked')
 
     // check the side panel has details for the clicked node
     cy.contains('Node Data', { timeout: 10000 }).should('be.visible')
-    cy.get('@pickedNodes').then((p: any) => {
-        cy.contains('h2', p.firstLabel).should('be.visible')
-    })
+    cy.get("@pickedNodes").then((p) => {
+      const picked = p as unknown as PickedNodes;
+      cy.contains("h2", picked.firstLabel).should("be.visible");
+    });
 
     // click the multi-select toggle swithc again to go back to multi-select mode
     cy.get('[aria-label="Toggle multi-select mode"]')
@@ -129,6 +164,6 @@ describe('happy path for multi-select', () => {
     // click the multi-select toggle to go back to single select mode 
     cy.get('[aria-label="Toggle multi-select mode"]')
         .click()
-        .should('have.attr', 'data-state', 'unchecked')
+        .should('have.attr', 'data-state', 'unchecked');
   });
 });
