@@ -3,7 +3,7 @@ import { createRoot } from 'react-dom/client'
 import './index.css'
 import App from './App.tsx'
 
-// for testing with cypress - to click on node in network graph page
+// for testing with cypress - to click on node(s) in network graph page
 type CypressWindow = Window & {
   Cypress?: unknown;
   __STORE__?: typeof import("./store/useStore").useStore;
