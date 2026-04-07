@@ -180,7 +180,7 @@ const GraphManager = forwardRef<GraphViewRef, unknown>((_, ref) => {
         const neighborNodes = new Set<string>(graph.neighbors(selectedNodeId));
 
         return { communityNodes, neighborNodes, selectedLouvain };
-    }, [selectedNodeId, infoPanelMode, sigma, communityIndex]);
+    }, [selectedNodeId, sigma, communityIndex]);
 
 
     // Multi-select: derive path sets from store (populated by backend API)
@@ -472,7 +472,7 @@ const GraphManager = forwardRef<GraphViewRef, unknown>((_, ref) => {
         stateRef.current.visibleNodes = visibleNodes;
         // update graph (note: this does not perform a hard refresh on the browser)
         sigma.refresh();
-    }, [nodes, edges, deferredSearchQuery, viewLevel, selectedNodeId, isolationData, isMultiSelect, multiSelectPathData, selectedNodeIds, sigma, graphFilters, searchMatchIds, searchResultsSemantic, searchMode, infoPanelMode]);
+    }, [nodes, edges, deferredSearchQuery, viewLevel, selectedNodeId, isolationData, isMultiSelect, multiSelectPathData, selectedNodeIds, sigma, graphFilters, searchMatchIds, searchResultsSemantic, searchMode]);
 
     useEffect(() => {
         const graph = sigma.getGraph();

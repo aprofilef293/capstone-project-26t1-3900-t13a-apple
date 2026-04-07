@@ -102,14 +102,14 @@ export function ExplorerSearch({ viewMode = "graph" }: { viewMode?: "graph" | "h
             : [];
 
         return { exactResults: exactTitleHits, fuzzyResults: fuzzyTitleHits, descriptionResults: descHits };
-    }, [fuse, filteredNodes, searchQuery, searchMode]);
+    }, [fuse, filteredNodes, searchQuery]);
 
     // Sync results to store in an effect (not during render)
     useEffect(() => {
         setSearchResultsExactTitle(exactResults ?? []);
         setSearchResultsFuzzyTitle(fuzzyResults);
         setSearchResultsDescription(descriptionResults);
-    }, [exactResults, fuzzyResults, descriptionResults, setSearchResultsExactTitle, setSearchResultsFuzzyTitle, setSearchResultsDescription]);
+    }, [exactResults, fuzzyResults, descriptionResults, setSearchResultsFuzzyTitle, setSearchResultsDescription]);
 
     const searchResults = useMemo(
         () => [...exactResults ?? [], ...fuzzyResults, ...descriptionResults],
