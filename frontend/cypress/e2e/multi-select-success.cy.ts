@@ -18,15 +18,15 @@ type AppStoreState = {
 };
 
 type StoreWindow = Window & {
-  __STORE__?: {
+  STORE?: {
     getState: () => AppStoreState;
   };
 };
 
 const getStoreState = (win: Window): AppStoreState => {
-  const store = (win as unknown as StoreWindow).__STORE__;
+  const store = (win as unknown as StoreWindow).STORE;
   if (!store) {
-    throw new Error("__STORE__ should be available");
+    throw new Error("STORE should be available");
   }
   return store.getState();
 };
