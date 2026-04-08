@@ -10,17 +10,17 @@ type AppStoreState = {
 };
 
 type StoreWindow = Window & {
-    STORE?: {
-        getState: () => AppStoreState;
-    };
+  __STORE__?: {
+    getState: () => AppStoreState;
+  };
 };
 
 const getStoreState = (win: Window): AppStoreState => {
-    const store = (win as unknown as StoreWindow).STORE;
-    if (!store) {
-        throw new Error("STORE should be available");
-    }
-    return store.getState();
+  const store = (win as unknown as StoreWindow).__STORE__;
+  if (!store) {
+    throw new Error("__STORE__ should be available");
+  }
+  return store.getState();
 };
 
 describe('happy path for single-select', () => {
