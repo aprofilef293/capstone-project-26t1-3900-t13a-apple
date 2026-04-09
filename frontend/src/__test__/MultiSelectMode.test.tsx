@@ -105,4 +105,15 @@ describe("tests for multi-select mode", () => {
     fireEvent.click(removeButtons[0]);
     expect(toggleNodeSelectionMock).toHaveBeenCalledWith("test1");
   });
+
+  it("shows shows a msg when no path are found between nodes", () => {
+  mockState.selectedNodeIds = ["test1", "test2"];
+  mockState.pathNodeIds = [];
+  mockState.pathLoading = false;
+  mockState.infoPanelMode = "multi-select";
+
+  render(<MultiSelectNodeSidebar />);
+
+  expect(screen.getByText("No path found between selected nodes.")).toBeInTheDocument();
+});
 });
