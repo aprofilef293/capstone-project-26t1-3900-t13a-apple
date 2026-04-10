@@ -1,7 +1,5 @@
 # Contributing to OBO Explorer
 
-Thank you for your interest in contributing to OBO Explorer.
-
 ## Getting Started
 
 1. Clone the repository
@@ -17,24 +15,20 @@ Thank you for your interest in contributing to OBO Explorer.
 
 ## Code Style
 
-### Backend (Python)
+### Python
 
 - Follow PEP 8 conventions
 - Use [Ruff](https://docs.astral.sh/ruff/) for linting and formatting
 - Run `ruff check` and `ruff format` before committing
 
-### Frontend (TypeScript/React)
+### Typescript and React
 
 - Use [ESLint](https://eslint.org/) for linting
 - Run `npm run lint` before committing
 
 ## Reporting Issues
 
-If you find a bug or have a feature request, please open a GitHub issue with:
-
-- A clear description of the problem or suggestion
-- Steps to reproduce (for bugs)
-- Expected vs actual behaviour
+If you find a bug or have a feature request, please open a GitHub issue using the [bug report template](.github/ISSUE_TEMPLATE/bug_report.md).
 
 ## License
 
