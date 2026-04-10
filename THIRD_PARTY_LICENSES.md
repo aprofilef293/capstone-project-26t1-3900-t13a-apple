@@ -72,6 +72,8 @@ We gratefully acknowledge their authors and contributors for making this project
 | pyfftw | BSD-3-Clause [1] |
 | numba-kdtree | MIT |
 | pygments | BSD-2-Clause |
+| torch | BSD-3-Clause |
+| sentence-transformers | Apache-2.0 |
 
 ## Backend Development
 
