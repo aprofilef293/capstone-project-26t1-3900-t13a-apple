@@ -2,6 +2,7 @@ import csv
 import io
 import logging
 import math
+import os
 import time
 from datetime import datetime
 
@@ -393,6 +394,7 @@ def export_paths_csv(
     writer.writerow(
         [
             "ID",
+            "URL",
             "Name",
             "Definition",
             "Synonyms",
@@ -406,6 +408,23 @@ def export_paths_csv(
             "Role",
         ]
     )
+
+    def _split_id(nid: str, props: dict) -> tuple[str, str]:
+        """Return (short_id, url) for a node.
+
+        If the node has a stored 'url' property, use that.
+        If the id itself is a URL (e.g. from OWL files), extract the
+        short id from the last path segment and use the full id as the URL.
+        """
+        stored_url = _clean(props.get("url"))
+        if stored_url:
+            return nid, stored_url
+        if nid.startswith("http://") or nid.startswith("https://"):
+            # ID is a full URL — extract short id from last segment
+            # e.g. http://humanbehaviourchange.org/ontology/BCIO_006049 → BCIO_006049
+            short = nid.rsplit("/", 1)[-1]
+            return short, nid
+        return nid, ""
 
     def _sort_key(nid: str) -> tuple[int, str]:
         if nid in selected_set:
@@ -453,9 +472,12 @@ def export_paths_csv(
 
         obsolete = "Yes" if props.get("is_obsolete") else ""
 
+        short_id, url = _split_id(nid, props)
+
         writer.writerow(
             [
-                nid,
+                short_id,
+                url,
                 _clean(props.get("name")),
                 _clean(props.get("definition")),
                 _join_list(props.get("synonyms")),
@@ -479,7 +501,16 @@ def export_paths_csv(
         time.perf_counter() - t0,
     )
 
-    filename = f"{datetime.now().strftime('%Y-%m-%d_%H%M%S')}_path_export.csv"
+    # Use the original uploaded filename if available
+    source_file = next(
+        (props.get("source_file") for props in node_map.values() if props.get("source_file")),
+        None,
+    )
+    if source_file:
+        base = os.path.splitext(source_file)[0]
+    else:
+        base = "path_export"
+    filename = f"{datetime.now().strftime('%Y-%m-%d_%H%M%S')}_{base}_subset.csv"
 
     return StreamingResponse(
         output,

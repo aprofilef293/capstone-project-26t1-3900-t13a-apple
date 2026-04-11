@@ -351,6 +351,7 @@ class TestGraphRouter:
         assert len(lines) >= 3  # header + 2 nodes
         header = lines[0]
         assert "ID" in header
+        assert "URL" in header
         assert "Name" in header
         assert "Definition" in header
         assert "Subclass Of" in header
@@ -367,13 +368,19 @@ class TestGraphRouter:
                     "xrefs": ["DB:001"],
                     "comment": "Some comment",
                     "is_obsolete": True,
+                    "url": "http://example.org/T_1",
                 },
                 "rel_type": "is_a",
                 "target_id": "T:2",
                 "target_name": "parent term",
             },
             {
-                "node": {"id": "T:2", "name": "parent term", "namespace": "biological_process"},
+                "node": {
+                    "id": "T:2",
+                    "name": "parent term",
+                    "namespace": "biological_process",
+                    "url": "http://example.org/T_2",
+                },
                 "rel_type": None,
                 "target_id": None,
                 "target_name": None,
@@ -390,6 +397,7 @@ class TestGraphRouter:
 
         # T:1 is selected, T:2 is path node — selected sorts first
         t1 = next(r for r in rows if r["ID"] == "T:1")
+        assert t1["URL"] == "http://example.org/T_1"
         assert t1["Name"] == "term1"
         assert t1["Definition"] == "A definition"
         assert "syn1" in t1["Synonyms"]
@@ -507,6 +515,49 @@ class TestGraphRouter:
         # Selected first, then Path Node, then Neighbour
         assert roles.index("Selected") < roles.index("Path Node")
         assert roles.index("Path Node") < roles.index("Neighbour")
+
+    def test_export_csv_filename_from_source(self, client, mock_memgraph):
+        mock_memgraph.execute_read.return_value = [
+            {
+                "node": {"id": "T:1", "name": "term1", "source_file": "doid.obo"},
+                "rel_type": None,
+                "target_id": None,
+                "target_name": None,
+            },
+        ]
+        resp = client.get("/api/graph/paths/export?path_ids=T:1")
+        assert resp.status_code == 200
+        disposition = resp.headers["content-disposition"]
+        assert "doid_subset.csv" in disposition
+
+    def test_export_csv_url_id_split(self, client, mock_memgraph):
+        """When the node id is a full URL, the ID column should show
+        the short id and the URL column should show the full URL."""
+        mock_memgraph.execute_read.return_value = [
+            {
+                "node": {
+                    "id": "http://humanbehaviourchange.org/ontology/BCIO_006049",
+                    "name": "some term",
+                },
+                "rel_type": None,
+                "target_id": None,
+                "target_name": None,
+            },
+        ]
+        resp = client.get(
+            "/api/graph/paths/export"
+            "?path_ids=http://humanbehaviourchange.org/ontology/BCIO_006049"
+        )
+        assert resp.status_code == 200
+
+        import csv
+        import io
+
+        reader = csv.DictReader(io.StringIO(resp.text.lstrip("\ufeff")))
+        rows = list(reader)
+        row = rows[0]
+        assert row["ID"] == "BCIO_006049"
+        assert row["URL"] == "http://humanbehaviourchange.org/ontology/BCIO_006049"
 
     # ----- /semantic-search endpoint -----
 
