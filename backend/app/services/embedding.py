@@ -17,13 +17,14 @@ _CACHE_DIR = Path("/app/.embedding_cache")
 logger = logging.getLogger(__name__)
 
 class LocalEmbeddingModel:
-    _BATCH_SIZE = 64
+    _BATCH_SIZE = 128
     _MAX_CONCURRENT = 16
     _DIMENSION_CACHE: dict[str, int] = {}
 
     def __init__(self, model_name: str = "BAAI/bge-small-en-v1.5"):
         self._model_name = model_name
         self._model = SentenceTransformer(model_name, device='cpu')
+        logger.info("Prepared a local instance of %s", model_name)
 
     async def encode(self, texts: list[str]) -> np.ndarray:
         if not texts:
@@ -223,8 +224,8 @@ class EmbeddingService:
         model: The embedding model used to encode both index texts and queries.
     """
 
-    def __init__(self) -> None:
-        self._model = LocalEmbeddingModel()
+    def __init__(self, model: LocalEmbeddingModel | HuggingFaceEmbeddingModel) -> None:
+        self._model = model
         self._ids: list[str] = []
         # One embedding matrix per field, keyed by field name.
         self._field_embeddings: dict[str, np.ndarray] = {}
