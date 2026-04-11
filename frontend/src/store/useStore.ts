@@ -42,6 +42,11 @@ export const DEFAULT_FILTERS: GraphFilters = {
     excludedColors: new Set(),
 };
 
+type CypressWindow = Window & {
+  Cypress?: unknown;
+  __STORE__?: typeof useStore;
+};
+
 interface ExplorerState {
     nodes: GraphNode[];
     edges: GraphEdge[];
@@ -340,7 +345,7 @@ export const useStore = create<ExplorerState>((set) => ({
 
             if (!response.ok || !response.body) {
                 let errorMsg = response.statusText;
-                let errorCode = response.status;
+                const errorCode = response.status;
                 try {
                     const errorBody = await response.json();
                     // Try to extract a message from the error body
@@ -351,7 +356,7 @@ export const useStore = create<ExplorerState>((set) => ({
                             errorMsg = errorBody.detail;
                         }
                     }
-                } catch (e) {
+                } catch {
                     // fallback to statusText (ie. errorMsg)
                 }
                 localStorage.setItem('importStatus', 'error');
@@ -524,3 +529,13 @@ export const useStore = create<ExplorerState>((set) => ({
         return { pathViewOnly: next };
     }),
 }));
+
+// for testing with cypress - to click on node(s) in network graph page
+export function exposeStoreForCypress() {
+  if (typeof window === "undefined") return;
+
+  const win = window as CypressWindow;
+  if (!win.Cypress) return;
+
+  win.__STORE__ = useStore;
+}

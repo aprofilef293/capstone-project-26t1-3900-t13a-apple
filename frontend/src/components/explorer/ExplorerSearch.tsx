@@ -76,7 +76,7 @@ export function ExplorerSearch({ viewMode = "graph" }: { viewMode?: "graph" | "h
 
         const q = searchQuery.trim();
         if (!q) {
-            return { fuzzyResults: [], descriptionResults: [] };
+            return { fuzzyResults: [], descriptionResults: []};
         }
 
         const exactTitleHits = filteredNodes.filter(node => node.label.toLowerCase().includes(q.toLowerCase())).slice(0, 50);
