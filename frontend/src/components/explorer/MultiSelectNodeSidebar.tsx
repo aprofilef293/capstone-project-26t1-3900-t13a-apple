@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { useStore } from "../../store/useStore";
 import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
-import { RefreshCcw, X, ChevronRight, Loader2, ChevronDown } from "lucide-react";
+import {RefreshCcw, X, ChevronRight, Loader2, ChevronDown, Download} from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -10,6 +10,7 @@ import {
   DropdownMenuRadioItem,
   DropdownMenuTrigger,
 } from "../ui/dropdown-menu";
+import { exportMultiShortestPathsCsv } from "../../lib/api";
 
 type GraphNode = {
   id: string;
@@ -25,6 +26,7 @@ type GraphNode = {
 const MultiSelectNodeSidebar: React.FC = () => {
   const {selectedNodeIds, setSelectedNodeId, nodes, clearSelectedNodes, infoPanelMode, setInfoPanelMode, pathNodeIds, pathLoading, toggleNodeSelection} = useStore();
   const [selectedAttribute, setSelectedAttribute] = useState<string>("");
+  const [isExporting, setIsExporting] = useState(false);
 
   if (infoPanelMode !== "multi-select" || selectedNodeIds.length === 0)
     return null;
@@ -40,6 +42,28 @@ const MultiSelectNodeSidebar: React.FC = () => {
   const attributeKeys = Array.from(
     new Set(displayNodes.flatMap((node) => Object.keys(node.attributes || {}))),
   );
+
+  const handleExportCsv = async () => {
+    if (selectedNodeIds.length < 2 || isExporting) return;
+
+    setIsExporting(true);
+    try {
+      const { blob, filename } =
+        await exportMultiShortestPathsCsv(pathNodeIds, selectedNodeIds);
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error("Error exporting path CSV:", error);
+    } finally {
+      setIsExporting(false);
+    }
+  };
 
   return (
     <aside className="w-[400px] shrink-0 h-full overflow-hidden bg-sidebar/95 border-l border-sidebar-border shadow-lg z-30 flex flex-col p-6">
@@ -207,7 +231,22 @@ const MultiSelectNodeSidebar: React.FC = () => {
       </div>
 
       {/* Footer */}
-      <div className="mt-auto flex justify-center pt-4">
+      <div className="mt-auto flex flex-col justify-center gap-2 pt-4">
+        <Button
+          variant="secondary"
+          className="w-full text-s p-5"
+          onClick={handleExportCsv}
+          disabled={!hasPath || pathLoading || isExporting}
+          title="Export path as CSV"
+        >
+          {" "}
+          {isExporting ? (
+            <Loader2 className="w-4 h-4 animate-spin" />
+          ) : (
+            <Download className="w-4 h-4" />
+          )}{" "}
+          Export CSV{" "}
+        </Button>
         <Button
           variant="secondary"
           className="w-full text-s p-5"
