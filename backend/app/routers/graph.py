@@ -2,6 +2,7 @@ import csv
 import io
 import logging
 import math
+import os
 import time
 from datetime import datetime
 
@@ -393,6 +394,7 @@ def export_paths_csv(
     writer.writerow(
         [
             "ID",
+            "URL",
             "Name",
             "Definition",
             "Synonyms",
@@ -404,6 +406,8 @@ def export_paths_csv(
             "Namespace",
             "Obsolete",
             "Role",
+            "Path Position",
+            "Community",
         ]
     )
 
@@ -421,6 +425,22 @@ def export_paths_csv(
         s = str(val).strip()
         return "" if s == "None" else s
 
+    def _short_id(raw_id: str) -> str:
+        """Extract short ID from a full URL, or return as-is."""
+        if raw_id.startswith("http://") or raw_id.startswith("https://"):
+            return raw_id.rsplit("/", 1)[-1]
+        return raw_id
+
+    def _split_id(nid: str, props: dict) -> tuple[str, str]:
+        """Return (short_id, url) for a node.
+
+        If the id itself is a URL (e.g. from OWL files), extract the
+        short id from the last path segment and use the full id as the URL.
+        """
+        if nid.startswith("http://") or nid.startswith("https://"):
+            return nid.rsplit("/", 1)[-1], nid
+        return nid, _clean(props.get("url"))
+
     def _rel_label(rel_type: str) -> str:
         """'part_of' -> 'part of'."""
         return rel_type.replace("_", " ")
@@ -430,6 +450,9 @@ def export_paths_csv(
         if isinstance(vals, list):
             return "; ".join(_clean(v) for v in vals if _clean(v))
         return _clean(vals)
+
+    # Build path position lookup from the original ordered path_ids
+    path_position: dict[str, int] = {pid: idx + 1 for idx, pid in enumerate(path_ids)}
 
     for nid in sorted(all_node_ids, key=_sort_key):
         props = node_map[nid]
@@ -441,21 +464,30 @@ def export_paths_csv(
         else:
             role = "Neighbour"
 
-        isa_parents = [f"{_clean(tname)} [{tid}]" for rtype, tid, tname in outgoing.get(nid, []) if rtype == "is_a"]
-        isa_children = [f"{_clean(sname)} [{sid}]" for rtype, sid, sname in incoming.get(nid, []) if rtype == "is_a"]
+        short_id, url = _split_id(nid, props)
+
+        isa_parents = [
+            f"{_clean(tname)} [{_short_id(tid)}]" for rtype, tid, tname in outgoing.get(nid, []) if rtype == "is_a"
+        ]
+        isa_children = [
+            f"{_clean(sname)} [{_short_id(sid)}]" for rtype, sid, sname in incoming.get(nid, []) if rtype == "is_a"
+        ]
         other_rels: list[str] = []
         for rtype, tid, tname in outgoing.get(nid, []):
             if rtype != "is_a":
-                other_rels.append(f"{_rel_label(rtype)} {_clean(tname)} [{tid}]")
+                other_rels.append(f"{_rel_label(rtype)} {_clean(tname)} [{_short_id(tid)}]")
         for rtype, sid, sname in incoming.get(nid, []):
             if rtype != "is_a":
-                other_rels.append(f"{_rel_label(rtype)} from {_clean(sname)} [{sid}]")
+                other_rels.append(f"{_rel_label(rtype)} from {_clean(sname)} [{_short_id(sid)}]")
 
         obsolete = "Yes" if props.get("is_obsolete") else ""
+        position = path_position.get(nid, "")
+        community = _clean(props.get("louvain"))
 
         writer.writerow(
             [
-                nid,
+                short_id,
+                url,
                 _clean(props.get("name")),
                 _clean(props.get("definition")),
                 _join_list(props.get("synonyms")),
@@ -467,6 +499,8 @@ def export_paths_csv(
                 _clean(props.get("namespace")),
                 obsolete,
                 role,
+                position,
+                community,
             ]
         )
 
@@ -479,7 +513,15 @@ def export_paths_csv(
         time.perf_counter() - t0,
     )
 
-    filename = f"{datetime.now().strftime('%Y-%m-%d_%H%M%S')}_path_export.csv"
+    source_file = next(
+        (props.get("source_file") for props in node_map.values() if props.get("source_file")),
+        None,
+    )
+    if source_file:
+        base = os.path.splitext(source_file)[0]
+    else:
+        base = "path_export"
+    filename = f"{datetime.now().strftime('%Y-%m-%d_%H%M%S')}_{base}_subset.csv"
 
     return StreamingResponse(
         output,
