@@ -23,7 +23,6 @@ class OntologyTerm(BaseModel):
     xrefs: list[str] = []
     comment: str | None = None
     is_obsolete: bool = False
-    url: str | None = None
 
     # Preprocessing attributes
     size: float | None = None
