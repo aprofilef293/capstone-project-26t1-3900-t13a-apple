@@ -1,9 +1,12 @@
+import csv
+import io
 import logging
 import math
 import time
+from datetime import datetime
 
 from fastapi import APIRouter, HTTPException, Query, Request
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, StreamingResponse
 
 from app.models.graph import GraphData, SerializedEdge, SerializedNode
 
@@ -318,6 +321,170 @@ def get_multi_shortest_paths(
     result = _build_graph_data_from_paths(records)
     logger.info("GET /paths (%d nodes, %d pairs) completed in %.3fs", len(ids), len(pairs), time.perf_counter() - t0)
     return result
+
+
+@router.get(
+    "/paths/export",
+    summary="Export path, neighbours, and relationships as CSV",
+    description="Export pre-computed path nodes and their first-level neighbours "
+    "as a CSV containing node metadata and relationships.",
+)
+def export_paths_csv(
+    request: Request,
+    path_ids: list[str] = Query(..., description="All node IDs along the path (from frontend)"),
+    selected_ids: list[str] = Query(default=[], description="User-selected endpoint node IDs"),
+):
+    """Export path nodes, their first-level neighbours, and all relationships as CSV."""
+    if not path_ids:
+        raise HTTPException(status_code=422, detail="No path node IDs provided")
+
+    t0 = time.perf_counter()
+    mg = request.app.state.memgraph
+    path_node_ids = set(path_ids)
+    selected_set = set(selected_ids)
+
+    # Single query: path nodes + neighbours + all relationships
+    records = mg.execute_read(
+        "MATCH (n:OntologyTerm) WHERE n.id IN $path_ids "
+        "OPTIONAL MATCH (n)--(m:OntologyTerm) "
+        "WITH COLLECT(DISTINCT n) + COLLECT(DISTINCT m) AS all_nodes "
+        "UNWIND all_nodes AS node "
+        "WITH DISTINCT node "
+        "OPTIONAL MATCH (node)-[r:RELATES_TO]->(target:OntologyTerm) "
+        "RETURN node, r.type AS rel_type, target.id AS target_id, target.name AS target_name",
+        {"path_ids": path_ids},
+    )
+
+    if not records:
+        raise HTTPException(status_code=404, detail="No nodes found for the given path IDs")
+
+    # Build node map and outgoing relationships from query results
+    node_map: dict[str, dict] = {}
+    outgoing: dict[str, list[tuple[str, str, str]]] = {}
+    for rec in records:
+        raw = rec.get("node")
+        if raw is None:
+            continue
+        props = dict(raw) if hasattr(raw, "items") else raw
+        nid = props.get("id")
+        if not nid:
+            continue
+        if nid not in node_map:
+            node_map[nid] = props
+
+        rel_type = rec.get("rel_type")
+        target_id = rec.get("target_id")
+        if rel_type and target_id:
+            target_name = rec.get("target_name") or target_id
+            outgoing.setdefault(nid, []).append((rel_type, target_id, target_name))
+
+    all_node_ids = list(node_map.keys())
+
+    # Build incoming map (reverse of outgoing)
+    incoming: dict[str, list[tuple[str, str, str]]] = {}
+    for nid, rels in outgoing.items():
+        src_name = node_map.get(nid, {}).get("name", nid)
+        for rel_type, target_id, _ in rels:
+            incoming.setdefault(target_id, []).append((rel_type, nid, src_name))
+
+    output = io.StringIO()
+    output.write("\ufeff")
+    writer = csv.writer(output)
+    writer.writerow([
+        "ID",
+        "Name",
+        "Definition",
+        "Synonyms",
+        "Cross-references",
+        "Subclass Of",
+        "Has Subclasses",
+        "Other Relationships",
+        "Comments",
+        "Namespace",
+        "Obsolete",
+        "Role",
+    ])
+
+    def _sort_key(nid: str) -> tuple[int, str]:
+        if nid in selected_set:
+            return (0, nid)
+        if nid in path_node_ids:
+            return (1, nid)
+        return (2, nid)
+
+    def _clean(val: object) -> str:
+        """Return a clean string — never 'None', no leading/trailing whitespace."""
+        if val is None:
+            return ""
+        s = str(val).strip()
+        return "" if s == "None" else s
+
+    def _rel_label(rel_type: str) -> str:
+        """'part_of' -> 'part of'."""
+        return rel_type.replace("_", " ")
+
+    def _join_list(vals: object) -> str:
+        """Join a list with '; ' or return empty string."""
+        if isinstance(vals, list):
+            return "; ".join(_clean(v) for v in vals if _clean(v))
+        return _clean(vals)
+
+    for nid in sorted(all_node_ids, key=_sort_key):
+        props = node_map[nid]
+
+        if nid in selected_set:
+            role = "Selected"
+        elif nid in path_node_ids:
+            role = "Path Node"
+        else:
+            role = "Neighbour"
+
+        isa_parents = [
+            f"{_clean(tname)} [{tid}]"
+            for rtype, tid, tname in outgoing.get(nid, []) if rtype == "is_a"
+        ]
+        isa_children = [
+            f"{_clean(sname)} [{sid}]"
+            for rtype, sid, sname in incoming.get(nid, []) if rtype == "is_a"
+        ]
+        other_rels: list[str] = []
+        for rtype, tid, tname in outgoing.get(nid, []):
+            if rtype != "is_a":
+                other_rels.append(f"{_rel_label(rtype)} {_clean(tname)} [{tid}]")
+        for rtype, sid, sname in incoming.get(nid, []):
+            if rtype != "is_a":
+                other_rels.append(f"{_rel_label(rtype)} from {_clean(sname)} [{sid}]")
+
+        obsolete = "Yes" if props.get("is_obsolete") else ""
+
+        writer.writerow([
+            nid,
+            _clean(props.get("name")),
+            _clean(props.get("definition")),
+            _join_list(props.get("synonyms")),
+            _join_list(props.get("xrefs")),
+            "; ".join(isa_parents),
+            "; ".join(isa_children),
+            "; ".join(other_rels),
+            _clean(props.get("comment")),
+            _clean(props.get("namespace")),
+            obsolete,
+            role,
+        ])
+
+    output.seek(0)
+    logger.info(
+        "GET /paths/export (%d selected, %d path, %d total) completed in %.3fs",
+        len(selected_ids), len(path_node_ids), len(all_node_ids), time.perf_counter() - t0,
+    )
+
+    filename = f"{datetime.now().strftime('%Y-%m-%d_%H%M%S')}_path_export.csv"
+
+    return StreamingResponse(
+        output,
+        media_type="text/csv",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
 
 
 @router.get(
