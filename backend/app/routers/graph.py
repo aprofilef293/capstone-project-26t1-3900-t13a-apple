@@ -390,20 +390,22 @@ def export_paths_csv(
     output = io.StringIO()
     output.write("\ufeff")
     writer = csv.writer(output)
-    writer.writerow([
-        "ID",
-        "Name",
-        "Definition",
-        "Synonyms",
-        "Cross-references",
-        "Subclass Of",
-        "Has Subclasses",
-        "Other Relationships",
-        "Comments",
-        "Namespace",
-        "Obsolete",
-        "Role",
-    ])
+    writer.writerow(
+        [
+            "ID",
+            "Name",
+            "Definition",
+            "Synonyms",
+            "Cross-references",
+            "Subclass Of",
+            "Has Subclasses",
+            "Other Relationships",
+            "Comments",
+            "Namespace",
+            "Obsolete",
+            "Role",
+        ]
+    )
 
     def _sort_key(nid: str) -> tuple[int, str]:
         if nid in selected_set:
@@ -439,14 +441,8 @@ def export_paths_csv(
         else:
             role = "Neighbour"
 
-        isa_parents = [
-            f"{_clean(tname)} [{tid}]"
-            for rtype, tid, tname in outgoing.get(nid, []) if rtype == "is_a"
-        ]
-        isa_children = [
-            f"{_clean(sname)} [{sid}]"
-            for rtype, sid, sname in incoming.get(nid, []) if rtype == "is_a"
-        ]
+        isa_parents = [f"{_clean(tname)} [{tid}]" for rtype, tid, tname in outgoing.get(nid, []) if rtype == "is_a"]
+        isa_children = [f"{_clean(sname)} [{sid}]" for rtype, sid, sname in incoming.get(nid, []) if rtype == "is_a"]
         other_rels: list[str] = []
         for rtype, tid, tname in outgoing.get(nid, []):
             if rtype != "is_a":
@@ -457,25 +453,30 @@ def export_paths_csv(
 
         obsolete = "Yes" if props.get("is_obsolete") else ""
 
-        writer.writerow([
-            nid,
-            _clean(props.get("name")),
-            _clean(props.get("definition")),
-            _join_list(props.get("synonyms")),
-            _join_list(props.get("xrefs")),
-            "; ".join(isa_parents),
-            "; ".join(isa_children),
-            "; ".join(other_rels),
-            _clean(props.get("comment")),
-            _clean(props.get("namespace")),
-            obsolete,
-            role,
-        ])
+        writer.writerow(
+            [
+                nid,
+                _clean(props.get("name")),
+                _clean(props.get("definition")),
+                _join_list(props.get("synonyms")),
+                _join_list(props.get("xrefs")),
+                "; ".join(isa_parents),
+                "; ".join(isa_children),
+                "; ".join(other_rels),
+                _clean(props.get("comment")),
+                _clean(props.get("namespace")),
+                obsolete,
+                role,
+            ]
+        )
 
     output.seek(0)
     logger.info(
         "GET /paths/export (%d selected, %d path, %d total) completed in %.3fs",
-        len(selected_ids), len(path_node_ids), len(all_node_ids), time.perf_counter() - t0,
+        len(selected_ids),
+        len(path_node_ids),
+        len(all_node_ids),
+        time.perf_counter() - t0,
     )
 
     filename = f"{datetime.now().strftime('%Y-%m-%d_%H%M%S')}_path_export.csv"

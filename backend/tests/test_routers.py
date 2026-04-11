@@ -315,6 +315,199 @@ class TestGraphRouter:
         assert resp.status_code == 404
         assert "No paths found" in resp.json()["detail"]
 
+    # ----- /paths/export endpoint -----
+
+    def test_export_csv_basic(self, client, mock_memgraph):
+        mock_memgraph.execute_read.return_value = [
+            {
+                "node": {
+                    "id": "T:1",
+                    "name": "cell growth",
+                    "namespace": "biological_process",
+                    "definition": "The process of growing",
+                    "synonyms": ["growth"],
+                    "xrefs": ["PMID:123"],
+                    "comment": "A comment",
+                    "is_obsolete": False,
+                },
+                "rel_type": "is_a",
+                "target_id": "T:2",
+                "target_name": "biological process",
+            },
+            {
+                "node": {"id": "T:2", "name": "biological process", "namespace": "biological_process"},
+                "rel_type": None,
+                "target_id": None,
+                "target_name": None,
+            },
+        ]
+        resp = client.get("/api/graph/paths/export?path_ids=T:1&path_ids=T:2&selected_ids=T:1")
+        assert resp.status_code == 200
+        assert resp.headers["content-type"] == "text/csv; charset=utf-8"
+        assert "attachment" in resp.headers["content-disposition"]
+        assert "path_export" in resp.headers["content-disposition"]
+
+        lines = resp.text.lstrip("\ufeff").splitlines()
+        assert len(lines) >= 3  # header + 2 nodes
+        header = lines[0]
+        assert "ID" in header
+        assert "Name" in header
+        assert "Definition" in header
+        assert "Subclass Of" in header
+
+    def test_export_csv_columns(self, client, mock_memgraph):
+        mock_memgraph.execute_read.return_value = [
+            {
+                "node": {
+                    "id": "T:1",
+                    "name": "term1",
+                    "namespace": "biological_process",
+                    "definition": "A definition",
+                    "synonyms": ["syn1", "syn2"],
+                    "xrefs": ["DB:001"],
+                    "comment": "Some comment",
+                    "is_obsolete": True,
+                },
+                "rel_type": "is_a",
+                "target_id": "T:2",
+                "target_name": "parent term",
+            },
+            {
+                "node": {"id": "T:2", "name": "parent term", "namespace": "biological_process"},
+                "rel_type": None,
+                "target_id": None,
+                "target_name": None,
+            },
+        ]
+        resp = client.get("/api/graph/paths/export?path_ids=T:1&path_ids=T:2&selected_ids=T:1")
+        assert resp.status_code == 200
+
+        import csv
+        import io
+
+        reader = csv.DictReader(io.StringIO(resp.text.lstrip("\ufeff")))
+        rows = list(reader)
+
+        # T:1 is selected, T:2 is path node — selected sorts first
+        t1 = next(r for r in rows if r["ID"] == "T:1")
+        assert t1["Name"] == "term1"
+        assert t1["Definition"] == "A definition"
+        assert "syn1" in t1["Synonyms"]
+        assert "syn2" in t1["Synonyms"]
+        assert "DB:001" in t1["Cross-references"]
+        assert "Some comment" in t1["Comments"]
+        assert t1["Obsolete"] == "Yes"
+        assert t1["Role"] == "Selected"
+        assert "parent term [T:2]" in t1["Subclass Of"]
+
+        t2 = next(r for r in rows if r["ID"] == "T:2")
+        assert t2["Role"] == "Path Node"
+        assert "term1 [T:1]" in t2["Has Subclasses"]
+
+    def test_export_csv_neighbour_role(self, client, mock_memgraph):
+        mock_memgraph.execute_read.return_value = [
+            {
+                "node": {"id": "T:1", "name": "path node"},
+                "rel_type": None,
+                "target_id": None,
+                "target_name": None,
+            },
+            {
+                "node": {"id": "T:3", "name": "neighbour node"},
+                "rel_type": None,
+                "target_id": None,
+                "target_name": None,
+            },
+        ]
+        # T:1 is a path node, T:3 is a neighbour (not in path_ids)
+        resp = client.get("/api/graph/paths/export?path_ids=T:1&selected_ids=T:1")
+        assert resp.status_code == 200
+
+        import csv
+        import io
+
+        reader = csv.DictReader(io.StringIO(resp.text.lstrip("\ufeff")))
+        rows = list(reader)
+        t3 = next((r for r in rows if r["ID"] == "T:3"), None)
+        if t3:
+            assert t3["Role"] == "Neighbour"
+
+    def test_export_csv_other_relationships(self, client, mock_memgraph):
+        mock_memgraph.execute_read.return_value = [
+            {
+                "node": {"id": "T:1", "name": "term1"},
+                "rel_type": "part_of",
+                "target_id": "T:2",
+                "target_name": "term2",
+            },
+            {
+                "node": {"id": "T:2", "name": "term2"},
+                "rel_type": None,
+                "target_id": None,
+                "target_name": None,
+            },
+        ]
+        resp = client.get("/api/graph/paths/export?path_ids=T:1&path_ids=T:2")
+        assert resp.status_code == 200
+
+        import csv
+        import io
+
+        reader = csv.DictReader(io.StringIO(resp.text.lstrip("\ufeff")))
+        rows = list(reader)
+        t1 = next(r for r in rows if r["ID"] == "T:1")
+        assert "part of" in t1["Other Relationships"]
+        assert "term2 [T:2]" in t1["Other Relationships"]
+
+    def test_export_csv_no_path_ids(self, client):
+        resp = client.get("/api/graph/paths/export")
+        assert resp.status_code == 422
+
+    def test_export_csv_not_found(self, client, mock_memgraph):
+        mock_memgraph.execute_read.return_value = []
+        resp = client.get("/api/graph/paths/export?path_ids=FAKE:1")
+        assert resp.status_code == 404
+
+    def test_export_csv_none_values_cleaned(self, client, mock_memgraph):
+        mock_memgraph.execute_read.return_value = [
+            {
+                "node": {
+                    "id": "T:1",
+                    "name": "term1",
+                    "definition": None,
+                    "comment": None,
+                    "synonyms": None,
+                    "xrefs": None,
+                    "namespace": None,
+                },
+                "rel_type": None,
+                "target_id": None,
+                "target_name": None,
+            },
+        ]
+        resp = client.get("/api/graph/paths/export?path_ids=T:1")
+        assert resp.status_code == 200
+        assert "None" not in resp.text.replace("none", "").replace("content-disposition", "")
+
+    def test_export_csv_sort_order(self, client, mock_memgraph):
+        mock_memgraph.execute_read.return_value = [
+            {"node": {"id": "T:3", "name": "neighbour"}, "rel_type": None, "target_id": None, "target_name": None},
+            {"node": {"id": "T:2", "name": "path"}, "rel_type": None, "target_id": None, "target_name": None},
+            {"node": {"id": "T:1", "name": "selected"}, "rel_type": None, "target_id": None, "target_name": None},
+        ]
+        resp = client.get("/api/graph/paths/export?path_ids=T:1&path_ids=T:2&selected_ids=T:1")
+        assert resp.status_code == 200
+
+        import csv
+        import io
+
+        reader = csv.DictReader(io.StringIO(resp.text.lstrip("\ufeff")))
+        rows = list(reader)
+        roles = [r["Role"] for r in rows]
+        # Selected first, then Path Node, then Neighbour
+        assert roles.index("Selected") < roles.index("Path Node")
+        assert roles.index("Path Node") < roles.index("Neighbour")
+
     # ----- /semantic-search endpoint -----
 
     def test_semantic_search_unavailable(self, client):
