@@ -73,7 +73,8 @@ const GraphManager = forwardRef<GraphViewRef, unknown>((_, ref) => {
         searchQuery, searchMode, viewLevel, setIsNodeSelecting,
         selectedNodeIds, pathNodeIds, pathEdgeIds,
         infoPanelMode, graphFilters: rawFilters, pathViewOnly,
-        searchResultsSemantic, searchResultsFuzzyTitle, searchResultsDescription
+        searchResultsSemantic, searchResultsFuzzyTitle, searchResultsDescription,
+        committedSearchNodeIds, searchScopeActive
     } = useStore();
     const graphFilters = rawFilters ?? DEFAULT_FILTERS;
     const lastClickedNodeRef = useRef(false);
@@ -396,6 +397,8 @@ const GraphManager = forwardRef<GraphViewRef, unknown>((_, ref) => {
         multiSelectPathData,
         isDark,
         pathViewOnly,
+        committedSearchNodeIds,
+        searchScopeActive,
         // Edge endpoint cache to avoid graph.source()/target() per frame
         edgeEndpoints: new Map<string, { source: string; target: string }>(),
     });
@@ -410,8 +413,10 @@ const GraphManager = forwardRef<GraphViewRef, unknown>((_, ref) => {
         stateRef.current.multiSelectPathData = multiSelectPathData;
         stateRef.current.isDark = isDark;
         stateRef.current.pathViewOnly = pathViewOnly;
+        stateRef.current.committedSearchNodeIds = committedSearchNodeIds;
+        stateRef.current.searchScopeActive = searchScopeActive;
         sigma.refresh();
-    }, [selectedNodeId, isMultiSelect, selectedNodeIds, nodeStyles, isolationData, multiSelectPathData, isDark, pathViewOnly, sigma]);
+    }, [selectedNodeId, isMultiSelect, selectedNodeIds, nodeStyles, isolationData, multiSelectPathData, isDark, pathViewOnly, committedSearchNodeIds, searchScopeActive, sigma]);
 
     useEffect(() => {
         const graph = sigma.getGraph();
@@ -428,6 +433,8 @@ const GraphManager = forwardRef<GraphViewRef, unknown>((_, ref) => {
         const query = deferredSearchQuery.toLowerCase();
         const labelGroups = getGroups(graphFilters.labelKeywords || []);
         const descGroups = getGroups(graphFilters.descriptionKeywords || []);
+        const committedSearchSet = new Set(committedSearchNodeIds);
+        const selectedSet = new Set(selectedNodeIds);
 
         const visibleNodes = new Set<string>();
 
@@ -461,9 +468,13 @@ const GraphManager = forwardRef<GraphViewRef, unknown>((_, ref) => {
             }
 
             // Multi-select path isolation
-            if (isMultiSelect && multiSelectPathData) {
-                isVisible = multiSelectPathData.pathNodes.has(id) ||
-                    (multiSelectPathData.neighborNodes.has(id) && level >= viewLevel);
+            if (isMultiSelect && searchScopeActive) {
+                const inSelected = selectedSet.has(id);
+                const inPath = multiSelectPathData ? multiSelectPathData.pathNodes.has(id) : false;
+                const inCommittedSearch = committedSearchSet.has(id);
+                isVisible = inSelected || inPath || inCommittedSearch;
+            } else if (isMultiSelect && multiSelectPathData) {
+                isVisible = multiSelectPathData.pathNodes.has(id) || (multiSelectPathData.neighborNodes.has(id) && level >= viewLevel);
             }
 
             if (isVisible) visibleNodes.add(id);
@@ -472,7 +483,7 @@ const GraphManager = forwardRef<GraphViewRef, unknown>((_, ref) => {
         stateRef.current.visibleNodes = visibleNodes;
         // update graph (note: this does not perform a hard refresh on the browser)
         sigma.refresh();
-    }, [nodes, edges, deferredSearchQuery, viewLevel, selectedNodeId, isolationData, isMultiSelect, multiSelectPathData, selectedNodeIds, sigma, graphFilters, searchMatchIds, searchResultsSemantic, searchMode]);
+    }, [nodes, edges, deferredSearchQuery, viewLevel, selectedNodeId, isolationData, isMultiSelect, multiSelectPathData, selectedNodeIds, committedSearchNodeIds, searchScopeActive, sigma, graphFilters, searchMatchIds, searchResultsSemantic, searchMode]);
 
     useEffect(() => {
         const graph = sigma.getGraph();
@@ -486,6 +497,10 @@ const GraphManager = forwardRef<GraphViewRef, unknown>((_, ref) => {
             let opacity = 1;
             let hidden = false;
             let color = data.color;
+
+            if (state.isMultiSelect && state.searchScopeActive && !state.visibleNodes.has(node)) {
+                hidden = true;
+            }
 
             if (state.isMultiSelect && state.selectedNodeIds.length >= 2) {
                 const isRelated = state.multiSelectPathData

@@ -27,6 +27,8 @@ export function ExplorerSearch({ viewMode = "graph" }: { viewMode?: "graph" | "h
         graphFilters,
         searchMode,
         setSearchMode,
+        applySearchScope,
+        clearSearchScope,
     } = useStore();
 
     const [inputValue, setInputValue] = useState(searchQuery);
@@ -116,16 +118,31 @@ export function ExplorerSearch({ viewMode = "graph" }: { viewMode?: "graph" | "h
         [exactResults, fuzzyResults, descriptionResults]
     );
 
-    const handleSearchTrigger = () => {
+    const keywordResultIds = useMemo(
+        () => [...new Set(searchResults.map((n) => n.id))],
+        [searchResults]
+    );
+
+    const handleSearchTrigger = async () => {
         const queryStr = inputValue.trim();
-        if (queryStr) {
-            setSearchQuery(queryStr);
-            setInfoPanelMode('search-results');
+        if (!queryStr) {
+            clearSearchScope();
+            setSearchQuery("");
+            setInfoPanelMode("closed");
             setIsOpen(false);
+            return;
         }
-        if (searchMode === "semantic" && queryStr) {
-            doSemanticSearch(queryStr);
+
+        setSearchQuery(queryStr);
+        setInfoPanelMode('search-results');
+        setIsOpen(false);
+
+        if (searchMode === "semantic") {
+            const semanticResults = await doSemanticSearch(queryStr);
+            applySearchScope(semanticResults.map((n) => n.id));
+            return;
         }
+        applySearchScope(keywordResultIds);
     };
 
     return (
@@ -138,7 +155,7 @@ export function ExplorerSearch({ viewMode = "graph" }: { viewMode?: "graph" | "h
                         onFocus={() => setIsOpen(true)}
                         onKeyDown={(e) => {
                             if (e.key === 'Enter') {
-                                handleSearchTrigger();
+                                void handleSearchTrigger();
                             }
                         }}
                         onChange={(e) => {
@@ -155,6 +172,7 @@ export function ExplorerSearch({ viewMode = "graph" }: { viewMode?: "graph" | "h
                         onClick={() => {
                             setInputValue("");
                             setSearchQuery("");
+                            clearSearchScope();
                             setIsOpen(false);
                             setViewLevel(1);
                             setInfoPanelMode('closed');
@@ -167,7 +185,9 @@ export function ExplorerSearch({ viewMode = "graph" }: { viewMode?: "graph" | "h
                     </Button>
                 )}
                 <Button
-                    onClick={handleSearchTrigger}
+                    onClick={() => {
+                        void handleSearchTrigger();
+                    }}
                     variant="ghost"
                     size="icon"
                     className="h-8 w-8 hover:bg-blue-500/10"
@@ -183,6 +203,7 @@ export function ExplorerSearch({ viewMode = "graph" }: { viewMode?: "graph" | "h
                             variant="ghost"
                             onClick={() => {
                                 setInfoPanelMode('closed');
+                                clearSearchScope();
                                 setSearchMode(mode);
                             }}
                             className={cn(
