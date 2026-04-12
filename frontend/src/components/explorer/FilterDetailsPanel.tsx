@@ -191,7 +191,7 @@ export function GraphFilterPanel() {
                     <div className="flex items-center justify-between px-4 py-3 border-b border-sidebar-border">
                         <div className="flex items-center gap-2">
                             <Filter className="w-3.5 h-3.5 text-sidebar-foreground/70" />
-                            <span className="text-xs font-semibold text-sidebar-foreground">Graph Filters</span>
+                            <span className="text-xs font-semibold text-sidebar-foreground">Graph Filter Conditions</span>
                         </div>
                         <div className="flex items-center gap-1.5">
                             {activeCount > 0 && (
