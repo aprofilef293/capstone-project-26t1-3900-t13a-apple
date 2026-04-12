@@ -117,7 +117,7 @@ const MultiSelectNodeSidebar: React.FC = () => {
               value={selectedAttribute || NONE_VALUE}
               onValueChange={handleAttributeChange}
             >
-             <DropdownMenuRadioItem value={NONE_VALUE}>None (show id)</DropdownMenuRadioItem>
+             <DropdownMenuRadioItem value={NONE_VALUE}>None (show node id)</DropdownMenuRadioItem>
               {attributeKeys.map((key) => (
                 <DropdownMenuRadioItem key={key} value={key}>
                   {key}
