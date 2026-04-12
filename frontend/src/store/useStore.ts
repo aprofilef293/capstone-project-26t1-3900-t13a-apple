@@ -47,6 +47,13 @@ type CypressWindow = Window & {
   __STORE__?: typeof useStore;
 };
 
+export interface ActivityItem {
+    mode: 'node-info' | 'search-results' | 'multi-select';
+    singleSelectedNode?: string | null;
+    searchMode?: 'keyword' | 'semantic';
+    searchQuery?: string;
+}
+
 interface ExplorerState {
     nodes: GraphNode[];
     edges: GraphEdge[];
@@ -54,8 +61,9 @@ interface ExplorerState {
     selectedNodeId: string | null;
     searchQuery: string;
     viewLevel: number;
-    prevNodes: string[];
-    setPrevNodes: (prevNodes: string[]) => void;
+    prevActivity: ActivityItem[];
+    setPrevActivity: (prevActivity: ActivityItem[]) => void;
+    updateActivity: (item?: ActivityItem) => void;
     setSelectedNodeId: (id: string | null) => void;
     setGraphData: (nodes: GraphNode[], edges: GraphEdge[]) => void;
     setSearchQuery: (query: string) => void;
@@ -157,17 +165,6 @@ const createGraph = (nodes: GraphNode[], edges: GraphEdge[]) => {
     return graph;
 };
 
-const updatePrevNodes = (id: string | null) => {
-    const prevNodes = useStore.getState().prevNodes;
-    const setPrevNodes = useStore.getState().setPrevNodes;
-    if (id == null) {
-        setPrevNodes([]);
-    } else if (prevNodes[prevNodes.length - 1] !== id) {
-        prevNodes.push(id);
-        setPrevNodes(prevNodes);
-    }
-}
-
 // load persisted file info helper
 const getPersistedFileInfo = () => {
     try {
@@ -192,14 +189,29 @@ export const useStore = create<ExplorerState>((set) => ({
     viewLevel: 1,
     isGraphLoading: false,
     isInitialGraphLoading: false,
-    prevNodes: [],
-    setPrevNodes: (prevNodes) => {
-        set({ prevNodes });
+    prevActivity: [],
+    setPrevActivity: (prevActivity) => {
+        set({ prevActivity });
+    },
+    updateActivity: (item?) => {
+        const prevActivity = useStore.getState().prevActivity;
+        const setPrevActivity = useStore.getState().setPrevActivity;
+        if (!item) {
+            setPrevActivity([]);
+        } else {
+            prevActivity.push(item);
+            setPrevActivity(prevActivity);
+        }
+        // TODO: check that you've handled what this was handling
+        // else if (prevNodes[prevNodes.length - 1] !== id) {
+        //     prevNodes.push(id);
+        //     setPrevNodes(prevNodes);
+        // }
     },
     setSelectedNodeId: (id) => {
         set({ selectedNodeId: id });
         localStorage.setItem('selectedNodeId', id ?? '');
-        updatePrevNodes(id);
+        useStore.getState().updateActivity({mode: 'node-info', singleSelectedNode: id });
         if (id) {
             useStore.getState().setIsMultiSelect(false);
             localStorage.setItem('isMultiSelect', 'false');
@@ -486,7 +498,14 @@ export const useStore = create<ExplorerState>((set) => ({
     })(),
     setInfoPanelMode: (mode) => {
         localStorage.setItem('infoPanelMode', mode);
+        if (useStore.getState().infoPanelMode !== "multi-select" && mode === "multi-select") {
+            // only add to path of previous activity/selections if multiselect is being turned on (wasn't already on)
+            useStore.getState().updateActivity({ mode: 'multi-select' });
+        }
         set({ infoPanelMode: mode });
+        if (mode === "closed") {
+            useStore.getState().updateActivity();
+        }
         if (mode === 'closed' || mode === 'search-results') {
             useStore.getState().setSelectedNodeId(null);
         }

@@ -27,6 +27,7 @@ export function ExplorerSearch({ viewMode = "graph" }: { viewMode?: "graph" | "h
         graphFilters,
         searchMode,
         setSearchMode,
+        updateActivity,
     } = useStore();
 
     const [inputValue, setInputValue] = useState(searchQuery);
@@ -122,6 +123,7 @@ export function ExplorerSearch({ viewMode = "graph" }: { viewMode?: "graph" | "h
             setSearchQuery(queryStr);
             setInfoPanelMode('search-results');
             setIsOpen(false);
+            updateActivity({ mode: 'search-results', searchMode, searchQuery: queryStr });
         }
         if (searchMode === "semantic" && queryStr) {
             doSemanticSearch(queryStr);
