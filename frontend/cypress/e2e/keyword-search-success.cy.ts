@@ -31,7 +31,7 @@ describe('happy path for keyword search', () => {
     cy.get('canvas').should('be.visible')
 
     // click search bar + type "organism" (ie. search term)
-    cy.get('input[placeholder="Search nodes..."]').as('searchInput')
+    cy.get('input[placeholder="Search for exact words or phrases"]').as('searchInput')
     cy.get('@searchInput').click().type('organism', { delay: 80 })
 
     // check dropdown appears under searchbar + has suggested matching nodes/ terms

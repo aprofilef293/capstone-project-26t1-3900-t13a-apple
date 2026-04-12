@@ -103,7 +103,7 @@ describe("tests for searchbar", () => {
 
     // render search bar + type 'heart'
     render(<ExplorerSearch />);
-    const input = screen.getByPlaceholderText("Search nodes...");
+    const input = screen.getByPlaceholderText("Search for exact words or phrases");
     fireEvent.change(input, { target: { value: "heart" } });
 
     // make sure search function is not called yet
@@ -119,7 +119,7 @@ describe("tests for searchbar", () => {
   it("click 'x' clears the words typed in search bar", () => {
     // render search bar + type 'cancer'
     const { container } = render(<ExplorerSearch />);
-    const input = screen.getByPlaceholderText("Search nodes...");
+    const input = screen.getByPlaceholderText("Search for exact words or phrases");
     fireEvent.change(input, { target: { value: "cancer" } });
 
     // check that the 'x' icon is visible + click it
@@ -139,7 +139,7 @@ describe("tests for searchbar", () => {
     mockState.searchQuery = "heart";
     // render search bar + type 'heart' + click enter
     render(<ExplorerSearch />);
-    const input = screen.getByPlaceholderText("Search nodes...");
+    const input = screen.getByPlaceholderText("Search for exact words or phrases");
     fireEvent.keyDown(input, { key: "Enter" });
 
     expect(setInfoPanelModeMock).toHaveBeenCalledWith("search-results");
@@ -174,7 +174,7 @@ describe("tests for searchbar", () => {
     
     // render search bar + type in "@@@@@"
     render(<ExplorerSearch />);
-    const input = screen.getByPlaceholderText("Search nodes...");
+    const input = screen.getByPlaceholderText("Search for exact words or phrases");
     fireEvent.focus(input);
 
     expect(screen.getByText(/No quick matches for "@@@@@"/i),).toBeInTheDocument();

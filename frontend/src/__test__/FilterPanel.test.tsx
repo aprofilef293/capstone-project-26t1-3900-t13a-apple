@@ -56,15 +56,15 @@ describe("tests for filter panel", () => {
     const toggle = screen.getByTitle("Graph filters");
 
     // default is closed
-    expect(screen.queryByText("Graph Filters")).not.toBeInTheDocument();
+    expect(screen.queryByText("Graph Filter Conditions")).not.toBeInTheDocument();
 
     // open the filter
     fireEvent.click(toggle);
-    expect(screen.getByText("Graph Filters")).toBeInTheDocument();
+    expect(screen.getByText("Graph Filter Conditions")).toBeInTheDocument();
 
     // close again
     fireEvent.click(toggle);
-    expect(screen.queryByText("Graph Filters")).not.toBeInTheDocument();
+    expect(screen.queryByText("Graph Filter Conditions")).not.toBeInTheDocument();
   });
 
   it("filter panel closes by tapping outside the screen", () => {
@@ -72,11 +72,11 @@ describe("tests for filter panel", () => {
 
     // open the panel
     fireEvent.click(screen.getByTitle("Graph filters"));
-    expect(screen.getByText("Graph Filters")).toBeInTheDocument();
+    expect(screen.getByText("Graph Filter Conditions")).toBeInTheDocument();
 
     // click somewhere outside the panel
     fireEvent.mouseDown(document.body);
-    expect(screen.queryByText("Graph Filters")).not.toBeInTheDocument();
+    expect(screen.queryByText("Graph Filter Conditions")).not.toBeInTheDocument();
   });
 
   it("correctly adds search terms (name and description field together)", () => {

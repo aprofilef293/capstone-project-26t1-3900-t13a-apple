@@ -32,7 +32,7 @@ describe('happy path for filter panel', () => {
 
     // check filter icon is there + click (ie. funnel icon next to multi-select toggle)
     cy.get('button[title="Graph filters"]').should('be.visible').click()
-    cy.contains('span', 'Graph Filters').should('be.visible')
+    cy.contains('span', 'Graph Filter Conditions').should('be.visible')
 
     // type 'surveillance' into the filter panel search bar + click enter
     cy.get('#graph-filter-panel').within(() => {
@@ -147,6 +147,6 @@ describe('happy path for filter panel', () => {
         .click()
 
     // check filter panel is closed
-    cy.contains('span', 'Graph Filters').should('not.exist') 
+    cy.contains('span', 'Graph Filter Conditions').should('not.exist') 
   });
 });
