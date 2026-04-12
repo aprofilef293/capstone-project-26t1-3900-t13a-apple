@@ -286,12 +286,13 @@ export function NodeDetailsPanel() {
                 <div className="flex items-center justify-between mb-3">
                     <button
                         onClick={() => {
-                            const tempPrevActivity = [...prevActivity];
+                            const tempPrevActivity = prevActivity;
                             tempPrevActivity.pop();
                             const prev = tempPrevActivity.pop();
                             setPrevActivity(tempPrevActivity);
                             if (!prev) {
                                 // no previous activity, close panel
+                                setSelectedNodeId(null);
                                 setInfoPanelMode('closed');
                             } else if (prev.mode === 'node-info') {
                                 // return to previous single node
