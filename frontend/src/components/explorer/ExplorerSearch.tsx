@@ -142,8 +142,36 @@ export function ExplorerSearch({ viewMode = "graph" }: { viewMode?: "graph" | "h
             applySearchScope(semanticResults.map((n) => n.id));
             return;
         }
-        applySearchScope(keywordResultIds);
-    };
+
+        const exactTitleHits = filteredNodes
+            .filter((node) => node.label.toLowerCase().includes(queryStr.toLowerCase()))
+            .slice(0, 50);
+        const exactIds = new Set(exactTitleHits.map((n) => n.id));
+
+        const fuzzyTitleHits = fuse
+            .search(queryStr)
+            .filter((node) => !exactIds.has(node.item.id))
+            .slice(0, 20)
+            .map((r) => r.item);
+        const fuzzyIds = new Set(fuzzyTitleHits.map((n) => n.id));
+
+        const descHits =
+            queryStr.length >= 3
+                ? filteredNodes
+                    .filter((node) => {
+                        if (fuzzyIds.has(node.id) || exactIds.has(node.id)) return false;
+                        const ql = queryStr.toLowerCase();
+                        const def = ((node.attributes.definition as string) ?? "").toLowerCase();
+                        const syns: string[] = (node.attributes.synonyms as string[]) ?? [];
+                        return def.includes(ql) || syns.some((s) => s.toLowerCase().includes(ql));
+                    })
+                    .slice(0, 20)
+                : [];
+
+        setSearchResultsExactTitle(exactTitleHits);
+        setSearchResultsFuzzyTitle(fuzzyTitleHits);
+        setSearchResultsDescription(descHits);
+        applySearchScope([...new Set([...exactTitleHits, ...fuzzyTitleHits, ...descHits].map((n) => n.id))]);    };
 
     return (
         <div ref={wrapperRef} className="relative w-full max-w-lg pointer-events-auto mx-auto group">

@@ -73,7 +73,7 @@ const GraphManager = forwardRef<GraphViewRef, unknown>((_, ref) => {
         searchQuery, searchMode, viewLevel, setIsNodeSelecting,
         selectedNodeIds, pathNodeIds, pathEdgeIds,
         infoPanelMode, graphFilters: rawFilters, pathViewOnly,
-        searchResultsSemantic, searchResultsFuzzyTitle, searchResultsDescription,
+        searchResultsSemantic, searchResultsExactTitle, searchResultsFuzzyTitle, searchResultsDescription,
         committedSearchNodeIds, searchScopeActive
     } = useStore();
     const graphFilters = rawFilters ?? DEFAULT_FILTERS;
@@ -159,10 +159,11 @@ const GraphManager = forwardRef<GraphViewRef, unknown>((_, ref) => {
     const searchMatchIds = useMemo(() => {
         if (!deferredSearchQuery) return null;
         const ids = new Set<string>();
+        for (const n of searchResultsExactTitle) ids.add(n.id as string);
         for (const n of searchResultsFuzzyTitle) ids.add(n.id as string);
         for (const n of searchResultsDescription) ids.add(n.id as string);
         return ids.size > 0 ? ids : null;
-    }, [deferredSearchQuery, searchResultsFuzzyTitle, searchResultsDescription]);
+    }, [deferredSearchQuery, searchResultsExactTitle, searchResultsFuzzyTitle, searchResultsDescription]);
 
     // Isolation data
     const isolationData = useMemo(() => {
