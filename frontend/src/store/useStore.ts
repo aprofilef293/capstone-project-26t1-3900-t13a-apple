@@ -499,12 +499,13 @@ export const useStore = create<ExplorerState>((set) => ({
             useStore.getState().updateActivity({ mode: 'multi-select' });
         }
         set({ infoPanelMode: mode });
-        if (mode === "closed") {
-            // closing sidebar clears history of activity
-            useStore.getState().updateActivity();
-        }
         if (mode === 'closed' || mode === 'search-results') {
             useStore.getState().setSelectedNodeId(null);
+            if (mode === 'search-results') {
+                useStore.getState().updateActivity({ mode: 'search-results', searchMode: useStore.getState().searchMode, searchQuery: useStore.getState().searchQuery });
+            } else {
+                useStore.getState().updateActivity();
+            }
         }
         // keeping isMultiSelect aligned with infoPanelMode (should always match)
         useStore.getState().setIsMultiSelect(mode === 'multi-select');
