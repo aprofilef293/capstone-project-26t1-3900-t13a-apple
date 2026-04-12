@@ -5,7 +5,7 @@ import { NodeDetailsPanel } from "../components/explorer/NodeDetailsPanel";
 
 const setSelectedNodeIdMock = vi.fn();
 const setInfoPanelModeMock = vi.fn();
-const setPrevNodesMock = vi.fn();
+const setPrevActivityMock = vi.fn();
 const setSearchQueryMock = vi.fn();
 
 // mocked data for graph (2 nodes, 1 edge connecting them)
@@ -58,8 +58,8 @@ const mockState = {
     graph.addEdge("test2", "test1");
     return graph;
   })(),
-  prevNodes: [],
-  setPrevNodes: setPrevNodesMock,
+  prevActivity: [],
+  setPrevActivity: setPrevActivityMock,
   setSelectedNodeId: setSelectedNodeIdMock,
   setInfoPanelMode: setInfoPanelModeMock,
   setSearchQuery: setSearchQueryMock,
