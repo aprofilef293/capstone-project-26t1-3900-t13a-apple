@@ -185,7 +185,7 @@ describe("tests for searchbar", () => {
 
     // render search bar + type in "@@@@@"
     render(<ExplorerSearch />);
-    const input = screen.getByPlaceholderText("Search nodes...");
+    const input = screen.getByPlaceholderText("Search for exact words or phrases");
     fireEvent.focus(input);
 
     // check the dropdown shows no results msg
@@ -199,7 +199,7 @@ describe("tests for searchbar", () => {
   it("clicking outside the search bar closes the dropdown", () => {
     // render search bar + type 'heart'
     render(<ExplorerSearch />);
-    const input = screen.getByPlaceholderText("Search nodes...");
+    const input = screen.getByPlaceholderText("Search for exact words or phrases");
     fireEvent.focus(input);
     fireEvent.change(input, { target: { value: 'heart' } });
 
