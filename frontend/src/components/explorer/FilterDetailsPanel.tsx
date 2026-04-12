@@ -38,11 +38,23 @@ function TagInput({
     tags: TagKeyword[];
     onAdd: (text: string) => void;
     onRemove: (text: string) => void;
-    onToggleMode: (text: string) => void;
+    onToggleMode: (text: string, mode?: TagMode) => void;
     placeholder: string;
     id: string;
 }) {
     const [inputValue, setInputValue] = useState("");
+    const [activeMenu, setActiveMenu] = useState<string | null>(null);
+
+    // Close menu on outside click
+    useEffect(() => {
+        const handleClickOutside = (e: MouseEvent) => {
+            if (activeMenu && !(e.target as HTMLElement).closest('.relative')) {
+                setActiveMenu(null);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, [activeMenu]);
 
     const handleKeyDown = (e: React.KeyboardEvent) => {
         if (e.key === 'Enter' || e.key === ',') {
@@ -69,21 +81,24 @@ function TagInput({
         switch (mode) {
             case 'mandatory':
                 return {
-                    bg: "bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20",
-                    hover: "hover:bg-purple-500/20",
-                    icon: <Asterisk className="w-2.5 h-2.5" />
+                    bg: "bg-purple-500/15 text-purple-700 dark:text-purple-400 border-purple-500/30",
+                    halo: "shadow-[0_0_8px_rgba(168,85,247,0.25)]",
+                    icon: <Asterisk className="w-2.5 h-2.5" />,
+                    label: "Only Must"
                 };
             case 'exclude':
                 return {
-                    bg: "bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/20",
-                    hover: "hover:bg-red-500/20",
-                    icon: <Ban className="w-2.5 h-2.5" />
+                    bg: "bg-red-500/15 text-red-700 dark:text-red-400 border-red-500/30",
+                    halo: "shadow-[0_0_8px_rgba(239,68,68,0.25)]",
+                    icon: <Ban className="w-2.5 h-2.5" />,
+                    label: "Exclude"
                 };
             default:
                 return {
-                    bg: "bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20",
-                    hover: "hover:bg-blue-500/20",
-                    icon: <Check className="w-2.5 h-2.5" />
+                    bg: "bg-blue-500/15 text-blue-700 dark:text-blue-400 border-blue-500/30",
+                    halo: "shadow-[0_0_8px_rgba(59,130,246,0.25)]",
+                    icon: <Check className="w-2.5 h-2.5" />,
+                    label: "Include"
                 };
         }
     };
@@ -96,25 +111,58 @@ function TagInput({
             {tags.map((tag) => {
                 const styles = getModeStyles(tag.mode);
                 return (
-                    <span
-                        key={tag.text}
-                        className={cn(
-                            "inline-flex items-center gap-1.5 pl-1.5 pr-1 py-1 border rounded-md text-[10px] font-medium transition-all animate-in zoom-in-95 duration-150 cursor-pointer select-none",
-                            styles.bg,
-                            styles.hover
-                        )}
-                        onClick={(e) => { e.stopPropagation(); onToggleMode(tag.text); }}
-                        title={`Mode: ${tag.mode}. Click to cycle.`}
-                    >
-                        {styles.icon}
-                        {tag.text}
-                        <button
-                            onClick={(e) => { e.stopPropagation(); onRemove(tag.text); }}
-                            className="p-0.5 rounded-sm hover:bg-black/5 dark:hover:bg-white/5 transition-all ml-0.5"
+                    <div key={tag.text} className="relative">
+                        <span
+                            className={cn(
+                                "inline-flex items-center gap-1.5 pl-1.5 pr-1 py-1 border rounded-md text-[10px] font-medium transition-all animate-in zoom-in-95 duration-150 select-none",
+                                styles.bg,
+                                styles.halo
+                            )}
                         >
-                            <X className="w-2.5 h-2.5" />
-                        </button>
-                    </span>
+                            <div 
+                                className="flex items-center gap-0.5 hover:opacity-70 cursor-pointer pr-1 border-r border-current/20"
+                                onClick={(e) => { e.stopPropagation(); setActiveMenu(activeMenu === tag.text ? null : tag.text); }}
+                            >
+                                {styles.icon}
+                                <ChevronDown className="w-2.5 h-2.5" />
+                            </div>
+                            
+                            {tag.text}
+                            
+                            <button
+                                onClick={(e) => { e.stopPropagation(); onRemove(tag.text); }}
+                                className="p-0.5 rounded-sm hover:bg-black/5 dark:hover:bg-white/5 transition-all ml-0.5"
+                            >
+                                <X className="w-2.5 h-2.5" />
+                            </button>
+                        </span>
+
+                        {activeMenu === tag.text && (
+                            <div className="absolute top-full left-0 mt-1.5 z-50 w-36 bg-sidebar/95 backdrop-blur-md border border-sidebar-border rounded-lg shadow-xl py-1 overflow-hidden animate-in fade-in zoom-in-95 duration-100">
+                                {(['include', 'mandatory', 'exclude'] as TagMode[]).map((m) => {
+                                    const mStyles = getModeStyles(m);
+                                    return (
+                                        <button
+                                            key={m}
+                                            onClick={(e) => { 
+                                                e.stopPropagation(); 
+                                                onToggleMode(tag.text, m); 
+                                                setActiveMenu(null); 
+                                            }}
+                                            className={cn(
+                                                "w-full flex items-center gap-2 px-2.5 py-1.5 text-[10px] font-medium transition-colors hover:bg-sidebar-accent",
+                                                tag.mode === m ? "text-foreground" : "text-muted-foreground"
+                                            )}
+                                        >
+                                            <span className={cn("p-0.5 rounded", mStyles.bg)}>{mStyles.icon}</span>
+                                            <span className="capitalize">{m}</span>
+                                            {tag.mode === m && <Check className="w-2.5 h-2.5 ml-auto text-blue-500" />}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        )}
+                    </div>
                 );
             })}
             <input
@@ -126,7 +174,7 @@ function TagInput({
                 onBlur={handleBlur}
                 placeholder={tags.length === 0 ? placeholder : "Add..."}
                 className={cn(
-                    "flex-1 bg-transparent border-none outline-none text-xs text-sidebar-foreground placeholder:text-sidebar-foreground/40 min-w-[40px] py-1",
+                    "flex-1 bg-transparent border-none outline-none text-xs text-sidebar-foreground placeholder:text-sidebar-foreground/40 min-w-[60px] py-1",
                     tags.length > 0 ? "placeholder:text-sidebar-foreground/20" : ""
                 )}
             />
@@ -284,14 +332,13 @@ export function GraphFilterPanel() {
                                             labelKeywords: graphFilters.labelKeywords.filter(t => t.text !== text),
                                             descriptionKeywords: graphFilters.descriptionKeywords.filter(t => t.text !== text),
                                         })}
-                                        onToggleMode={(text) => {
-                                            const cycle = (t: TagKeyword) =>
-                                                t.text === text
-                                                    ? { ...t, mode: (t.mode === 'include' ? 'mandatory' : t.mode === 'mandatory' ? 'exclude' : 'include') as TagMode }
-                                                    : t;
+                                        onToggleMode={(text, mode) => {
+                                            const update = (t: TagKeyword) => t.text === text 
+                                                ? { ...t, mode: mode ?? (t.mode === 'include' ? 'mandatory' : t.mode === 'mandatory' ? 'exclude' : 'include') as TagMode } 
+                                                : t;
                                             setGraphFilters({
-                                                labelKeywords: graphFilters.labelKeywords.map(cycle),
-                                                descriptionKeywords: graphFilters.descriptionKeywords.map(cycle),
+                                                labelKeywords: graphFilters.labelKeywords.map(update),
+                                                descriptionKeywords: graphFilters.descriptionKeywords.map(update),
                                             });
                                         }}
                                         placeholder="e.g. cancer, allergy…"
@@ -323,10 +370,10 @@ export function GraphFilterPanel() {
                                             tags={graphFilters.labelKeywords}
                                             onAdd={(text) => setGraphFilters({ labelKeywords: [...graphFilters.labelKeywords, { text, mode: 'include' }] })}
                                             onRemove={(text) => setGraphFilters({ labelKeywords: graphFilters.labelKeywords.filter(t => t.text !== text) })}
-                                            onToggleMode={(text) => setGraphFilters({
+                                            onToggleMode={(text, mode) => setGraphFilters({
                                                 labelKeywords: graphFilters.labelKeywords.map(t =>
-                                                    t.text === text
-                                                        ? { ...t, mode: t.mode === 'include' ? 'mandatory' : t.mode === 'mandatory' ? 'exclude' : 'include' }
+                                                    t.text === text 
+                                                        ? { ...t, mode: mode ?? (t.mode === 'include' ? 'mandatory' : t.mode === 'mandatory' ? 'exclude' : 'include') as TagMode } 
                                                         : t
                                                 )
                                             })}
@@ -340,10 +387,10 @@ export function GraphFilterPanel() {
                                             tags={graphFilters.descriptionKeywords}
                                             onAdd={(text) => setGraphFilters({ descriptionKeywords: [...graphFilters.descriptionKeywords, { text, mode: 'include' }] })}
                                             onRemove={(text) => setGraphFilters({ descriptionKeywords: graphFilters.descriptionKeywords.filter(t => t.text !== text) })}
-                                            onToggleMode={(text) => setGraphFilters({
+                                            onToggleMode={(text, mode) => setGraphFilters({
                                                 descriptionKeywords: graphFilters.descriptionKeywords.map(t =>
-                                                    t.text === text
-                                                        ? { ...t, mode: t.mode === 'include' ? 'mandatory' : t.mode === 'mandatory' ? 'exclude' : 'include' }
+                                                    t.text === text 
+                                                        ? { ...t, mode: mode ?? (t.mode === 'include' ? 'mandatory' : t.mode === 'mandatory' ? 'exclude' : 'include') as TagMode } 
                                                         : t
                                                 )
                                             })}
