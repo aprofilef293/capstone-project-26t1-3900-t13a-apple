@@ -146,7 +146,7 @@ export function ExplorerSearch({ viewMode = "graph" }: { viewMode?: "graph" | "h
                             setIsOpen(true);
                             if (e.target.value) setViewLevel(1);
                         }}
-                        placeholder="Search nodes..."
+                        placeholder={searchMode === "keyword" ? "Search for exact words or phrases" : "Search for semantic matches"}
                         className="w-full bg-transparent border-none text-sm text-sidebar-foreground placeholder:text-sidebar-foreground/50 focus:outline-none focus:ring-0"
                     />
                 </div>

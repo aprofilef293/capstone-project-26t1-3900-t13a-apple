@@ -35,7 +35,7 @@ describe('happy path for semantic search', () => {
     cy.contains('button', 'Advanced').click()
 
     // click on search bar and type 'organism' + click enter
-    cy.get('input[placeholder="Search nodes..."]')
+    cy.get('input[placeholder="Search for semantic matches"]')
       .as('searchInput')
       .click()
       .type('organism')
