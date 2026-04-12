@@ -108,7 +108,7 @@ const MultiSelectNodeSidebar: React.FC = () => {
               variant="outline"
               className="w-full justify-between text-xs group"
             >
-              {selectedAttribute || "None (showing node id)"}
+              {selectedAttribute || "Select attribute"}
               <ChevronDown className="w-3.5 h-3.5 opacity-50 transition-transform duration-200 group-data-[state=open]:rotate-180" />
             </Button>
           </DropdownMenuTrigger>
@@ -117,7 +117,7 @@ const MultiSelectNodeSidebar: React.FC = () => {
               value={selectedAttribute || NONE_VALUE}
               onValueChange={handleAttributeChange}
             >
-             <DropdownMenuRadioItem value={NONE_VALUE}>None (show node id)</DropdownMenuRadioItem>
+             <DropdownMenuRadioItem value={NONE_VALUE}>Select attribute</DropdownMenuRadioItem>
               {attributeKeys.map((key) => (
                 <DropdownMenuRadioItem key={key} value={key}>
                   {key}
