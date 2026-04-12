@@ -31,19 +31,6 @@ const computedAttributeKeys = [
     "y"
 ]
 
-function returnToPrevNode(prevNodes: string[], setPrevNodes: (prevNodes: string[]) => void, setSelectedNodeId: (id: string | null) => void): void {
-    const updatedPrevNodes = [...prevNodes];
-    updatedPrevNodes.pop();
-    const prevNode = updatedPrevNodes.pop();
-    if (prevNode === undefined) {
-        setPrevNodes([]);
-        setSelectedNodeId(null);
-    } else {
-        setSelectedNodeId(prevNode);
-        setPrevNodes(updatedPrevNodes);
-    }
-}
-
 function alphabeticalSort(a: string, b: string): number {
     if (a.toLowerCase() < b.toLowerCase())
         return -1;
@@ -227,7 +214,7 @@ function AttributesSection({
 
 /* ── Main panel ── */
 export function NodeDetailsPanel() {
-    const { selectedNodeId, nodes, graph, prevActivity, updateActivity, setSelectedNodeId, setInfoPanelMode, isMultiSelect, selectedNodeIds, setSearchQuery } = useStore();
+    const { selectedNodeId, nodes, graph, prevActivity, setPrevActivity, setSelectedNodeId, setInfoPanelMode, setSearchMode, setSearchQuery } = useStore();
     const node = nodes.find((n) => n.id === selectedNodeId);
 
     if (!node || !selectedNodeId) {
@@ -299,12 +286,33 @@ export function NodeDetailsPanel() {
                 <div className="flex items-center justify-between mb-3">
                     <button
                         onClick={() => {
-                            // if (isMultiSelect && selectedNodeIds.length > 0) {
-                            //     setSelectedNodeId(null);
-                            //     setInfoPanelMode('multi-select');
-                            // } else {
-                            //     returnToPrevNode(prevNodes, setPrevNodes, setSelectedNodeId);
-                            // }
+                            const tempPrevActivity = [...prevActivity];
+                            tempPrevActivity.pop();
+                            const prev = tempPrevActivity.pop();
+                            setPrevActivity(tempPrevActivity);
+                            if (!prev) {
+                                // no previous activity, close panel
+                                setInfoPanelMode('closed');
+                            } else if (prev.mode === 'node-info') {
+                                // return to previous single node
+                                if (!prev.singleSelectedNode) {
+                                    setSelectedNodeId(null);
+                                    setInfoPanelMode('closed');
+                                } else {
+                                    setSelectedNodeId(prev.singleSelectedNode);
+                                    setInfoPanelMode('node-info');
+                                }
+                            } else if (prev.mode === 'multi-select') {
+                                // return to multi-select
+                                setInfoPanelMode('multi-select');
+                            } else if (prev.mode === 'search-results') {
+                                // return to search
+                                if (!prev.searchMode) prev.searchMode = 'keyword';
+                                if (!prev.searchQuery) prev.searchQuery = "";
+                                setSearchMode(prev.searchMode);
+                                setSearchQuery(prev.searchQuery);
+                                setInfoPanelMode('search-results');
+                            }
                         }}
                         className="px-2 pb-1 hover:bg-sidebar-accent border border-transparent hover:border-sidebar-border/50 rounded-md transition-all text-sidebar-foreground/50 hover:text-sidebar-foreground flex items-center justify-center cursor-pointer"
                         title="Go back"

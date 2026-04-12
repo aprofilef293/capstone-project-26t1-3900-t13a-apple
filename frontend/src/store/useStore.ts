@@ -202,20 +202,17 @@ export const useStore = create<ExplorerState>((set) => ({
             prevActivity.push(item);
             setPrevActivity(prevActivity);
         }
-        // TODO: check that you've handled what this was handling
-        // else if (prevNodes[prevNodes.length - 1] !== id) {
-        //     prevNodes.push(id);
-        //     setPrevNodes(prevNodes);
-        // }
     },
     setSelectedNodeId: (id) => {
         set({ selectedNodeId: id });
         localStorage.setItem('selectedNodeId', id ?? '');
-        useStore.getState().updateActivity({mode: 'node-info', singleSelectedNode: id });
         if (id) {
             useStore.getState().setIsMultiSelect(false);
             localStorage.setItem('isMultiSelect', 'false');
             useStore.getState().setInfoPanelMode('node-info');
+            useStore.getState().updateActivity({ mode: 'node-info', singleSelectedNode: id });
+        } else {
+            useStore.getState().updateActivity();
         }
     },
     setGraphData: (nodes, edges) => set({
@@ -266,7 +263,6 @@ export const useStore = create<ExplorerState>((set) => ({
         }
     },
     searchResults: [],
-    // TODO: make this localstorage (save search mode)
     searchMode: 'keyword',
     setSearchMode: (mode) => set({ searchMode: mode }),
     setViewLevel: (level) => set({ viewLevel: level }),
@@ -504,6 +500,7 @@ export const useStore = create<ExplorerState>((set) => ({
         }
         set({ infoPanelMode: mode });
         if (mode === "closed") {
+            // closing sidebar clears history of activity
             useStore.getState().updateActivity();
         }
         if (mode === 'closed' || mode === 'search-results') {
