@@ -23,6 +23,7 @@ type GraphNode = {
 };
 
 const MultiSelectNodeSidebar: React.FC = () => {
+  const NONE_VALUE = "__none__";
   const {selectedNodeIds, setSelectedNodeId, nodes, clearSelectedNodes, infoPanelMode, setInfoPanelMode, pathNodeIds, pathLoading, toggleNodeSelection} = useStore();
   const [selectedAttribute, setSelectedAttribute] = useState<string>("");
 
@@ -40,6 +41,15 @@ const MultiSelectNodeSidebar: React.FC = () => {
   const attributeKeys = Array.from(
     new Set(displayNodes.flatMap((node) => Object.keys(node.attributes || {}))),
   );
+
+  const handleAttributeChange = (value: string) => {
+    if (value === NONE_VALUE) {
+      setSelectedAttribute("");
+      return;
+    }
+    // toggle off if clicked again
+    setSelectedAttribute((prev) => (prev === value ? "" : value));
+  };
 
   return (
     <aside className="w-[400px] shrink-0 h-full overflow-hidden bg-sidebar/95 border-l border-sidebar-border shadow-lg z-30 flex flex-col p-6">
@@ -98,29 +108,21 @@ const MultiSelectNodeSidebar: React.FC = () => {
               variant="outline"
               className="w-full justify-between text-xs group"
             >
-              {selectedAttribute || "Select attribute"}
+              {selectedAttribute || "None (showing id)"}
               <ChevronDown className="w-3.5 h-3.5 opacity-50 transition-transform duration-200 group-data-[state=open]:rotate-180" />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent className="w-[var(--radix-dropdown-menu-trigger-width)]">
             <DropdownMenuRadioGroup
-              value={selectedAttribute}
-              onValueChange={setSelectedAttribute}
+              value={selectedAttribute || NONE_VALUE}
+              onValueChange={handleAttributeChange}
             >
-              <DropdownMenuRadioItem value="id" className="justify-start">
-                id
-              </DropdownMenuRadioItem>
-              {attributeKeys
-                .filter((key) => key !== "id")
-                .map((key) => (
-                  <DropdownMenuRadioItem
-                    key={key}
-                    value={key}
-                    className="justify-start"
-                  >
-                    {key}
-                  </DropdownMenuRadioItem>
-                ))}
+             <DropdownMenuRadioItem value={NONE_VALUE}>None (show id)</DropdownMenuRadioItem>
+              {attributeKeys.map((key) => (
+                <DropdownMenuRadioItem key={key} value={key}>
+                  {key}
+                </DropdownMenuRadioItem>
+              ))}
             </DropdownMenuRadioGroup>
           </DropdownMenuContent>
         </DropdownMenu>
