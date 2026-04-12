@@ -16,6 +16,7 @@ _CACHE_DIR = Path("/app/.embedding_cache")
 
 logger = logging.getLogger(__name__)
 
+
 class LocalEmbeddingModel:
     _BATCH_SIZE = 128
     _MAX_CONCURRENT = 16
@@ -23,19 +24,18 @@ class LocalEmbeddingModel:
 
     def __init__(self, model_name: str = "BAAI/bge-small-en-v1.5"):
         self._model_name = model_name
-        self._model = SentenceTransformer(model_name, device='cpu')
+        self._model = SentenceTransformer(model_name, device="cpu")
         logger.info("Prepared a local instance of %s", model_name)
 
     async def encode(self, texts: list[str]) -> np.ndarray:
         if not texts:
-            return np.array([], dtype = np.float32)
-        return (await asyncio.to_thread(
-            self._model.encode,
-            texts,
-            batch_size = self._BATCH_SIZE,
-            normalize_embeddings=True,
-            convert_to_numpy=True
-        )).astype(np.float32)
+            return np.array([], dtype=np.float32)
+        return (
+            await asyncio.to_thread(
+                self._model.encode, texts, batch_size=self._BATCH_SIZE, normalize_embeddings=True, convert_to_numpy=True
+            )
+        ).astype(np.float32)
+
 
 class HuggingFaceEmbeddingModel:
     """Client for generating text embeddings via the HuggingFace Inference API.

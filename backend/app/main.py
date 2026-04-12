@@ -9,9 +9,9 @@ from starlette.middleware.gzip import GZipMiddleware
 from app.config import Settings
 from app.routers import file_upload, graph
 from app.services.embedding import (
-    LocalEmbeddingModel,
-    HuggingFaceEmbeddingModel,
     EmbeddingService,
+    HuggingFaceEmbeddingModel,
+    LocalEmbeddingModel,
 )
 from app.services.memgraph import MemgraphService
 
@@ -55,7 +55,7 @@ def create_app() -> FastAPI:
                 mode = "local"
             else:
                 hf_token = os.getenv("EMBEDDING_HF_TOKEN")
-                model = HuggingFaceEmbeddingModel(model_name, hf_token) 
+                model = HuggingFaceEmbeddingModel(model_name, hf_token)
                 mode = "remote"
             try:
                 logger.info(f"Launching {mode} embedding service...")

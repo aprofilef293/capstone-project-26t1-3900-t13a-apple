@@ -19,7 +19,7 @@ class Settings(BaseSettings):
             Configures the HuggingFace Inference API used for vector-based
             semantic search over ontology terms.
 
-            - ``embedding_local`` — Set to ``true`` for local inference, and 
+            - ``embedding_local`` — Set to ``true`` for local inference, and
               ``false`` for remote inference.
             - ``embedding_enabled`` — Set to ``false`` to disable the embedding
               service entirely (e.g. in CI or test environments where the HF API
