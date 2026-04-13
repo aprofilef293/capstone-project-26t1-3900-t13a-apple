@@ -1,3 +1,6 @@
+"""Graph router helpers and endpoint behaviour with mocked Memgraph."""
+
+
 class TestNodeFromRecord:
     """Unit tests for the _node_from_record helper."""
 
@@ -8,7 +11,7 @@ class TestNodeFromRecord:
         node = _node_from_record(props, 0, 1)
         assert node.key == "GO:001"
         assert node.attributes["label"] == "cell growth"
-        assert node.attributes["color"] == "#2563eb"  # biological_process -> Process -> blue
+        assert node.attributes["color"] == "#2563eb"
         assert node.attributes["nodeType"] == "Process"
 
     def test_molecular_function_namespace(self):
@@ -37,7 +40,7 @@ class TestNodeFromRecord:
     def test_fallback_circular_layout(self):
         from app.routers.graph import _node_from_record
 
-        props = {"id": "GO:001", "name": "test"}  # no x, y
+        props = {"id": "GO:001", "name": "test"}
         node = _node_from_record(props, 0, 4)
         assert isinstance(node.attributes["x"], float)
         assert isinstance(node.attributes["y"], float)
@@ -253,16 +256,16 @@ class TestGraphRouter:
 
     def test_shortest_path_source_not_found(self, client, mock_memgraph):
         mock_memgraph.execute_read.side_effect = [
-            [],  # main BFS query returns nothing
-            [],  # existence check also returns nothing
+            [],
+            [],
         ]
         resp = client.get("/api/graph/path?source=FAKE:1&target=FAKE:2")
         assert resp.status_code == 404
 
     def test_shortest_path_no_path(self, client, mock_memgraph):
         mock_memgraph.execute_read.side_effect = [
-            [],  # main BFS query returns nothing
-            [{"id": "T:1"}, {"id": "T:2"}],  # existence check finds both nodes
+            [],
+            [{"id": "T:1"}, {"id": "T:2"}],
         ]
         resp = client.get("/api/graph/path?source=T:1&target=T:2")
         assert resp.status_code == 404
@@ -275,8 +278,6 @@ class TestGraphRouter:
         assert resp.status_code == 200
         data = resp.json()
         assert len(data["nodes"]) == 1
-
-    # ----- /paths endpoint -----
 
     def test_multi_paths(self, client, mock_memgraph):
         mock_memgraph.execute_read.return_value = [
@@ -299,8 +300,8 @@ class TestGraphRouter:
 
     def test_multi_paths_not_found(self, client, mock_memgraph):
         mock_memgraph.execute_read.side_effect = [
-            [],  # BFS returns nothing
-            [{"id": "T:1"}],  # only T:1 found
+            [],
+            [{"id": "T:1"}],
         ]
         resp = client.get("/api/graph/paths?ids=T:1&ids=T:2")
         assert resp.status_code == 404
@@ -308,14 +309,12 @@ class TestGraphRouter:
 
     def test_multi_paths_no_path_found(self, client, mock_memgraph):
         mock_memgraph.execute_read.side_effect = [
-            [],  # BFS returns nothing
-            [{"id": "T:1"}, {"id": "T:2"}],  # both nodes exist
+            [],
+            [{"id": "T:1"}, {"id": "T:2"}],
         ]
         resp = client.get("/api/graph/paths?ids=T:1&ids=T:2")
         assert resp.status_code == 404
         assert "No paths found" in resp.json()["detail"]
-
-    # ----- /paths/export endpoint -----
 
     def test_export_csv_basic(self, client, mock_memgraph):
         mock_memgraph.execute_read.return_value = [
@@ -348,7 +347,7 @@ class TestGraphRouter:
         assert "path_export" in resp.headers["content-disposition"]
 
         lines = resp.text.lstrip("\ufeff").splitlines()
-        assert len(lines) >= 3  # header + 2 nodes
+        assert len(lines) >= 3
         header = lines[0]
         assert "ID" in header
         assert "URL" in header
@@ -391,7 +390,6 @@ class TestGraphRouter:
         reader = csv.DictReader(io.StringIO(resp.text.lstrip("\ufeff")))
         rows = list(reader)
 
-        # T:1 is selected, T:2 is path node — selected sorts first
         t1 = next(r for r in rows if r["ID"] == "T:1")
         assert t1["Name"] == "term1"
         assert t1["Definition"] == "A definition"
@@ -422,7 +420,6 @@ class TestGraphRouter:
                 "target_name": None,
             },
         ]
-        # T:1 is a path node, T:3 is a neighbour (not in path_ids)
         resp = client.get("/api/graph/paths/export?path_ids=T:1&selected_ids=T:1")
         assert resp.status_code == 200
 
@@ -507,7 +504,6 @@ class TestGraphRouter:
         reader = csv.DictReader(io.StringIO(resp.text.lstrip("\ufeff")))
         rows = list(reader)
         roles = [r["Role"] for r in rows]
-        # Selected first, then Path Node, then Neighbour
         assert roles.index("Selected") < roles.index("Path Node")
         assert roles.index("Path Node") < roles.index("Neighbour")
 
@@ -563,7 +559,6 @@ class TestGraphRouter:
         reader = csv.DictReader(io.StringIO(resp.text.lstrip("\ufeff")))
         rows = list(reader)
         t1 = next(r for r in rows if r["ID"] == "T_1")
-        # Should show short ID, not full URL
         assert "term2 [T_2]" in t1["Subclass Of"]
         assert "http://" not in t1["Subclass Of"]
 
@@ -586,7 +581,7 @@ class TestGraphRouter:
         t3 = next(r for r in rows if r["ID"] == "T:3")
         assert t1["Path Position"] == "1"
         assert t2["Path Position"] == "2"
-        assert t3["Path Position"] == ""  # neighbour has no position
+        assert t3["Path Position"] == ""
 
     def test_export_csv_community(self, client, mock_memgraph):
         mock_memgraph.execute_read.return_value = [
@@ -621,10 +616,7 @@ class TestGraphRouter:
         disposition = resp.headers["content-disposition"]
         assert "doid_subset.csv" in disposition
 
-    # ----- /semantic-search endpoint -----
-
     def test_semantic_search_unavailable(self, client):
-        # client fixture has no embedding_service set
         resp = client.get("/api/graph/semantic-search?q=test")
         assert resp.status_code == 503
 
@@ -645,7 +637,6 @@ class TestGraphRouter:
         assert resp.status_code == 200
         data = resp.json()
         assert len(data["nodes"]) == 2
-        # Nodes should have searchScore attribute
         node_map = {n["key"]: n for n in data["nodes"]}
         assert node_map["T:1"]["attributes"]["searchScore"] == 0.95
 
@@ -667,7 +658,6 @@ class TestGraphRouter:
 
         mock_svc = AsyncMock()
         mock_svc.is_ready = True
-        # All results below the threshold
         mock_svc.search = AsyncMock(return_value=[("T:1", 0.3, "name")])
         client.app.state.embedding_service = mock_svc
 
@@ -676,15 +666,10 @@ class TestGraphRouter:
         data = resp.json()
         assert data["nodes"] == []
 
-    # ----- GET /graph caching -----
-
     def test_get_graph_caches_result(self, client, mock_memgraph):
         mock_memgraph.execute_read.return_value = [{"n": {"id": "T:1", "name": "a"}, "r": None, "m": None}]
-        # First call populates cache
         resp1 = client.get("/api/graph/")
         assert resp1.status_code == 200
-        # Second call should use cache
         resp2 = client.get("/api/graph/")
         assert resp2.status_code == 200
-        # execute_read should only have been called once
         assert mock_memgraph.execute_read.call_count == 1

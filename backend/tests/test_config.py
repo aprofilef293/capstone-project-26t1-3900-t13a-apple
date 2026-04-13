@@ -1,4 +1,4 @@
-"""Unit tests for app.config.Settings."""
+"""Settings defaults, overrides, and env-var binding."""
 
 from app.config import Settings
 
@@ -6,7 +6,7 @@ from app.config import Settings
 class TestSettings:
     def test_defaults(self):
         s = Settings(
-            _env_file=None,  # don't read .env during tests
+            _env_file=None,
         )
         assert s.memgraph_uri == "bolt://localhost:7687"
         assert s.memgraph_user == ""

@@ -1,4 +1,4 @@
-"""Unit tests for Pydantic models in app.models.graph and app.models.upload."""
+"""Pydantic models: OntologyTerm, OntologyRelation, GraphData, and serialization."""
 
 import pytest
 from pydantic import ValidationError
@@ -57,9 +57,9 @@ class TestOntologyTerm:
 
     def test_missing_required_fields(self):
         with pytest.raises(ValidationError):
-            OntologyTerm(id="X:1")  # missing name
+            OntologyTerm(id="X:1")
         with pytest.raises(ValidationError):
-            OntologyTerm(name="x")  # missing id
+            OntologyTerm(name="x")
 
     def test_model_dump(self):
         term = OntologyTerm(id="T:1", name="test", synonyms=["a", "b"])

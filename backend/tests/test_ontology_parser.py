@@ -1,4 +1,4 @@
-"""Unit tests for app.services.ontology_parser — uses temp files, no external services."""
+"""OBO file parsing: terms, relations, synonyms, comments, and obsolete flags."""
 
 import tempfile
 
@@ -56,7 +56,7 @@ class TestParseOntology:
 
     def test_term_count(self):
         terms, _ = self._parse()
-        assert len(terms) == 4  # including the obsolete term
+        assert len(terms) == 4
 
     def test_term_fields(self):
         terms, _ = self._parse()
