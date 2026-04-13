@@ -19,12 +19,18 @@ class Settings(BaseSettings):
             Configures the HuggingFace Inference API used for vector-based
             semantic search over ontology terms.
 
-            - ``embedding_local`` — Set to ``true`` for local inference, and
-              ``false`` for remote inference.
+            - ``embedding_local`` — Set to ``true`` for local inference via
+              sentence-transformers, ``false`` for remote inference via the
+              HuggingFace Inference API.
+            - ``embedding_model_name`` — Model ID used for embeddings
+              (default ``BAAI/bge-small-en-v1.5``).  Works with any
+              sentence-transformers-compatible model.
+            - ``embedding_hf_token`` — HuggingFace API token, required only
+              when ``embedding_local`` is ``false``.  Obtain a free token at
+              https://huggingface.co/settings/tokens.
             - ``embedding_enabled`` — Set to ``false`` to disable the embedding
-              service entirely (e.g. in CI or test environments where the HF API
-              is unavailable).  When disabled, the ``/api/graph/embedding-search``
-              endpoint returns 503.
+              service entirely (e.g. in CI or test environments).  When
+              disabled, the ``/api/graph/embedding-search`` endpoint returns 503.
 
         Server
             General server behaviour.
@@ -41,6 +47,8 @@ class Settings(BaseSettings):
     memgraph_password: str = ""
 
     embedding_local: bool = True
+    embedding_model_name: str = "BAAI/bge-small-en-v1.5"
+    embedding_hf_token: str = ""
     embedding_enabled: bool = True
 
     cors_origins: list[str] = ["http://localhost:5173"]
