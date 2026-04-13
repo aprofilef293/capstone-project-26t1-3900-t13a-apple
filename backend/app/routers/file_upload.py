@@ -196,6 +196,9 @@ async def upload_ontology(request: Request, file: UploadFile = File(...)):
             # Wait for embeddings to finish (may already be done).
             if embedding_task:
                 try:
+                    while not embedding_task.done():
+                        yield ": keep-alive\n\n"
+                        await asyncio.sleep(1)
                     await embedding_task
                     logger.info("Embedding index built in %.3fs", time.perf_counter() - embedding_start)
                 except Exception as emb_err:

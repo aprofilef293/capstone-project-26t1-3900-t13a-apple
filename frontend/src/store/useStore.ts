@@ -42,6 +42,18 @@ export const DEFAULT_FILTERS: GraphFilters = {
     excludedColors: new Set(),
 };
 
+type CypressWindow = Window & {
+  Cypress?: unknown;
+  __STORE__?: typeof useStore;
+};
+
+export interface ActivityItem {
+    mode: 'node-info' | 'search-results' | 'multi-select';
+    singleSelectedNode?: string | null;
+    searchMode?: 'keyword' | 'semantic';
+    searchQuery?: string;
+}
+
 interface ExplorerState {
     nodes: GraphNode[];
     edges: GraphEdge[];
@@ -49,8 +61,9 @@ interface ExplorerState {
     selectedNodeId: string | null;
     searchQuery: string;
     viewLevel: number;
-    prevNodes: string[];
-    setPrevNodes: (prevNodes: string[]) => void;
+    prevActivity: ActivityItem[];
+    setPrevActivity: (prevActivity: ActivityItem[]) => void;
+    updateActivity: (item?: ActivityItem) => void;
     setSelectedNodeId: (id: string | null) => void;
     setGraphData: (nodes: GraphNode[], edges: GraphEdge[]) => void;
     setSearchQuery: (query: string) => void;
@@ -152,17 +165,6 @@ const createGraph = (nodes: GraphNode[], edges: GraphEdge[]) => {
     return graph;
 };
 
-const updatePrevNodes = (id: string | null) => {
-    const prevNodes = useStore.getState().prevNodes;
-    const setPrevNodes = useStore.getState().setPrevNodes;
-    if (id == null) {
-        setPrevNodes([]);
-    } else if (prevNodes[prevNodes.length - 1] !== id) {
-        prevNodes.push(id);
-        setPrevNodes(prevNodes);
-    }
-}
-
 // load persisted file info helper
 const getPersistedFileInfo = () => {
     try {
@@ -187,18 +189,30 @@ export const useStore = create<ExplorerState>((set) => ({
     viewLevel: 1,
     isGraphLoading: false,
     isInitialGraphLoading: false,
-    prevNodes: [],
-    setPrevNodes: (prevNodes) => {
-        set({ prevNodes });
+    prevActivity: [],
+    setPrevActivity: (prevActivity) => {
+        set({ prevActivity });
+    },
+    updateActivity: (item?) => {
+        const prevActivity = useStore.getState().prevActivity;
+        const setPrevActivity = useStore.getState().setPrevActivity;
+        if (!item) {
+            setPrevActivity([]);
+        } else {
+            prevActivity.push(item);
+            setPrevActivity(prevActivity);
+        }
     },
     setSelectedNodeId: (id) => {
         set({ selectedNodeId: id });
         localStorage.setItem('selectedNodeId', id ?? '');
-        updatePrevNodes(id);
         if (id) {
             useStore.getState().setIsMultiSelect(false);
             localStorage.setItem('isMultiSelect', 'false');
             useStore.getState().setInfoPanelMode('node-info');
+            useStore.getState().updateActivity({ mode: 'node-info', singleSelectedNode: id });
+        } else {
+            useStore.getState().updateActivity();
         }
     },
     setGraphData: (nodes, edges) => set({
@@ -249,7 +263,6 @@ export const useStore = create<ExplorerState>((set) => ({
         }
     },
     searchResults: [],
-    // TODO: make this localstorage (save search mode)
     searchMode: 'keyword',
     setSearchMode: (mode) => set({ searchMode: mode }),
     setViewLevel: (level) => set({ viewLevel: level }),
@@ -340,7 +353,7 @@ export const useStore = create<ExplorerState>((set) => ({
 
             if (!response.ok || !response.body) {
                 let errorMsg = response.statusText;
-                let errorCode = response.status;
+                const errorCode = response.status;
                 try {
                     const errorBody = await response.json();
                     // Try to extract a message from the error body
@@ -351,7 +364,7 @@ export const useStore = create<ExplorerState>((set) => ({
                             errorMsg = errorBody.detail;
                         }
                     }
-                } catch (e) {
+                } catch {
                     // fallback to statusText (ie. errorMsg)
                 }
                 localStorage.setItem('importStatus', 'error');
@@ -481,9 +494,18 @@ export const useStore = create<ExplorerState>((set) => ({
     })(),
     setInfoPanelMode: (mode) => {
         localStorage.setItem('infoPanelMode', mode);
+        if (useStore.getState().infoPanelMode !== "multi-select" && mode === "multi-select") {
+            // only add to path of previous activity/selections if multiselect is being turned on (wasn't already on)
+            useStore.getState().updateActivity({ mode: 'multi-select' });
+        }
         set({ infoPanelMode: mode });
         if (mode === 'closed' || mode === 'search-results') {
             useStore.getState().setSelectedNodeId(null);
+            if (mode === 'search-results') {
+                useStore.getState().updateActivity({ mode: 'search-results', searchMode: useStore.getState().searchMode, searchQuery: useStore.getState().searchQuery });
+            } else {
+                useStore.getState().updateActivity();
+            }
         }
         // keeping isMultiSelect aligned with infoPanelMode (should always match)
         useStore.getState().setIsMultiSelect(mode === 'multi-select');
@@ -524,3 +546,13 @@ export const useStore = create<ExplorerState>((set) => ({
         return { pathViewOnly: next };
     }),
 }));
+
+// for testing with cypress - to click on node(s) in network graph page
+export function exposeStoreForCypress() {
+  if (typeof window === "undefined") return;
+
+  const win = window as CypressWindow;
+  if (!win.Cypress) return;
+
+  win.__STORE__ = useStore;
+}

@@ -1,6 +1,6 @@
-# Base stage
 FROM python:3.12-slim AS base
 WORKDIR /app
+ENV HF_HOME=/app/.model_cache
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
@@ -22,10 +22,8 @@ RUN poetry install --no-interaction --no-ansi
 COPY . .
 EXPOSE 8000
 
-# Dev stage
 FROM base AS dev
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
 
-# Production stage
 FROM base AS prod
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
