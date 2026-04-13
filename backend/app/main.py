@@ -1,5 +1,4 @@
 import logging
-import os
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
@@ -49,16 +48,14 @@ def create_app() -> FastAPI:
 
         app.state.embedding_service = None
         if settings.embedding_enabled:
-            model_name = os.getenv("EMBEDDING_MODEL_NAME")
             if settings.embedding_local:
-                model = LocalEmbeddingModel(model_name)
+                model = LocalEmbeddingModel(settings.embedding_model_name)
                 mode = "local"
             else:
-                hf_token = os.getenv("EMBEDDING_HF_TOKEN")
-                model = HuggingFaceEmbeddingModel(model_name, hf_token)
+                model = HuggingFaceEmbeddingModel(settings.embedding_model_name, settings.embedding_hf_token)
                 mode = "remote"
             try:
-                logger.info(f"Launching {mode} embedding service...")
+                logger.info("Launching %s embedding service...", mode)
                 app.state.embedding_service = EmbeddingService(model)
                 await _rebuild_embedding_index(app.state.memgraph, app.state.embedding_service)
             except Exception as e:
