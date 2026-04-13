@@ -30,6 +30,7 @@ services:
     volumes:
       - embedding-cache:/app/.embedding_cache
       - preprocessing-cache:/app/.preprocessing_cache
+      - model-cache:/root/.cache
 
   frontend:
     build:
@@ -45,3 +46,4 @@ volumes:
   memgraph-log:
   embedding-cache:
   preprocessing-cache:
+  model-cache:
