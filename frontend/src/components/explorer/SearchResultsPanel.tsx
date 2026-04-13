@@ -108,7 +108,12 @@ export function SearchResultsPanel() {
                         <X className="w-5 h-5" />
                     </button>
                 </div>
-                <span className="text-[12px] text-sidebar-foreground/70 font-mono tracking-wider mr-auto">Query: {searchQuery}</span>
+                <div className="text-[12px] text-sidebar-foreground font-mono tracking-wider mr-auto mt-2 mb-2">Query: {searchQuery}</div>
+                <div className="text-[12px] text-sidebar-foreground/70 font-mono tracking-wider mr-auto">
+                    {searchMode === "keyword" ?
+                        "Search results include exact matches on node labels and descriptions (if available).\nSuggested results use fuzzy matching to find potential similar matches."
+                        : "Search results include semantic (meaning-based) matches on node labels and descriptions."}
+                </div>
             </div>
 
             <ScrollArea className="flex-1 min-h-0 pb-6 px-6 pt-2">
