@@ -1,0 +1,51 @@
+services:
+  memgraph:
+    image: memgraph/memgraph
+    ports:
+      - "7687:7687"
+      - "7444:7444"
+    volumes:
+      - memgraph-data:/var/lib/memgraph
+      - memgraph-log:/var/log/memgraph
+    command: ["--log-level=TRACE"]
+    environment:
+      - MEMGRAPH_USER=memgraph
+      - MEMGRAPH_PASSWORD=memgraph
+    networks:
+      - capstone
+
+  backend:
+    build:
+      context: .
+      target: dev
+    ports:
+      - "8000:8000"
+    environment:
+      - MEMGRAPH_URI=bolt://memgraph:7687
+      - MEMGRAPH_USER=memgraph
+      - MEMGRAPH_PASSWORD=memgraph
+      - CORS_ORIGINS=["http://localhost:5173"]
+      - EMBEDDING_HF_TOKEN=${EMBEDDING_HF_TOKEN}
+      - EMBEDDING_MODEL_NAME=${EMBEDDING_MODEL_NAME}
+    depends_on:
+      - memgraph
+    volumes:
+      - .:/app
+      - /app/.venv
+      - embedding-cache:/app/.embedding_cache
+      - preprocessing-cache:/app/.preprocessing_cache
+      - model-cache:/app/.model_cache
+    networks:
+      - capstone
+
+volumes:
+  memgraph-data:
+  memgraph-log:
+  embedding-cache:
+  preprocessing-cache:
+  model-cache:
+
+networks:
+  capstone:
+    name: capstone
+    driver: bridge
