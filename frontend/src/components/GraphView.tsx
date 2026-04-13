@@ -431,7 +431,7 @@ const GraphManager = forwardRef<GraphViewRef, unknown>((_, ref) => {
     // Visibility filter – runs on search/viewLevel/selection/filter changes
     useEffect(() => {
         const graph = sigma.getGraph();
-        const query = deferredSearchQuery.toLowerCase();
+        const query = searchQuery === "" ? "" : deferredSearchQuery.toLowerCase();
         const labelGroups = getGroups(graphFilters.labelKeywords || []);
         const descGroups = getGroups(graphFilters.descriptionKeywords || []);
         const committedSearchSet = new Set(committedSearchNodeIds);
@@ -484,7 +484,7 @@ const GraphManager = forwardRef<GraphViewRef, unknown>((_, ref) => {
         stateRef.current.visibleNodes = visibleNodes;
         // update graph (note: this does not perform a hard refresh on the browser)
         sigma.refresh();
-    }, [nodes, edges, deferredSearchQuery, viewLevel, selectedNodeId, isolationData, isMultiSelect, multiSelectPathData, selectedNodeIds, committedSearchNodeIds, searchScopeActive, sigma, graphFilters, searchMatchIds, searchResultsSemantic, searchMode]);
+    }, [nodes, edges, deferredSearchQuery, searchQuery, viewLevel, selectedNodeId, isolationData, isMultiSelect, multiSelectPathData, selectedNodeIds, committedSearchNodeIds, searchScopeActive, sigma, graphFilters, searchMatchIds, searchResultsSemantic, searchMode]);
 
     useEffect(() => {
         const graph = sigma.getGraph();
