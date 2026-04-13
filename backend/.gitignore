@@ -1,14 +1,18 @@
+# Python
 __pycache__/
 *.py[cod]
-
-.embedding_cache/
-
 *.egg-info/
 dist/
 
+# Virtual environment
 .venv/
 
+# Environment variables
 .env
 
+# Caches
+.preprocessing_cache/
+.embedding_cache/
+.model_cache/
 .ruff_cache/
 .pytest_cache/
