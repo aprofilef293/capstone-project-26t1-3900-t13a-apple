@@ -6,7 +6,7 @@ import { useTheme } from "./theme-provider";
 import { NodeBorderProgram } from "@sigma/node-border";
 import { EdgeLineProgram, NodePointProgram } from "sigma/rendering";
 import { adjustColorBrightness, desaturateColor } from "../lib/utils";
-import { getGroups, checkMatch } from "../lib/filterUtils";
+import { getGroups, checkMatch, hasActiveGraphFilters, matchesGraphFilters } from "../lib/filterUtils";
 import { MultiDirectedGraph } from "graphology";
 
 /** UI Configuration */
@@ -164,6 +164,22 @@ const GraphManager = forwardRef<GraphViewRef, unknown>((_, ref) => {
         for (const n of searchResultsDescription) ids.add(n.id as string);
         return ids.size > 0 ? ids : null;
     }, [deferredSearchQuery, searchResultsExactTitle, searchResultsFuzzyTitle, searchResultsDescription]);
+
+    const filterScopeActive = useMemo(
+        () => isMultiSelect && hasActiveGraphFilters(graphFilters),
+        [isMultiSelect, graphFilters]
+    );
+
+    const filterMatchIds = useMemo(() => {
+        if (!filterScopeActive) return null;
+
+        const ids = new Set<string>();
+        for (const node of nodes) {
+            if (matchesGraphFilters(node, graphFilters)) ids.add(node.id);
+        }
+
+        return ids;
+    }, [filterScopeActive, nodes, graphFilters]);
 
     // Isolation data
     const isolationData = useMemo(() => {
@@ -400,6 +416,7 @@ const GraphManager = forwardRef<GraphViewRef, unknown>((_, ref) => {
         pathViewOnly,
         committedSearchNodeIds,
         searchScopeActive,
+        filterScopeActive,
         // Edge endpoint cache to avoid graph.source()/target() per frame
         edgeEndpoints: new Map<string, { source: string; target: string }>(),
     });
@@ -416,8 +433,9 @@ const GraphManager = forwardRef<GraphViewRef, unknown>((_, ref) => {
         stateRef.current.pathViewOnly = pathViewOnly;
         stateRef.current.committedSearchNodeIds = committedSearchNodeIds;
         stateRef.current.searchScopeActive = searchScopeActive;
+        stateRef.current.filterScopeActive = filterScopeActive;
         sigma.refresh();
-    }, [selectedNodeId, isMultiSelect, selectedNodeIds, nodeStyles, isolationData, multiSelectPathData, isDark, pathViewOnly, committedSearchNodeIds, searchScopeActive, sigma]);
+    }, [selectedNodeId, isMultiSelect, selectedNodeIds, nodeStyles, isolationData, multiSelectPathData, isDark, pathViewOnly, committedSearchNodeIds, searchScopeActive, filterScopeActive, sigma]);
 
     useEffect(() => {
         const graph = sigma.getGraph();
@@ -436,6 +454,7 @@ const GraphManager = forwardRef<GraphViewRef, unknown>((_, ref) => {
         const descGroups = getGroups(graphFilters.descriptionKeywords || []);
         const committedSearchSet = new Set(committedSearchNodeIds);
         const selectedSet = new Set(selectedNodeIds);
+        const filterMatchSet = filterMatchIds ?? new Set<string>();
 
         const visibleNodes = new Set<string>();
 
@@ -469,11 +488,12 @@ const GraphManager = forwardRef<GraphViewRef, unknown>((_, ref) => {
             }
 
             // Multi-select path isolation
-            if (isMultiSelect && searchScopeActive) {
+            if (isMultiSelect && (searchScopeActive || filterScopeActive)) {
                 const inSelected = selectedSet.has(id);
                 const inPath = multiSelectPathData ? multiSelectPathData.pathNodes.has(id) : false;
                 const inCommittedSearch = committedSearchSet.has(id);
-                isVisible = inSelected || inPath || inCommittedSearch;
+                const inFilterMatch = filterMatchSet.has(id);
+                isVisible = inSelected || inPath || inCommittedSearch || inFilterMatch;
             } else if (isMultiSelect && multiSelectPathData) {
                 isVisible = multiSelectPathData.pathNodes.has(id) || (multiSelectPathData.neighborNodes.has(id) && level >= viewLevel);
             }
@@ -484,7 +504,7 @@ const GraphManager = forwardRef<GraphViewRef, unknown>((_, ref) => {
         stateRef.current.visibleNodes = visibleNodes;
         // update graph (note: this does not perform a hard refresh on the browser)
         sigma.refresh();
-    }, [nodes, edges, deferredSearchQuery, searchQuery, viewLevel, selectedNodeId, isolationData, isMultiSelect, multiSelectPathData, selectedNodeIds, committedSearchNodeIds, searchScopeActive, sigma, graphFilters, searchMatchIds, searchResultsSemantic, searchMode]);
+    }, [nodes, edges, deferredSearchQuery, searchQuery, viewLevel, selectedNodeId, isolationData, isMultiSelect, multiSelectPathData, selectedNodeIds, committedSearchNodeIds, searchScopeActive, filterScopeActive, filterMatchIds, sigma, graphFilters, searchMatchIds, searchResultsSemantic, searchMode]);
 
     useEffect(() => {
         const graph = sigma.getGraph();
@@ -499,7 +519,7 @@ const GraphManager = forwardRef<GraphViewRef, unknown>((_, ref) => {
             let hidden = false;
             let color = data.color;
 
-            if (state.isMultiSelect && state.searchScopeActive && !state.visibleNodes.has(node)) {
+            if (state.isMultiSelect && (state.searchScopeActive || state.filterScopeActive) && !state.visibleNodes.has(node)) {
                 hidden = true;
             }
 
