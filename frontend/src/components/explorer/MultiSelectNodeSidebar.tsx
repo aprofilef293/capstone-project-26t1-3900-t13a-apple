@@ -24,6 +24,7 @@ type GraphNode = {
 };
 
 const MultiSelectNodeSidebar: React.FC = () => {
+  const NONE_VALUE = "__none__";
   const {selectedNodeIds, setSelectedNodeId, nodes, clearSelectedNodes, infoPanelMode, setInfoPanelMode, pathNodeIds, pathLoading, toggleNodeSelection} = useStore();
   const [selectedAttribute, setSelectedAttribute] = useState<string>("");
   const [isExporting, setIsExporting] = useState(false);
@@ -42,6 +43,15 @@ const MultiSelectNodeSidebar: React.FC = () => {
   const attributeKeys = Array.from(
     new Set(displayNodes.flatMap((node) => Object.keys(node.attributes || {}))),
   );
+
+  const handleAttributeChange = (value: string) => {
+    if (value === NONE_VALUE) {
+      setSelectedAttribute("");
+      return;
+    }
+    // toggle off if clicked again
+    setSelectedAttribute((prev) => (prev === value ? "" : value));
+  };
 
   const handleExportCsv = async () => {
     if (selectedNodeIds.length < 2 || isExporting) return;
@@ -128,23 +138,15 @@ const MultiSelectNodeSidebar: React.FC = () => {
           </DropdownMenuTrigger>
           <DropdownMenuContent className="w-[var(--radix-dropdown-menu-trigger-width)]">
             <DropdownMenuRadioGroup
-              value={selectedAttribute}
-              onValueChange={setSelectedAttribute}
+              value={selectedAttribute || NONE_VALUE}
+              onValueChange={handleAttributeChange}
             >
-              <DropdownMenuRadioItem value="id" className="justify-start">
-                id
-              </DropdownMenuRadioItem>
-              {attributeKeys
-                .filter((key) => key !== "id")
-                .map((key) => (
-                  <DropdownMenuRadioItem
-                    key={key}
-                    value={key}
-                    className="justify-start"
-                  >
-                    {key}
-                  </DropdownMenuRadioItem>
-                ))}
+             <DropdownMenuRadioItem value={NONE_VALUE}>Select attribute</DropdownMenuRadioItem>
+              {attributeKeys.map((key) => (
+                <DropdownMenuRadioItem key={key} value={key}>
+                  {key}
+                </DropdownMenuRadioItem>
+              ))}
             </DropdownMenuRadioGroup>
           </DropdownMenuContent>
         </DropdownMenu>
@@ -206,14 +208,14 @@ const MultiSelectNodeSidebar: React.FC = () => {
                   <div className="text-xs text-gray-500 dark:text-zinc-400">
                     {selectedAttribute ? (
                       <>
-                        {selectedAttribute}:{" "}
+                        {selectedAttribute}: &nbsp;
                         <span className="font-mono text-gray-400 dark:text-zinc-500">
                           {String(node.attributes[selectedAttribute] ?? "N/A")}
                         </span>
                       </>
                     ) : (
                       <>
-                        id:{" "}
+                        id:&nbsp;
                         <span className="font-mono text-gray-400 dark:text-zinc-500">
                           {node.id}
                         </span>
@@ -234,18 +236,17 @@ const MultiSelectNodeSidebar: React.FC = () => {
       <div className="mt-auto flex flex-col justify-center gap-2 pt-4">
         <Button
           variant="secondary"
-          className="w-full text-s p-5"
+          className="w-full text-s p-5 disabled:opacity-100 disabled:bg-secondary disabled:text-secondary-foreground"
           onClick={handleExportCsv}
           disabled={!hasPath || pathLoading || isExporting}
           title="Export path as CSV"
         >
-          {" "}
           {isExporting ? (
             <Loader2 className="w-4 h-4 animate-spin" />
           ) : (
             <Download className="w-4 h-4" />
-          )}{" "}
-          Export CSV{" "}
+          )}
+          Export CSV
         </Button>
         <Button
           variant="secondary"
