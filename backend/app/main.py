@@ -10,6 +10,7 @@ from app.routers import file_upload, graph
 from app.services.embedding import (
     EmbeddingService,
     HuggingFaceEmbeddingModel,
+    LocalEmbeddingModel,
 )
 from app.services.memgraph import MemgraphService
 
@@ -47,12 +48,14 @@ def create_app() -> FastAPI:
 
         app.state.embedding_service = None
         if settings.embedding_enabled:
-            try:
-                logger.info(
-                    "Connecting to HuggingFace Inference API (token=%s...)",
-                    settings.embedding_hf_token[:10] if settings.embedding_hf_token else "NONE",
-                )
+            if settings.embedding_local:
+                model = LocalEmbeddingModel(settings.embedding_model_name)
+                mode = "local"
+            else:
                 model = HuggingFaceEmbeddingModel(settings.embedding_model_name, settings.embedding_hf_token)
+                mode = "remote"
+            try:
+                logger.info("Launching %s embedding service...", mode)
                 app.state.embedding_service = EmbeddingService(model)
                 await _rebuild_embedding_index(app.state.memgraph, app.state.embedding_service)
             except Exception as e:

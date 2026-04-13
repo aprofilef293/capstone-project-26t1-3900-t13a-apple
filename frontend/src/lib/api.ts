@@ -27,6 +27,41 @@ export async function fetchMultiShortestPaths(ids: string[]) {
     return response.json();
 }
 
+export async function exportMultiShortestPathsCsv(
+    pathIds: string[],
+    selectedIds: string[] = []
+): Promise<{ blob: Blob; filename: string }> {
+    if (pathIds.length === 0) {
+        throw new Error("No path nodes available to export");
+    }
+
+    const params = new URLSearchParams();
+    pathIds.forEach((id) => params.append("path_ids", id));
+    selectedIds.forEach((id) => params.append("selected_ids", id));
+
+    const response = await fetch(`/api/graph/paths/export?${params.toString()}`);
+
+    if (!response.ok) {
+        let detail = response.statusText;
+        try {
+            const body = await response.json();
+            if (typeof body?.detail === "string") {
+                detail = body.detail;
+            }
+        } catch {
+            // keep status text fallback
+        }
+        throw new Error(`Failed to export path CSV: ${detail}`);
+    }
+
+    const blob = await response.blob();
+    const disposition = response.headers.get("Content-Disposition");
+    const filenameMatch = disposition?.match(/filename="([^"]+)"/);
+    const filename = filenameMatch?.[1] ?? "path-export.csv";
+
+    return { blob, filename };
+}
+
 // Can use to get upload/processing progress from backend
 export function listenToSSE(
     endpoint: string,

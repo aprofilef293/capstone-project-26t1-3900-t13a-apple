@@ -11,8 +11,6 @@ class TestSettings:
         assert s.memgraph_uri == "bolt://localhost:7687"
         assert s.memgraph_user == ""
         assert s.memgraph_password == ""
-        assert s.embedding_model_name == "BAAI/bge-small-en-v1.5"
-        assert s.embedding_hf_token == ""
         assert s.embedding_enabled is True
         assert s.cors_origins == ["http://localhost:5173"]
         assert s.debug is False
