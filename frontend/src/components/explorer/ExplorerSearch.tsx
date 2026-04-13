@@ -118,11 +118,6 @@ export function ExplorerSearch({ viewMode = "graph" }: { viewMode?: "graph" | "h
         [exactResults, fuzzyResults, descriptionResults]
     );
 
-    const keywordResultIds = useMemo(
-        () => [...new Set(searchResults.map((n) => n.id))],
-        [searchResults]
-    );
-
     const handleSearchTrigger = async () => {
         const queryStr = inputValue.trim();
         if (!queryStr) {
@@ -301,4 +296,3 @@ export function ExplorerSearch({ viewMode = "graph" }: { viewMode?: "graph" | "h
         </div>
     );
 }
-
