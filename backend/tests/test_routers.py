@@ -1,5 +1,6 @@
 """Graph router helpers and endpoint behaviour with mocked Memgraph."""
 
+
 class TestNodeFromRecord:
     """Unit tests for the _node_from_record helper."""
 
