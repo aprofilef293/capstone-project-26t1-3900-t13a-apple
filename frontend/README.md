@@ -24,7 +24,7 @@ docker compose -f docker-compose.dev.yml up --build   # Development (hot reload)
 docker compose down -v                                # Teardown
 ```
 
-Note: please make sure the backend is running before running the docker compose up commands in the frontend folder.
+Note: please make sure the backend is running before running the `docker compose up` commands in the frontend folder.
 
 ### 1.2 Local Development
 
