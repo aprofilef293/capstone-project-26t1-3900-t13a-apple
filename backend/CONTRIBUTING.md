@@ -15,16 +15,27 @@
 
 ## Code Style
 
-### Python
+### Backend Python
 
 - Follow PEP 8 conventions
-- Use [Ruff](https://docs.astral.sh/ruff/) for linting and formatting
-- Run `ruff check` and `ruff format` before committing
+- Use [Ruff](https://docs.astral.sh/ruff/) for linting and formatting (configured in `backend/pyproject.toml`)
+- Run from the `backend/` directory:
 
-### Typescript and React
+```bash
+cd backend
 
-- Use [ESLint](https://eslint.org/) for linting
-- Run `npm run lint` before committing
+# Check for lint errors
+ruff check .
+
+# Auto-fix lint errors where possible
+ruff check --fix .
+
+# Format code
+ruff format .
+
+# Check formatting without applying changes
+ruff format --check .
+```
 
 ## Reporting Issues
 
@@ -32,4 +43,5 @@ If you find a bug or have a feature request, please open a GitHub issue using th
 
 ## License
 
-By contributing, you agree that your contributions will be licensed under the [MIT License](LICENSE).
+
+By contributing, you agree that your contributions will be licensed under the MIT [License](LICENSE).
