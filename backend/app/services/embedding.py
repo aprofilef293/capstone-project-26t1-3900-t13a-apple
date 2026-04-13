@@ -367,7 +367,23 @@ class EmbeddingService:
         if not self._ids or not self._field_embeddings:
             return []
 
-        query_vec = await self._model.encode([query])  # (1, dim)
+        # Split on commas and strip whitespace
+        terms = [t.strip() for t in query.split(",") if t.strip()]
+        if not terms:
+            return []
+
+        if len(terms) == 1:
+            query_vec = await self._model.encode(terms)
+        else:
+            # Encode all terms in a single batch call, then average + re-normalise.
+            all_vecs = await self._model.encode(terms)  # (n_terms, dim)
+            centroid = all_vecs.mean(axis=0)  # (dim,)
+            norm = np.linalg.norm(centroid)
+            if norm > 0:
+                centroid /= norm
+            query_vec = centroid[np.newaxis, :]  # (1, dim)
+            logger.debug("Multi-term query: %d terms averaged into centroid", len(terms))
+
         n = len(self._ids)
         # Track the best *weighted* cosine similarity per term across all
         # fields.  Each field's raw similarity is multiplied by its weight
