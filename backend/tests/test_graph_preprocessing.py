@@ -1,4 +1,4 @@
-"""Unit tests for app.services.graph_preprocessing — no external services."""
+"""Graph preprocessing: colour generation, overlap resolution, layout, and caching."""
 
 from __future__ import annotations
 
@@ -22,7 +22,7 @@ class TestGenerateDistinctColours:
         for c in colours:
             assert c.startswith("#")
             assert len(c) == 7
-            int(c[1:], 16)  # valid hex
+            int(c[1:], 16)
 
     def test_single_colour(self):
         colours = OntologyGraphPreprocessor._generate_distinct_colours(1)
@@ -34,7 +34,6 @@ class TestResolveOverlaps:
         pos = np.array([[0.0, 0.0], [1000.0, 1000.0]])
         sizes = np.array([1.0, 1.0])
         result = OntologyGraphPreprocessor._resolve_overlaps(pos, sizes, gap=5.0, overlap_multiplier=1.2)
-        # Positions should barely change since nodes are far apart
         np.testing.assert_allclose(result, pos, atol=1.0)
 
     def test_overlapping_nodes_pushed_apart(self):
@@ -42,9 +41,8 @@ class TestResolveOverlaps:
         sizes = np.array([10.0, 10.0])
         result = OntologyGraphPreprocessor._resolve_overlaps(pos, sizes, gap=5.0, overlap_multiplier=1.2)
         dist = np.linalg.norm(result[0] - result[1])
-        # After resolution, distance should be at least min_dist
         min_dist = 10.0 * 1.2 + 10.0 * 1.2 + 5.0
-        assert dist >= min_dist * 0.8  # allow some tolerance
+        assert dist >= min_dist * 0.8
 
     def test_single_node(self):
         pos = np.array([[5.0, 5.0]])
@@ -56,7 +54,6 @@ class TestResolveOverlaps:
         pos = np.array([[0.0, 0.0], [0.0, 0.0]])
         sizes = np.array([5.0, 5.0])
         result = OntologyGraphPreprocessor._resolve_overlaps(pos, sizes, gap=1.0, overlap_multiplier=1.0)
-        # Should have been pushed apart
         dist = np.linalg.norm(result[0] - result[1])
         assert dist > 0
 
@@ -100,11 +97,9 @@ class TestPreprocess:
         preprocessor = OntologyGraphPreprocessor()
 
         with pytest.MonkeyPatch.context() as mp:
-            # Mock cache to avoid filesystem access
             mp.setattr(preprocessor, "_try_load_cache", lambda *a: False)
             mp.setattr(preprocessor, "_save_cache", lambda *a: None)
 
-            # Mock tFDP solver
             import app.services.graph_preprocessing as gp_module
 
             class FakeTFDP:
@@ -114,7 +109,7 @@ class TestPreprocess:
                     self.edgetgt = None
 
                 def optimization(self):
-                    n = self.edgesrc.shape[0] - 1  # CSR indptr has n+1 entries
+                    n = self.edgesrc.shape[0] - 1
                     pos = np.random.randn(n, 2).astype(np.float64)
                     return pos, None
 
@@ -135,7 +130,6 @@ class TestPreprocess:
     def test_preprocess_isolated_nodes(self):
         """Test that isolated nodes (no edges) get positioned."""
         terms = [OntologyTerm(id=f"T:{i}", name=f"term{i}") for i in range(3)]
-        # No relations — all nodes are isolated
         preprocessor = OntologyGraphPreprocessor()
 
         with pytest.MonkeyPatch.context() as mp:

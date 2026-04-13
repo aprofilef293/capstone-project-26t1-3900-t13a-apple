@@ -1,4 +1,4 @@
-"""Integration tests for graph router endpoints against a real Memgraph instance."""
+"""Graph API endpoints — requires a running Memgraph on localhost:7687."""
 
 import io
 import json
@@ -91,9 +91,6 @@ def seeded_client(request):
         yield client
 
 
-# GET /api/graph/
-
-
 @pytest.mark.integration
 class TestGetGraph:
     def test_returns_all_nodes(self, seeded_client):
@@ -107,7 +104,7 @@ class TestGetGraph:
     def test_returns_edges(self, seeded_client):
         resp = seeded_client.get("/api/graph/")
         data = resp.json()
-        assert len(data["edges"]) >= 3  # is_a x2, part_of x1
+        assert len(data["edges"]) >= 3
 
     def test_node_attributes_present(self, seeded_client):
         resp = seeded_client.get("/api/graph/")
@@ -129,9 +126,6 @@ class TestGetGraph:
         assert data["options"]["type"] == "directed"
 
 
-# GET /api/graph/node/{node_id}
-
-
 @pytest.mark.integration
 class TestGetNodeNeighborhood:
     def test_existing_node(self, seeded_client):
@@ -140,7 +134,6 @@ class TestGetNodeNeighborhood:
         data = resp.json()
         node_ids = {n["key"] for n in data["nodes"]}
         assert "TEST:0002" in node_ids
-        # Should include neighbors (TEST:0001 parent, TEST:0003 child)
         assert len(node_ids) >= 2
 
     def test_node_not_found(self, seeded_client):
@@ -159,12 +152,8 @@ class TestGetNodeNeighborhood:
         assert resp.status_code == 200
         data = resp.json()
         node_ids = {n["key"] for n in data["nodes"]}
-        # Depth 2 from root should reach TEST:0001 -> TEST:0002 -> TEST:0003
         assert "TEST:0001" in node_ids
         assert "TEST:0002" in node_ids
-
-
-# GET /api/graph/search
 
 
 @pytest.mark.integration
@@ -201,12 +190,8 @@ class TestSearchGraph:
         resp = seeded_client.get("/api/graph/search?q=root")
         assert resp.status_code == 200
         data = resp.json()
-        # Root has a neighbor (child), so we should see edges
         node_ids = {n["key"] for n in data["nodes"]}
         assert len(node_ids) >= 1
-
-
-# GET /api/graph/path
 
 
 @pytest.mark.integration
@@ -227,7 +212,6 @@ class TestShortestPath:
         node_ids = {n["key"] for n in data["nodes"]}
         assert "TEST:0001" in node_ids
         assert "TEST:0003" in node_ids
-        # Path goes through TEST:0002
         assert len(data["nodes"]) >= 2
 
     def test_same_node(self, seeded_client):
@@ -253,9 +237,6 @@ class TestShortestPath:
         assert "TEST:0005" in node_ids
 
 
-# GET /api/graph/paths
-
-
 @pytest.mark.integration
 class TestMultiShortestPaths:
     def test_two_connected_nodes(self, seeded_client):
@@ -274,16 +255,12 @@ class TestMultiShortestPaths:
         assert {"TEST:0001", "TEST:0002", "TEST:0003"}.issubset(node_ids)
 
     def test_includes_isolated_fails(self, seeded_client):
-        # TEST:0004 is isolated, no path to others
         resp = seeded_client.get("/api/graph/paths?ids=TEST:0001&ids=TEST:0004")
         assert resp.status_code == 404
 
     def test_missing_node(self, seeded_client):
         resp = seeded_client.get("/api/graph/paths?ids=TEST:0001&ids=FAKE:999")
         assert resp.status_code == 404
-
-
-# GET /api/graph/semantic-search (disabled — returns 503)
 
 
 @pytest.mark.integration

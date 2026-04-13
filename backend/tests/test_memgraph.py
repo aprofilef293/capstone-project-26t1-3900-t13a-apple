@@ -1,4 +1,4 @@
-"""Unit tests for app.services.memgraph — fully mocked Neo4j driver."""
+"""MemgraphService: init, auth, read/write execution, and connectivity checks."""
 
 from unittest.mock import MagicMock, patch
 

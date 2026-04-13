@@ -1,4 +1,4 @@
-"""Integration tests for ontology upload endpoints against a real Memgraph instance."""
+"""Ontology upload pipeline — requires a running Memgraph on localhost:7687."""
 
 import io
 import json
@@ -72,9 +72,6 @@ def _parse_sse_events(response_text):
     return events
 
 
-# Upload validation
-
-
 @pytest.mark.integration
 class TestUploadValidation:
     def test_no_file_returns_422(self, real_client):
@@ -108,11 +105,7 @@ class TestUploadValidation:
             "/api/ontology/upload",
             files={"file": ("test.owl", io.BytesIO(SAMPLE_OBO), "text/plain")},
         )
-        # OWL extension is allowed even if content is OBO-formatted
         assert resp.status_code != 400 or "not supported" not in resp.text
-
-
-# SSE progress stream
 
 
 @pytest.mark.integration
@@ -153,12 +146,9 @@ class TestUploadSSEStream:
             "/api/ontology/upload",
             files={"file": ("bad.obo", io.BytesIO(b"not valid ontology data"), "text/plain")},
         )
-        assert resp.status_code == 200  # SSE stream always returns 200
+        assert resp.status_code == 200
         events = _parse_sse_events(resp.text)
         assert any("error" in e for e in events)
-
-
-# Data ingestion verification
 
 
 @pytest.mark.integration
@@ -252,13 +242,9 @@ class TestDataIngestion:
         assert row["pr"] is not None
 
 
-# Re-upload replaces data
-
-
 @pytest.mark.integration
 class TestReUpload:
     def test_reupload_replaces_graph(self, real_client):
-        # Upload 3-term file
         real_client.post(
             "/api/ontology/upload",
             files={"file": ("test.obo", io.BytesIO(SAMPLE_OBO), "text/plain")},
@@ -266,7 +252,6 @@ class TestReUpload:
         mg = real_client.app.state.memgraph
         assert len(mg.execute_read("MATCH (n:OntologyTerm) RETURN n")) == 3
 
-        # Re-upload 1-term file — should replace, not append
         real_client.post(
             "/api/ontology/upload",
             files={"file": ("test.obo", io.BytesIO(SAMPLE_OBO_SMALL), "text/plain")},
@@ -278,19 +263,14 @@ class TestReUpload:
             "/api/ontology/upload",
             files={"file": ("test.obo", io.BytesIO(SAMPLE_OBO), "text/plain")},
         )
-        # Populate the graph cache
         real_client.get("/api/graph/")
         assert real_client.app.state.graph_cache is not None
 
-        # Re-upload should clear the cache
         real_client.post(
             "/api/ontology/upload",
             files={"file": ("test.obo", io.BytesIO(SAMPLE_OBO_SMALL), "text/plain")},
         )
         assert real_client.app.state.graph_cache is None
-
-
-# List ontologies
 
 
 @pytest.mark.integration
