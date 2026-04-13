@@ -52,7 +52,7 @@ const MultiSelectNodeSidebar: React.FC = () => {
     // toggle off if clicked again
     setSelectedAttribute((prev) => (prev === value ? "" : value));
   };
-  
+
   const handleExportCsv = async () => {
     if (selectedNodeIds.length < 2 || isExporting) return;
 
@@ -208,14 +208,14 @@ const MultiSelectNodeSidebar: React.FC = () => {
                   <div className="text-xs text-gray-500 dark:text-zinc-400">
                     {selectedAttribute ? (
                       <>
-                        {selectedAttribute}:{" "}
+                        {selectedAttribute}: &nbsp;
                         <span className="font-mono text-gray-400 dark:text-zinc-500">
                           {String(node.attributes[selectedAttribute] ?? "N/A")}
                         </span>
                       </>
                     ) : (
                       <>
-                        id:{" "}
+                        id:&nbsp;
                         <span className="font-mono text-gray-400 dark:text-zinc-500">
                           {node.id}
                         </span>
@@ -236,18 +236,17 @@ const MultiSelectNodeSidebar: React.FC = () => {
       <div className="mt-auto flex flex-col justify-center gap-2 pt-4">
         <Button
           variant="secondary"
-          className="w-full text-s p-5"
+          className="w-full text-s p-5 disabled:opacity-100 disabled:bg-secondary disabled:text-secondary-foreground"
           onClick={handleExportCsv}
           disabled={!hasPath || pathLoading || isExporting}
           title="Export path as CSV"
         >
-          {" "}
           {isExporting ? (
             <Loader2 className="w-4 h-4 animate-spin" />
           ) : (
             <Download className="w-4 h-4" />
-          )}{" "}
-          Export CSV{" "}
+          )}
+          Export CSV
         </Button>
         <Button
           variant="secondary"
