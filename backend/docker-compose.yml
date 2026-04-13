@@ -17,7 +17,7 @@ services:
   backend:
     build:
       context: .
-      target: dev
+      target: prod
     ports:
       - "8000:8000"
     environment:
@@ -26,12 +26,13 @@ services:
       - MEMGRAPH_PASSWORD=memgraph
       - CORS_ORIGINS=["http://localhost:5173"]
       - EMBEDDING_HF_TOKEN=${EMBEDDING_HF_TOKEN}
+      - EMBEDDING_MODEL_NAME=${EMBEDDING_MODEL_NAME}
     depends_on:
       - memgraph
     volumes:
-      - .:/app
-      - /app/.venv
       - embedding-cache:/app/.embedding_cache
+      - preprocessing-cache:/app/.preprocessing_cache
+      - model-cache:/app/.model_cache
     networks:
       - capstone
 
@@ -39,6 +40,8 @@ volumes:
   memgraph-data:
   memgraph-log:
   embedding-cache:
+  preprocessing-cache:
+  model-cache:
 
 networks:
   capstone:

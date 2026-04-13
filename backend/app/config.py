@@ -19,17 +19,18 @@ class Settings(BaseSettings):
             Configures the HuggingFace Inference API used for vector-based
             semantic search over ontology terms.
 
-            - ``embedding_model_name`` — HuggingFace model ID used to generate
-              embeddings (default ``BAAI/bge-small-en-v1.5``).  Can be changed
-              to any sentence-transformers-compatible model hosted on HuggingFace
-              (e.g. ``BAAI/bge-base-en-v1.5``, ``sentence-transformers/all-MiniLM-L6-v2``).
-            - ``embedding_hf_token`` — HuggingFace API token.  Required for
-              inference.  Obtain a free token at https://huggingface.co/settings/tokens
-              with the *Make calls to Inference Providers* permission.
+            - ``embedding_local`` — Set to ``true`` for local inference via
+              sentence-transformers, ``false`` for remote inference via the
+              HuggingFace Inference API.
+            - ``embedding_model_name`` — Model ID used for embeddings
+              (default ``BAAI/bge-small-en-v1.5``).  Works with any
+              sentence-transformers-compatible model.
+            - ``embedding_hf_token`` — HuggingFace API token, required only
+              when ``embedding_local`` is ``false``.  Obtain a free token at
+              https://huggingface.co/settings/tokens.
             - ``embedding_enabled`` — Set to ``false`` to disable the embedding
-              service entirely (e.g. in CI or test environments where the HF API
-              is unavailable).  When disabled, the ``/api/graph/embedding-search``
-              endpoint returns 503.
+              service entirely (e.g. in CI or test environments).  When
+              disabled, the ``/api/graph/embedding-search`` endpoint returns 503.
 
         Server
             General server behaviour.
@@ -45,6 +46,7 @@ class Settings(BaseSettings):
     memgraph_user: str = ""
     memgraph_password: str = ""
 
+    embedding_local: bool = True
     embedding_model_name: str = "BAAI/bge-small-en-v1.5"
     embedding_hf_token: str = ""
     embedding_enabled: bool = True
