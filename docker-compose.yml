@@ -30,7 +30,7 @@ services:
     volumes:
       - embedding-cache:/app/.embedding_cache
       - preprocessing-cache:/app/.preprocessing_cache
-      - model-cache:/root/.cache
+      - model-cache:/app/.model_cache
 
   frontend:
     build:
