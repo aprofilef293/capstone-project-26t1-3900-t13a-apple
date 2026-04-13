@@ -1,3 +1,5 @@
+"""Pydantic models for the Graphology JSON serialization format used by the graph API."""
+
 from pydantic import BaseModel, Field
 
 
@@ -11,6 +13,7 @@ class SerializedNode(BaseModel):
     """
 
     key: str
+    # Flexible dict — different node types carry varying properties (size, color, namespace, etc.)
     attributes: dict[str, object] = {}
 
 
@@ -37,6 +40,7 @@ class GraphData(BaseModel):
     """
 
     attributes: dict[str, object] = {}
+    # Graphology requires these flags to correctly import the directed ontology graph
     options: dict[str, object] = Field(
         default_factory=lambda: {"type": "directed", "multi": True, "allowSelfLoops": True}
     )

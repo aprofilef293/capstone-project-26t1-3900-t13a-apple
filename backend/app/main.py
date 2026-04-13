@@ -1,3 +1,11 @@
+"""FastAPI application factory for the OBO Explorer API.
+
+Wires up CORS, GZip compression, API routers, and the optional
+``EmbeddingService`` used for semantic search.  The single entry point
+is :func:`create_app`, which returns a fully configured ``FastAPI``
+instance ready to be served by Uvicorn.
+"""
+
 import logging
 from contextlib import asynccontextmanager
 
@@ -19,7 +27,17 @@ logger = logging.getLogger(__name__)
 
 
 async def _rebuild_embedding_index(mg: MemgraphService, embedding_svc: EmbeddingService) -> None:
-    """Populate the vector index from terms already stored in Memgraph."""
+    """Populate the vector index from terms already stored in Memgraph.
+
+    Queries all ``OntologyTerm`` nodes from Memgraph (id, name, definition,
+    synonyms, and comment) and passes them to
+    ``EmbeddingService.build_index`` so that the semantic search feature is
+    available immediately after startup.
+
+    Args:
+        mg: Active ``MemgraphService`` used to read ontology terms.
+        embedding_svc: ``EmbeddingService`` whose index will be rebuilt.
+    """
     records = mg.execute_read(
         "MATCH (n:OntologyTerm) "
         "RETURN n.id AS id, n.name AS name, n.definition AS definition, "
@@ -38,14 +56,29 @@ def create_app() -> FastAPI:
 
     CORS ``allow_origins`` is read from ``Settings.cors_origins`` so the Vite
     frontend (default http://localhost:5173) can call the API during development.
+
+    Returns:
+        FastAPI: The fully configured application instance with CORS,
+        GZip middleware, and all API routers mounted.
     """
     settings = Settings()
 
     @asynccontextmanager
     async def lifespan(app: FastAPI):
+        """Manage application startup and shutdown lifecycle.
+
+        On startup, initialises ``MemgraphService`` and, when
+        ``Settings.embedding_enabled`` is ``True``, creates an
+        ``EmbeddingService`` and rebuilds its vector index.  On
+        shutdown, closes the Memgraph connection.
+
+        Args:
+            app: The ``FastAPI`` instance whose ``state`` will be populated.
+        """
         app.state.settings = settings
         app.state.memgraph = MemgraphService(settings)
 
+        # Graceful degradation — semantic search is unavailable if embedding setup fails, but the app still runs
         app.state.embedding_service = None
         if settings.embedding_enabled:
             if settings.embedding_local:
@@ -57,11 +90,13 @@ def create_app() -> FastAPI:
             try:
                 logger.info("Launching %s embedding service...", mode)
                 app.state.embedding_service = EmbeddingService(model)
+                # Restore the vector index from existing DB data so semantic search works immediately after restart
                 await _rebuild_embedding_index(app.state.memgraph, app.state.embedding_service)
             except Exception as e:
                 logger.warning("Embedding service failed to start, search will be unavailable: %s", e)
                 app.state.embedding_service = None
 
+        # --- startup complete / shutdown begins ---
         yield
         app.state.memgraph.close()
 
@@ -75,6 +110,7 @@ def create_app() -> FastAPI:
         ),
         lifespan=lifespan,
     )
+    # Graph responses can be large JSON payloads — GZip cuts transfer size significantly
     app.add_middleware(GZipMiddleware, minimum_size=1000)
     app.add_middleware(
         CORSMiddleware,

@@ -1,3 +1,5 @@
+"""FastAPI router for querying, searching, and exporting ontology graph data from Memgraph."""
+
 import csv
 import io
 import logging
@@ -15,12 +17,14 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
+# Maps GO namespace names to generic display types used in the frontend.
 NODE_TYPE_MAP = {
     "biological_process": "Process",
     "molecular_function": "Material",
     "cellular_component": "Outcome",
 }
 
+# Maps display types to hex colours for Sigma.js node rendering.
 COLOR_MAP = {
     "Process": "#2563eb",
     "Material": "#9333ea",
@@ -29,12 +33,27 @@ COLOR_MAP = {
 
 
 def _node_from_record(node_props: dict, index: int, total: int) -> SerializedNode:
+    """Convert a raw Memgraph node property dict into a ``SerializedNode``.
+
+    Uses stored x/y coordinates from t-FDP preprocessing when available,
+    falling back to a deterministic circular layout. Resolves color from
+    the node's stored color, namespace color map, or a default gray.
+
+    Args:
+        node_props: Property dict from a Memgraph OntologyTerm node.
+        index: Position index used for the circular layout fallback.
+        total: Total number of nodes, used to compute circular layout radius.
+
+    Returns:
+        A ``SerializedNode`` with Graphology-compatible attributes for Sigma.js.
+    """
     # Use stored coordinates if they exist
     x = node_props.get("x")
     y = node_props.get("y")
 
     # Fallback to circular layout if coordinates are missing
     if x is None or y is None:
+        # Evenly space nodes around a circle scaled by sqrt(total) for readable density
         angle = (2 * math.pi * index) / max(total, 1)
         radius = math.sqrt(max(total, 1)) * 2
         x = round(radius * math.cos(angle), 2)
@@ -47,7 +66,7 @@ def _node_from_record(node_props: dict, index: int, total: int) -> SerializedNod
     color = node_props.get("color") or node_props.get("colour") or COLOR_MAP.get(node_type, "#6b7280")
     size = round(float(node_props.get("size", 12)), 2)
 
-    # Drop fields duplicated by label/color; round floats to reduce send size
+    # Exclude "name" — it's promoted to "label" for Sigma.js, including both wastes bandwidth
     attrs = {k: v for k, v in node_props.items() if k not in ("name",)}
     if attrs.get("pagerank_score") is not None:
         attrs["pagerank_score"] = round(float(attrs["pagerank_score"]), 4)
@@ -68,7 +87,19 @@ def _node_from_record(node_props: dict, index: int, total: int) -> SerializedNod
 
 
 def _build_graph_data_from_paths(records: list[dict]) -> GraphData:
-    """Build GraphData from MATCH results that return n, r, m columns."""
+    """Build a ``GraphData`` response from Memgraph MATCH query records.
+
+    Expects each record to contain ``n`` (source node), ``r`` (relationship),
+    and ``m`` (target node) columns. Deduplicates nodes by ID and edges by
+    their ``{source}-{rel_type}-{target}`` key.
+
+    Args:
+        records: List of dicts from ``MemgraphService.execute_read``, each
+            containing ``n``, ``r``, and ``m`` keys.
+
+    Returns:
+        A ``GraphData`` instance ready for JSON serialization.
+    """
     seen_node_ids: set[str] = set()
     all_node_props: list[dict] = []
     edge_tuples: list[tuple[str, str, str]] = []
@@ -78,6 +109,7 @@ def _build_graph_data_from_paths(records: list[dict]) -> GraphData:
         n = record.get("n")
         m = record.get("m")
         if n:
+            # Memgraph returns Node objects or plain dicts depending on query shape — normalize to dict
             n_props = dict(n) if hasattr(n, "items") else n
             if n_props.get("id") and n_props["id"] not in seen_node_ids:
                 seen_node_ids.add(n_props["id"])
@@ -92,6 +124,7 @@ def _build_graph_data_from_paths(records: list[dict]) -> GraphData:
         if r and n and m:
             n_id = (dict(n) if hasattr(n, "items") else n).get("id", "")
             m_id = (dict(m) if hasattr(m, "items") else m).get("id", "")
+            # Fall back to generic RELATES_TO if the relationship object lacks a type property
             rel_type = dict(r).get("type", "RELATES_TO") if hasattr(r, "items") else "RELATES_TO"
             if n_id and m_id:
                 edge_tuples.append((n_id, m_id, rel_type))
@@ -131,6 +164,7 @@ def get_graph(
     (biological_process, molecular_function, cellular_component).
     The response conforms to the Graphology JSON serialization format.
     """
+    # In-memory cache avoids re-querying Memgraph on every page load — invalidated on new upload
     cached = getattr(request.app.state, "graph_cache", None)
     if cached is not None:
         logger.info("GET /graph served from cache")
@@ -142,6 +176,7 @@ def get_graph(
         "MATCH (n:OntologyTerm) OPTIONAL MATCH (n)-[r]->(m:OntologyTerm) RETURN n, r, m",
     )
     result = _build_graph_data_from_paths(records)
+    # Cache the result — invalidated in file_upload.py when new data is ingested
     request.app.state.graph_cache = result
     logger.info(
         "GET /graph completed in %.3fs (%d nodes, %d edges)",
@@ -180,6 +215,8 @@ def get_node_neighborhood(
     t0 = time.perf_counter()
     mg = request.app.state.memgraph
 
+    # Two-phase query: first find all reachable nodes within depth hops,
+    # then fetch only direct edges between them (avoids variable-length path collections)
     cypher = (
         "MATCH (n:OntologyTerm {id: $id}) "
         f"OPTIONAL MATCH (n)-[r*1..{depth}]-(m:OntologyTerm) "
@@ -222,6 +259,7 @@ def get_shortest_path(
     t0 = time.perf_counter()
     mg = request.app.state.memgraph
 
+    # Degenerate case: return the single node without running BFS
     if source == target:
         records = mg.execute_read(
             "MATCH (n:OntologyTerm {id: $id}) RETURN n, null AS r, null AS m",
@@ -231,6 +269,7 @@ def get_shortest_path(
             raise HTTPException(status_code=404, detail=f"Node '{source}' not found")
         return _build_graph_data_from_paths(records)
 
+    # BFS finds the shortest path; UNWIND flattens it into n/r/m triples for _build_graph_data_from_paths
     cypher = (
         f"MATCH p = (a:OntologyTerm {{id: $source}})"
         f"-[*BFS ..{max_depth}]-"
@@ -241,6 +280,7 @@ def get_shortest_path(
     )
     records = mg.execute_read(cypher, {"source": source, "target": target})
 
+    # If BFS returned nothing, distinguish "node doesn't exist" from "no path between them"
     if not records:
         check = mg.execute_read(
             "MATCH (n:OntologyTerm) WHERE n.id IN [$source, $target] RETURN n.id AS id",
@@ -292,6 +332,7 @@ def get_multi_shortest_paths(
     t0 = time.perf_counter()
     mg = request.app.state.memgraph
 
+    # Generate all unique pairs for pairwise BFS
     pairs = [[ids[i], ids[j]] for i in range(len(ids)) for j in range(i + 1, len(ids))]
 
     cypher = (
@@ -335,7 +376,30 @@ def export_paths_csv(
     path_ids: list[str] = Query(..., description="All node IDs along the path (from frontend)"),
     selected_ids: list[str] = Query(default=[], description="User-selected endpoint node IDs"),
 ):
-    """Export path nodes, their first-level neighbours, and all relationships as CSV."""
+    """Export path nodes, their first-level neighbours, and all relationships as CSV.
+
+    Queries Memgraph for the given path node IDs and their immediate
+    neighbours, then generates a CSV file with columns for term metadata
+    (ID, URL, name, definition, synonyms, xrefs), relationship information
+    (subclass hierarchy, other relationships), and graph analysis data
+    (community, path position, role).
+
+    Nodes are sorted with selected endpoints first, then path nodes, then
+    neighbours. The filename includes a timestamp and the source ontology name.
+
+    Args:
+        request: FastAPI request (used to access ``app.state.memgraph``).
+        path_ids: Ordered list of node IDs along the path.
+        selected_ids: User-selected endpoint node IDs (highlighted in the export).
+
+    Returns:
+        A ``StreamingResponse`` with ``text/csv`` content type and a
+        ``Content-Disposition`` header for file download.
+
+    Raises:
+        HTTPException 422: If ``path_ids`` is empty.
+        HTTPException 404: If no nodes are found for the given IDs.
+    """
     if not path_ids:
         raise HTTPException(status_code=422, detail="No path node IDs provided")
 
@@ -359,7 +423,6 @@ def export_paths_csv(
     if not records:
         raise HTTPException(status_code=404, detail="No nodes found for the given path IDs")
 
-    # Build node map and outgoing relationships from query results
     node_map: dict[str, dict] = {}
     outgoing: dict[str, list[tuple[str, str, str]]] = {}
     for rec in records:
@@ -381,7 +444,6 @@ def export_paths_csv(
 
     all_node_ids = list(node_map.keys())
 
-    # Build incoming map (reverse of outgoing)
     incoming: dict[str, list[tuple[str, str, str]]] = {}
     for nid, rels in outgoing.items():
         src_name = node_map.get(nid, {}).get("name", nid)
@@ -389,6 +451,7 @@ def export_paths_csv(
             incoming.setdefault(target_id, []).append((rel_type, nid, src_name))
 
     output = io.StringIO()
+    # UTF-8 BOM so Excel auto-detects encoding and displays special characters correctly
     output.write("\ufeff")
     writer = csv.writer(output)
     writer.writerow(
@@ -466,6 +529,7 @@ def export_paths_csv(
 
         short_id, url = _split_id(nid, props)
 
+        # Separate is_a (subclass hierarchy) from other relations for distinct CSV columns
         isa_parents = [
             f"{_clean(tname)} [{_short_id(tid)}]" for rtype, tid, tname in outgoing.get(nid, []) if rtype == "is_a"
         ]
@@ -513,6 +577,7 @@ def export_paths_csv(
         time.perf_counter() - t0,
     )
 
+    # Derive filename from the source ontology, with timestamp prefix for uniqueness
     source_file = next(
         (props.get("source_file") for props in node_map.values() if props.get("source_file")),
         None,
@@ -613,6 +678,7 @@ async def embedding_search(
 
     graph = _build_graph_data_from_paths(neighbor_records)
 
+    # Annotate matched nodes with their similarity score and best-matching field for the frontend
     for node in graph.nodes:
         if node.key in score_map:
             score, best_field = score_map[node.key]

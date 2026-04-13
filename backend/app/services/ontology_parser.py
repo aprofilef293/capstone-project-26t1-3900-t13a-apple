@@ -1,3 +1,5 @@
+"""Ontology file parser for OBO and OWL formats using the Pronto library."""
+
 import pronto
 
 from app.models.upload import OntologyRelation, OntologyTerm
@@ -44,6 +46,7 @@ def parse_ontology(file_path: str) -> tuple[list[OntologyTerm], list[OntologyRel
         terms.append(
             OntologyTerm(
                 id=term.id,
+                # Fall back to the raw ID if the term has no human-readable name
                 name=term.name or term.id,
                 namespace=term.namespace,
                 definition=str(term.definition) if term.definition else None,
@@ -56,6 +59,7 @@ def parse_ontology(file_path: str) -> tuple[list[OntologyTerm], list[OntologyRel
         )
 
         # is_a relationships (direct parents only)
+        # distance=1 restricts to direct parents — transitive ancestors are inferred from the graph
         for parent in term.superclasses(distance=1, with_self=False):
             relations.append(
                 OntologyRelation(

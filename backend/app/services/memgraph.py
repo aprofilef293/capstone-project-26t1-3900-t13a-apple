@@ -1,3 +1,5 @@
+"""Synchronous Memgraph database client for ontology graph storage and retrieval."""
+
 from neo4j import Driver, GraphDatabase
 
 from app.config import Settings
@@ -13,6 +15,13 @@ class MemgraphService:
     """
 
     def __init__(self, settings: Settings):
+        """Initialize the Memgraph client and establish a Bolt driver connection.
+
+        Args:
+            settings: Application settings containing ``memgraph_uri``,
+                ``memgraph_user``, and ``memgraph_password``.
+        """
+        # Skip auth for local dev where Memgraph typically runs without authentication
         auth = (settings.memgraph_user, settings.memgraph_password) if settings.memgraph_user else None
         self._driver: Driver = GraphDatabase.driver(settings.memgraph_uri, auth=auth)
 
@@ -25,7 +34,15 @@ class MemgraphService:
 
         Opens a short-lived session, runs the query with optional ``params``,
         and returns every record as a plain dict via ``record.data()``.
+
+        Args:
+            cypher: The Cypher query string to execute.
+            params: Optional dict of query parameters (default ``None``).
+
+        Returns:
+            A list of dicts, one per result record.
         """
+        # Short-lived sessions — the Neo4j driver handles connection pooling internally
         with self._driver.session() as session:
             result = session.run(cypher, params or {})
             return [record.data() for record in result]
@@ -35,13 +52,24 @@ class MemgraphService:
 
         Same mechanics as ``execute_read`` but semantically reserved for
         mutations so callers can be audited separately.
+
+        Args:
+            cypher: The Cypher query string to execute.
+            params: Optional dict of query parameters (default ``None``).
+
+        Returns:
+            A list of dicts, one per result record.
         """
         with self._driver.session() as session:
             result = session.run(cypher, params or {})
             return [record.data() for record in result]
 
     def verify_connectivity(self) -> bool:
-        """Ping the Memgraph server and return True if it responds, False on any error."""
+        """Ping the Memgraph server and return True if it responds, False on any error.
+
+        Returns:
+            ``True`` if the server responds to a ping, ``False`` on any error.
+        """
         try:
             self._driver.verify_connectivity()
             return True
