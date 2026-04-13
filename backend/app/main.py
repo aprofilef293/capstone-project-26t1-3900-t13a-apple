@@ -12,6 +12,7 @@ from app.services.embedding import (
     HuggingFaceEmbeddingModel,
     LocalEmbeddingModel,
 )
+from app.services.gemini import GeminiTermExtractor
 from app.services.memgraph import MemgraphService
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(levelname)s %(message)s")
@@ -61,6 +62,13 @@ def create_app() -> FastAPI:
             except Exception as e:
                 logger.warning("Embedding service failed to start, search will be unavailable: %s", e)
                 app.state.embedding_service = None
+
+        app.state.gemini = None
+        if settings.gemini_enabled and settings.gemini_api_key:
+            app.state.gemini = GeminiTermExtractor(settings.gemini_api_key)
+            logger.info("Gemini query expansion enabled")
+        else:
+            logger.info("Gemini query expansion disabled (set GEMINI_API_KEY to enable)")
 
         yield
         app.state.memgraph.close()

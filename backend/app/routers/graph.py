@@ -380,7 +380,14 @@ async def embedding_search(
     limit: int = Query(20, ge=1, le=100, description="Max results (1-100)."),
     threshold: float = Query(0.5, ge=0.0, le=1.0, description="Minimum similarity score (0-1)."),
 ):
-    """Semantic search powered by dense vector embeddings."""
+    """Semantic search powered by dense vector embeddings.
+
+    If the query looks like a sentence (no commas, more than two words) and the
+    Gemini service is configured, the sentence is first expanded into a list of
+    ontology-style terms via Gemini.  Those terms are then averaged into a
+    semantic centroid for the vector search.  Falls back to a direct search if
+    Gemini is unavailable or returns nothing useful.
+    """
     t0 = time.perf_counter()
     embedding_svc = getattr(request.app.state, "embedding_service", None)
     if embedding_svc is None or not embedding_svc.is_ready:
@@ -389,7 +396,16 @@ async def embedding_search(
             content={"detail": "Embedding index not available. Upload an ontology first."},
         )
 
-    results = await embedding_svc.search(q, top_k=limit)
+    search_query = q
+    expanded_terms: list[str] | None = None
+    gemini = getattr(request.app.state, "gemini", None)
+    if gemini is not None:
+        expanded_terms = await gemini.expand(q)
+        if expanded_terms:
+            search_query = ", ".join(expanded_terms)
+            logger.info("Gemini expanded %r → %s", q, expanded_terms)
+
+    results = await embedding_svc.search(search_query, top_k=limit)
     if not results:
         return GraphData()
 
@@ -414,9 +430,17 @@ async def embedding_search(
             score, best_field = score_map[node.key]
             node.attributes["searchScore"] = round(score, 4)
             node.attributes["matchFields"] = [best_field]
+            if expanded_terms:
+                node.attributes["expandedTerms"] = expanded_terms
 
     # Return nodes sorted by score descending (matched nodes first, then neighbors)
     graph.nodes.sort(key=lambda n: n.attributes.get("searchScore", -1), reverse=True)
 
-    logger.info("GET /semantic-search q=%r completed in %.3fs (%d matches)", q, time.perf_counter() - t0, len(top_ids))
+    logger.info(
+        "GET /semantic-search q=%r expanded=%s completed in %.3fs (%d matches)",
+        q,
+        expanded_terms,
+        time.perf_counter() - t0,
+        len(top_ids),
+    )
     return graph
