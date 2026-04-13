@@ -476,8 +476,8 @@ export const useStore = create<ExplorerState>((set) => ({
         }
         localStorage.setItem('selectedNodeIds', JSON.stringify(newIds));
         useStore.getState().setSelectedNodeIds(newIds);
-        // Re-open the panel if it was closed (e.g. after a page refresh)
-        if (newIds.length > 0 && useStore.getState().infoPanelMode === 'closed') {
+        // Re-open the multi-select panel if nodes are selected and panel is not node-info (e.g. after a page refresh)
+        if (newIds.length > 0 && (useStore.getState().infoPanelMode === 'closed' || useStore.getState().infoPanelMode === 'search-results' )) {
             useStore.getState().setInfoPanelMode('multi-select');
         }
         // Close panel if all nodes deselected
