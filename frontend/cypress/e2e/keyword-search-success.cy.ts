@@ -46,19 +46,17 @@ describe('happy path for keyword search', () => {
 
     // click on first search result in result panel
     cy.contains('h2', 'Search Results')
-        .parent()
-        .parent()
-        .parent()
-        .as('searchPanel')
+      .closest('div.border-l')
+      .as('searchPanel')
     
     // check search results panel have nodes (ie. at least 1 node so the panel isn't empty)
     cy.get('@searchPanel')
-        .find('div.cursor-pointer')
+        .find('[data-slot="accordion-content"] .cursor-pointer')
         .should('have.length.greaterThan', 0)
 
     // get the first search result
     cy.get('@searchPanel')
-        .find('div.cursor-pointer')
+        .find('[data-slot="accordion-content"] .cursor-pointer')
         .first()
         .as('firstResult')
 
