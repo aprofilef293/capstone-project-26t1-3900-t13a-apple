@@ -2,7 +2,7 @@ import { CircleQuestionMark } from "lucide-react";
 import { useState, type ReactNode } from "react";
 
 export function InfoHelpIcon({
-    innerText
+    innerText,
 }: {
     innerText: ReactNode;
 }) {
