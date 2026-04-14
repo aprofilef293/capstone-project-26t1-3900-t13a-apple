@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useStore } from "../../store/useStore";
 import { SlidersHorizontal } from "lucide-react";
 import { cn } from "../../lib/utils";
+import { InfoHelpIcon } from "../InfoHelpIcon";
 
 
 export function NodeSizeFilter() {
@@ -35,22 +36,25 @@ export function NodeSizeFilter() {
             </div>
 
             <div className={cn(
-                "flex-1 flex flex-col justify-center transition-opacity duration-200 min-w-0 h-full",
+                "flex-1 flex gap-2 items-center justify-center transition-opacity duration-200 min-w-0 h-full",
                 isExpanded ? "opacity-100" : "opacity-0 w-0 hidden"
             )}>
-                <div className="flex items-center justify-center text-[9px] font-medium text-muted-foreground uppercase tracking-wider mb-1">
-                    <span className="text-foreground font-bold">Level {viewLevel}</span>
+                <div className="flex flex-col">
+                    <div className="flex items-center justify-center text-[9px] font-medium text-muted-foreground uppercase tracking-wider mb-1">
+                        <span className="text-foreground font-bold">Level {viewLevel}</span>
+                    </div>
+                    <input
+                        type="range"
+                        min="1"
+                        max="5"
+                        step="1"
+                        value={viewLevel}
+                        onChange={(e) => setViewLevel(Number(e.target.value))}
+                        className="w-full h-1 bg-border rounded-full appearance-none cursor-pointer focus:outline-none [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3.5 [&::-webkit-slider-thumb]:h-3.5 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-foreground [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-background [&::-webkit-slider-thumb]:shadow-sm hover:[&::-webkit-slider-thumb]:scale-125 transition-all"
+                        title={`View Level: ${viewLevel >= 5 ? 'Hubs (5)' : viewLevel <= 1 ? 'All Nodes (1)' : viewLevel}`}
+                    />
                 </div>
-                <input
-                    type="range"
-                    min="1"
-                    max="5"
-                    step="1"
-                    value={viewLevel}
-                    onChange={(e) => setViewLevel(Number(e.target.value))}
-                    className="w-full h-1 bg-border rounded-full appearance-none cursor-pointer focus:outline-none [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3.5 [&::-webkit-slider-thumb]:h-3.5 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-foreground [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-background [&::-webkit-slider-thumb]:shadow-sm hover:[&::-webkit-slider-thumb]:scale-125 transition-all"
-                    title={`View Level: ${viewLevel >= 5 ? 'Hubs (5)' : viewLevel <= 1 ? 'All Nodes (1)' : viewLevel}`}
-                />
+                <InfoHelpIcon innerText={<p>Slide right to hide less-connected nodes and focus on the core structure.</p>} iconSize="w-7 h-7" boxWidth="w-65" side="top" align="end" />
             </div>
         </div>
     );
