@@ -40,6 +40,15 @@ class Settings(BaseSettings):
               service entirely (e.g. in CI or test environments).  When
               disabled, the ``/api/graph/embedding-search`` endpoint returns 503.
 
+        Gemini Query Expansion
+            When a sentence is submitted to the semantic search endpoint,
+            Gemini decomposes it into ontology-style terms before embedding.
+
+            - ``gemini_api_key`` — Google AI Studio API key.  Obtain one at
+              https://aistudio.google.com/app/apikey.  Leave empty to disable.
+            - ``gemini_enabled`` — Set to ``false`` to disable expansion even
+              when a key is present.
+
         Server
             General server behaviour.
 
@@ -55,9 +64,12 @@ class Settings(BaseSettings):
     memgraph_password: str = ""
 
     embedding_local: bool = True
-    embedding_model_name: str = "BAAI/bge-small-en-v1.5"
+    embedding_model_name: str = "aleynahukmet/bge-medical-small-en-v1.5"
     embedding_hf_token: str = ""
     embedding_enabled: bool = True
+
+    gemini_api_key: str = ""
+    gemini_enabled: bool = True
 
     cors_origins: list[str] = ["http://localhost:5173"]
     debug: bool = False

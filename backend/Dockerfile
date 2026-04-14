@@ -20,6 +20,10 @@ COPY pyproject.toml poetry.lock* ./
 RUN poetry install --no-interaction --no-ansi
 
 COPY . .
+
+ARG EMBEDDING_MODEL_NAME=aleynahukmet/bge-medical-small-en-v1.5
+RUN python -c "from sentence_transformers import SentenceTransformer; SentenceTransformer('${EMBEDDING_MODEL_NAME}', device='cpu')"
+
 EXPOSE 8000
 
 FROM base AS dev

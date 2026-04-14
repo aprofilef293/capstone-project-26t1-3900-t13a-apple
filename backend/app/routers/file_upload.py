@@ -139,23 +139,25 @@ async def upload_ontology(request: Request, file: UploadFile = File(...)):
         raise HTTPException(status_code=400, detail=USER_FRIENDLY_ERRORS[400])
 
     max_size = request.app.state.settings.upload_max_size_mb * 1024 * 1024
-    # Read in 8KB chunks to enforce the size limit without buffering the entire file in memory at once
-    content = bytearray()
-    while chunk := await file.read(8192):
-        content += chunk
-        if len(content) > max_size:
-            raise HTTPException(
-                status_code=413,
-                detail=USER_FRIENDLY_ERRORS[413],
-            )
-    content = bytes(content)
     filename = file.filename or "unknown"
 
-    async def event_stream():
-        with tempfile.NamedTemporaryFile(delete=False, suffix=ext) as tmp:
-            tmp.write(content)
-            tmp_path = tmp.name
+    tmp_fd, tmp_path = tempfile.mkstemp(suffix=ext)
+    try:
+        bytes_received = 0
+        with os.fdopen(tmp_fd, "wb") as tmp:
+            while chunk := await file.read(65536):
+                bytes_received += len(chunk)
+                if bytes_received > max_size:
+                    raise HTTPException(
+                        status_code=413,
+                        detail=USER_FRIENDLY_ERRORS[413],
+                    )
+                tmp.write(chunk)
+    except HTTPException:
+        os.unlink(tmp_path)
+        raise
 
+    async def event_stream():
         pipeline_start = time.perf_counter()
 
         try:
