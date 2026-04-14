@@ -51,15 +51,20 @@ describe('happy path for filter panel', () => {
 
     cy.get('@surveillanceTag')
         .invoke('attr', 'class')
-        .should('include', 'bg-blue-500/10')
+        .should('include', 'bg-blue-500/15')
     
-    // click on the tag
-    cy.get('@surveillanceTag').click()
+    // click on the chevron arrow beside the tag
+    cy.get('@surveillanceTag').find('svg.lucide-chevron-down').click()
 
-    // check if the colour of the tag changed (ie. tag colours rotate between blue -> purple -> red)
+    // click the purple one
+    cy.get('#graph-filter-panel')
+        .contains('button', /^mandatory$/i)
+        .click()
+
+    // check if the colour of the tag changed 
     cy.get('@surveillanceTag')
         .invoke('attr', 'class')
-        .should('include', 'bg-purple-500/10')
+        .should('include', 'bg-purple-500/15')
     
     // click on drop down in filter panel 
     cy.get('#graph-filter-panel').within(() => {
