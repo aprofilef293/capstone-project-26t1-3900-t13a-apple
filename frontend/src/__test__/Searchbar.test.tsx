@@ -25,6 +25,8 @@ const doSemanticSearchMock = vi.fn();
 const setInfoPanelModeMock = vi.fn();
 const setSearchModeMock = vi.fn();
 const setSearchResultsExactTitleMock = vi.fn();
+const applySearchScopeMock = vi.fn();
+const clearSearchScopeMock = vi.fn();
 
 // mocked data for graph (3 nodes)
 const baseNodes: MockNode[] = [
@@ -64,6 +66,8 @@ const mockState = {
   setSearchResultsDescription: setSearchResultsDescriptionMock,
   setSearchResultsExactTitle: setSearchResultsExactTitleMock,
   doSemanticSearch: doSemanticSearchMock,
+  applySearchScope: applySearchScopeMock,
+  clearSearchScope: clearSearchScopeMock,
   infoPanelMode: "closed" as "closed" | "search-results" | "node-info" | "multi-select",
   setInfoPanelMode: setInfoPanelModeMock,
   graphFilters: {},

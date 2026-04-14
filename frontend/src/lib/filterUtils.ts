@@ -22,6 +22,15 @@ export function checkMatch(text: string, groups: KeywordGroups): boolean {
     return true;
 }
 
+export function hasActiveGraphFilters(filters: GraphFilters): boolean {
+    return (
+        filters.labelKeywords.length > 0 ||
+        filters.descriptionKeywords.length > 0 ||
+        filters.minImportance > 0 ||
+        filters.excludedColors.size > 0
+    );
+}
+
 export function matchesGraphFilters(node: GraphNode, filters: GraphFilters): boolean {
     const label = node.label || node.id;
     const attrs = node.attributes;

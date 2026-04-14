@@ -76,11 +76,15 @@ interface ExplorerState {
     searchResultsSemantic: GraphNode[],
     setSearchResultsSemantic: (results: GraphNode[]) => void,
     searchResultsLoading: boolean;
-    doSemanticSearch: (query: string) => void;
+    doSemanticSearch: (query: string) => Promise<GraphNode[]>;
     searchResults: GraphNode[];
     searchMode: 'keyword' | 'semantic';
     setSearchMode: (mode: 'keyword' | 'semantic') => void;
     setViewLevel: (level: number) => void;
+    committedSearchNodeIds: string[];
+    searchScopeActive: boolean;
+    applySearchScope: (ids: string[]) => void;
+    clearSearchScope: () => void;
     fetchGraphData: (isInitial?: boolean) => Promise<void>;
     isGraphLoading: boolean;
     isInitialGraphLoading: boolean;
@@ -231,7 +235,7 @@ export const useStore = create<ExplorerState>((set) => ({
     searchResultsSemantic: [],
     setSearchResultsSemantic: (results) => set({ searchResultsSemantic: results }),
     searchResultsLoading: false,
-    doSemanticSearch: async (query: string) => {
+    doSemanticSearch: async (query: string): Promise<GraphNode[]> => {
         try {
             const queryStr = query ?? useStore.getState().searchQuery;
             useStore.getState().setSearchError(null);
@@ -255,17 +259,31 @@ export const useStore = create<ExplorerState>((set) => ({
             })
             useStore.getState().setSearchResultsSemantic(sortedNodes);
             set({ searchResultsLoading: false });
+            return sortedNodes;
         } catch (error) {
             set({ searchResultsLoading: false });
             console.error("Error fetching semantic search results:", error);
             useStore.getState().setSearchError("Error fetching semantic search results");
             useStore.getState().setSearchResultsSemantic([]);
+            return [];
         }
     },
     searchResults: [],
     searchMode: 'keyword',
     setSearchMode: (mode) => set({ searchMode: mode }),
     setViewLevel: (level) => set({ viewLevel: level }),
+    committedSearchNodeIds: [],
+    searchScopeActive: false,
+    applySearchScope: (ids: string[]) =>
+        set({
+            committedSearchNodeIds: ids,
+            searchScopeActive: true,
+        }),
+    clearSearchScope: () =>
+        set({
+            committedSearchNodeIds: [],
+            searchScopeActive: false,
+        }),
     // graph filters
     graphFilters: DEFAULT_FILTERS,
     setGraphFilters: (filters) => set((state) => ({ graphFilters: { ...state.graphFilters, ...filters } })),
@@ -458,8 +476,8 @@ export const useStore = create<ExplorerState>((set) => ({
         }
         localStorage.setItem('selectedNodeIds', JSON.stringify(newIds));
         useStore.getState().setSelectedNodeIds(newIds);
-        // Re-open the panel if it was closed (e.g. after a page refresh)
-        if (newIds.length > 0 && useStore.getState().infoPanelMode === 'closed') {
+        // Re-open the multi-select panel if nodes are selected and panel is not node-info (e.g. after a page refresh)
+        if (newIds.length > 0 && (useStore.getState().infoPanelMode === 'closed' || useStore.getState().infoPanelMode === 'search-results' )) {
             useStore.getState().setInfoPanelMode('multi-select');
         }
         // Close panel if all nodes deselected
@@ -508,7 +526,12 @@ export const useStore = create<ExplorerState>((set) => ({
             }
         }
         // keeping isMultiSelect aligned with infoPanelMode (should always match)
-        useStore.getState().setIsMultiSelect(mode === 'multi-select');
+        // useStore.getState().setIsMultiSelect(mode === 'multi-select');
+        if (mode === "multi-select") {
+            useStore.getState().setIsMultiSelect(true);
+        } else if (mode === "node-info") {
+            useStore.getState().setIsMultiSelect(false);
+        }
     },
     // shortest path
     pathNodeIds: [],

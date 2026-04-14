@@ -27,6 +27,8 @@ export function ExplorerSearch({ viewMode = "graph" }: { viewMode?: "graph" | "h
         graphFilters,
         searchMode,
         setSearchMode,
+        applySearchScope,
+        clearSearchScope,
     } = useStore();
 
     const [inputValue, setInputValue] = useState(searchQuery);
@@ -116,17 +118,55 @@ export function ExplorerSearch({ viewMode = "graph" }: { viewMode?: "graph" | "h
         [exactResults, fuzzyResults, descriptionResults]
     );
 
-    const handleSearchTrigger = () => {
+    const handleSearchTrigger = async () => {
         const queryStr = inputValue.trim();
-        if (queryStr) {
-            setSearchQuery(queryStr);
-            setInfoPanelMode('search-results');
+        if (!queryStr) {
+            clearSearchScope();
+            setSearchQuery("");
+            setInfoPanelMode("closed");
             setIsOpen(false);
+            return;
         }
-        if (searchMode === "semantic" && queryStr) {
-            doSemanticSearch(queryStr);
+
+        setSearchQuery(queryStr);
+        setInfoPanelMode('search-results');
+        setIsOpen(false);
+
+        if (searchMode === "semantic") {
+            const semanticResults = await doSemanticSearch(queryStr);
+            applySearchScope(semanticResults.map((n) => n.id));
+            return;
         }
-    };
+
+        const exactTitleHits = filteredNodes
+            .filter((node) => node.label.toLowerCase().includes(queryStr.toLowerCase()))
+            .slice(0, 50);
+        const exactIds = new Set(exactTitleHits.map((n) => n.id));
+
+        const fuzzyTitleHits = fuse
+            .search(queryStr)
+            .filter((node) => !exactIds.has(node.item.id))
+            .slice(0, 20)
+            .map((r) => r.item);
+        const fuzzyIds = new Set(fuzzyTitleHits.map((n) => n.id));
+
+        const descHits =
+            queryStr.length >= 3
+                ? filteredNodes
+                    .filter((node) => {
+                        if (fuzzyIds.has(node.id) || exactIds.has(node.id)) return false;
+                        const ql = queryStr.toLowerCase();
+                        const def = ((node.attributes.definition as string) ?? "").toLowerCase();
+                        const syns: string[] = (node.attributes.synonyms as string[]) ?? [];
+                        return def.includes(ql) || syns.some((s) => s.toLowerCase().includes(ql));
+                    })
+                    .slice(0, 20)
+                : [];
+
+        setSearchResultsExactTitle(exactTitleHits);
+        setSearchResultsFuzzyTitle(fuzzyTitleHits);
+        setSearchResultsDescription(descHits);
+        applySearchScope([...new Set([...exactTitleHits, ...fuzzyTitleHits, ...descHits].map((n) => n.id))]);    };
 
     return (
         <div ref={wrapperRef} className="relative w-full max-w-lg pointer-events-auto mx-auto group">
@@ -138,7 +178,7 @@ export function ExplorerSearch({ viewMode = "graph" }: { viewMode?: "graph" | "h
                         onFocus={() => setIsOpen(true)}
                         onKeyDown={(e) => {
                             if (e.key === 'Enter') {
-                                handleSearchTrigger();
+                                void handleSearchTrigger();
                             }
                         }}
                         onChange={(e) => {
@@ -155,6 +195,7 @@ export function ExplorerSearch({ viewMode = "graph" }: { viewMode?: "graph" | "h
                         onClick={() => {
                             setInputValue("");
                             setSearchQuery("");
+                            clearSearchScope();
                             setIsOpen(false);
                             setViewLevel(1);
                             setInfoPanelMode('closed');
@@ -167,7 +208,9 @@ export function ExplorerSearch({ viewMode = "graph" }: { viewMode?: "graph" | "h
                     </Button>
                 )}
                 <Button
-                    onClick={handleSearchTrigger}
+                    onClick={() => {
+                        void handleSearchTrigger();
+                    }}
                     variant="ghost"
                     size="icon"
                     className="h-8 w-8 hover:bg-blue-500/10"
@@ -183,6 +226,7 @@ export function ExplorerSearch({ viewMode = "graph" }: { viewMode?: "graph" | "h
                             variant="ghost"
                             onClick={() => {
                                 setInfoPanelMode('closed');
+                                clearSearchScope();
                                 setSearchMode(mode);
                             }}
                             className={cn(
@@ -252,4 +296,3 @@ export function ExplorerSearch({ viewMode = "graph" }: { viewMode?: "graph" | "h
         </div>
     );
 }
-

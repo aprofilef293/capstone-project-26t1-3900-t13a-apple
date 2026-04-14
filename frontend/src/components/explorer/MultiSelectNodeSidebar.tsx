@@ -236,7 +236,7 @@ const MultiSelectNodeSidebar: React.FC = () => {
       <div className="mt-auto flex flex-col justify-center gap-2 pt-4">
         <Button
           variant="secondary"
-          className="w-full text-s p-5 disabled:opacity-100 disabled:bg-secondary disabled:text-secondary-foreground"
+          className="w-full text-s p-5"
           onClick={handleExportCsv}
           disabled={!hasPath || pathLoading || isExporting}
           title="Export path as CSV"
