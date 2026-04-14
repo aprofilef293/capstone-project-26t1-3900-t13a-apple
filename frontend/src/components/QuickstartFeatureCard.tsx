@@ -206,8 +206,8 @@ export function QuickstartGuide() {
         <h2 className="text-2xl font-bold tracking-tight text-sidebar-foreground">
           Quickstart Guide
         </h2>
-        <p className="mt-1 text-sm text-sidebar-foreground/70">
-          Expand any feature to learn more.
+        <p className="mt-1 text-base text-sidebar-foreground/70">
+          Expand any feature to see more information.
         </p>
       </div>
  

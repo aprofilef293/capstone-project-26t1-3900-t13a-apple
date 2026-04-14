@@ -19,7 +19,7 @@ export function Dashboard() {
                     <QuickstartGuide />
 
                     <div className="space-y-4">
-                        <p className="text-lg text-sidebar-foreground/70 leading-relaxed max-w-2xl">
+                        <p className="text-base text-sidebar-foreground/70 leading-relaxed max-w-2xl">
                         Upload your OBO file to start exploring.
                         </p>
 
