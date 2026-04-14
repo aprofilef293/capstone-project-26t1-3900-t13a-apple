@@ -184,7 +184,7 @@ function TagInput({
 }
 
 function KeywordInfo() {
-    return (<div className="w-70 flex flex-col gap-1.5">
+    return (<div className="flex flex-col gap-1.5">
         <p>Type tags to filter graph nodes. Click any active tag to change its rule:</p>
         <ul className="pl-4 space-y-0.5 list-none">
             <li className="relative before:content-[''] before:absolute before:-left-3 before:top-1.5 before:w-1 before:h-1 before:bg-blue-500 before:rounded-full">
@@ -202,7 +202,7 @@ function KeywordInfo() {
 
 function ImportanceSliderInfo() {
     return (
-        <div className="w-40">
+        <div className="">
             <p>Slide right to hide less-connected nodes and focus on the core structure.</p>
         </div>
     )
@@ -265,7 +265,7 @@ export function GraphFilterPanel() {
                         <div className="flex items-center gap-2">
                             <Filter className="w-3.5 h-3.5 text-sidebar-foreground/70" />
                             <span className="text-xs font-semibold text-sidebar-foreground">Graph Filter Conditions</span>
-                            <InfoHelpIcon innerText={KeywordInfo()} />
+                            <InfoHelpIcon innerText={KeywordInfo()} side="bottom" align="start" wide={true} />
                         </div>
                         <div className="flex items-center gap-1.5">
                             {activeCount > 0 && (
@@ -407,7 +407,7 @@ export function GraphFilterPanel() {
                             <div className="flex items-center justify-between mb-1.5">
                                 <div className="flex justify-start gap-2">
                                     <SectionLabel>Min. importance</SectionLabel>
-                                    <InfoHelpIcon innerText={ImportanceSliderInfo()} />
+                                    <InfoHelpIcon innerText={ImportanceSliderInfo()}  side="bottom" align="start" />
                                 </div>
                                 <span className="text-[10px] font-mono text-sidebar-foreground/70 tabular-nums">
                                     {graphFilters.minImportance > 0
