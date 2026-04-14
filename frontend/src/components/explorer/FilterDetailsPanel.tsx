@@ -200,14 +200,6 @@ function KeywordInfo() {
     </div>)
 }
 
-function ImportanceSliderInfo() {
-    return (
-        <div className="">
-            <p>Slide right to hide less-connected nodes and focus on the core structure.</p>
-        </div>
-    )
-}
-
 export function GraphFilterPanel() {
     const { graphFilters: rawFilters, setGraphFilters, resetGraphFilters } = useStore();
     const graphFilters = rawFilters ?? DEFAULT_FILTERS;
@@ -407,7 +399,7 @@ export function GraphFilterPanel() {
                             <div className="flex items-center justify-between mb-1.5">
                                 <div className="flex justify-start gap-2">
                                     <SectionLabel>Min. importance</SectionLabel>
-                                    <InfoHelpIcon innerText={ImportanceSliderInfo()} boxWidth="w-65" side="bottom" align="start" />
+                                    <InfoHelpIcon innerText={<p>Slide right to hide less-connected nodes and focus on the core structure.</p>} boxWidth="w-65" side="bottom" align="start" />
                                 </div>
                                 <span className="text-[10px] font-mono text-sidebar-foreground/70 tabular-nums">
                                     {graphFilters.minImportance > 0
