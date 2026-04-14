@@ -265,7 +265,7 @@ export function GraphFilterPanel() {
                         <div className="flex items-center gap-2">
                             <Filter className="w-3.5 h-3.5 text-sidebar-foreground/70" />
                             <span className="text-xs font-semibold text-sidebar-foreground">Graph Filter Conditions</span>
-                            <InfoHelpIcon innerText={KeywordInfo()} side="bottom" align="start" wide={true} />
+                            <InfoHelpIcon innerText={KeywordInfo()} boxWidth="w-80" side="bottom" align="start" />
                         </div>
                         <div className="flex items-center gap-1.5">
                             {activeCount > 0 && (
@@ -407,7 +407,7 @@ export function GraphFilterPanel() {
                             <div className="flex items-center justify-between mb-1.5">
                                 <div className="flex justify-start gap-2">
                                     <SectionLabel>Min. importance</SectionLabel>
-                                    <InfoHelpIcon innerText={ImportanceSliderInfo()}  side="bottom" align="start" />
+                                    <InfoHelpIcon innerText={ImportanceSliderInfo()} boxWidth="w-65" side="bottom" align="start" />
                                 </div>
                                 <span className="text-[10px] font-mono text-sidebar-foreground/70 tabular-nums">
                                     {graphFilters.minImportance > 0

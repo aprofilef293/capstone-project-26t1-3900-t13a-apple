@@ -11,6 +11,7 @@ import {
   DropdownMenuTrigger,
 } from "../ui/dropdown-menu";
 import { exportMultiShortestPathsCsv } from "../../lib/api";
+import { InfoHelpIcon } from "../InfoHelpIcon";
 
 type GraphNode = {
   id: string;
@@ -234,20 +235,23 @@ const MultiSelectNodeSidebar: React.FC = () => {
 
       {/* Footer */}
       <div className="mt-auto flex flex-col justify-center gap-2 pt-4">
-        <Button
-          variant="secondary"
-          className="w-full text-s p-5"
-          onClick={handleExportCsv}
-          disabled={!hasPath || pathLoading || isExporting}
-          title="Export path as CSV"
-        >
-          {isExporting ? (
-            <Loader2 className="w-4 h-4 animate-spin" />
-          ) : (
-            <Download className="w-4 h-4" />
-          )}
-          Export CSV
-        </Button>
+        <div className="flex justify-between items-center">
+          <Button
+            variant="secondary"
+            className="w-80 text-s p-5"
+            onClick={handleExportCsv}
+            disabled={!hasPath || pathLoading || isExporting}
+            title="Export path as CSV"
+          >
+            {isExporting ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <Download className="w-4 h-4" />
+            )}
+            Export CSV
+          </Button>
+          <InfoHelpIcon innerText={<p>Exports data for currently selected nodes, in-path nodes, and their direct neighbours. Availability depends on path data.</p>} iconSize="w-5 h-5" boxWidth="w-60" side="left" align="center" />
+        </div>
         <Button
           variant="secondary"
           className="w-full text-s p-5"

@@ -5,22 +5,24 @@ import { cn } from "@/lib/utils";
 
 export function InfoHelpIcon({
     innerText,
+    iconSize = "w-4 h-4",
     side,
     align,
-    wide = false,
+    boxWidth,
 }: {
     innerText: ReactNode;
+    iconSize?: string;
+    boxWidth: string;
     side: "left" | "top" | "right" | "bottom";
     align: 'center' | 'start' | 'end';
-    wide?: boolean;
 }) {
     return (
         <HoverCard openDelay={10} closeDelay={10}>
             <HoverCardTrigger asChild>
-                <CircleQuestionMark className="w-4 h-4 text-blue-500" />
+                <CircleQuestionMark className={cn("text-blue-500", iconSize)} />
             </HoverCardTrigger>
-            <HoverCardContent side={side} align={align} className={cn("px-3 pb-2 pt-2 border border-blue-500/50 rounded-lg overflow-hidden mt-1 bg-sidebar-accent", wide ? "w-75" : "w-60")}>
-                <div className="text-[12px] text-muted-foreground leading-relaxed">
+            <HoverCardContent side={side} align={align} className={cn("px-3 pb-2 pt-2 border border-blue-500/50 rounded-lg overflow-hidden mt-1 bg-sidebar-accent", boxWidth)}>
+                <div className="text-[13px] text-muted-foreground leading-relaxed pb-1">
                     {innerText}
                 </div>
             </HoverCardContent>
