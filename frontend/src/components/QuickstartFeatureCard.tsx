@@ -141,7 +141,7 @@ export function QuickstartFeatureCard({
           <p className="text-sm font-semibold text-sidebar-foreground leading-tight">
             {feature.title}
           </p>
-          <p className="mt-0.5 text-xs text-sidebar-foreground/60 leading-tight truncate">
+          <p className="mt-0.5 text-xs text-sidebar-foreground/60 leading-tight whitespace-normal break-words">
             {feature.summary}
           </p>
         </div>
