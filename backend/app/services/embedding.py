@@ -19,9 +19,24 @@ logger = logging.getLogger(__name__)
 
 
 class LocalEmbeddingModel:
+    """Embedding model using a local sentence-transformers instance.
+
+    Loads the model into CPU memory on initialization and encodes text
+    batches asynchronously via ``asyncio.to_thread``. Embeddings are
+    L2-normalised to enable cosine similarity via dot product.
+
+    Args:
+        model_name: HuggingFace model identifier
+            (default ``"BAAI/bge-small-en-v1.5"``).
+
+    Attributes:
+        _BATCH_SIZE: Number of texts per encoding batch (128).
+    """
+
     _BATCH_SIZE = 128
 
     def __init__(self, model_name: str = "BAAI/bge-small-en-v1.5"):
+        # Lazy import — sentence-transformers is heavy and not needed when using remote HF API
         from sentence_transformers import SentenceTransformer
 
         self._model_name = model_name
@@ -29,6 +44,18 @@ class LocalEmbeddingModel:
         logger.info("Prepared local instance of %s", model_name)
 
     async def encode(self, texts: list[str]) -> np.ndarray:
+        """Encode a list of texts into L2-normalised embedding vectors.
+
+        Runs the sentence-transformers model in a background thread to avoid
+        blocking the async event loop.
+
+        Args:
+            texts: List of strings to encode. An empty list returns an empty array.
+
+        Returns:
+            A ``numpy.ndarray`` of shape ``(len(texts), dim)`` with dtype float32,
+            where each row is a unit-length embedding vector.
+        """
         if not texts:
             return np.array([], dtype=np.float32)
         return (
@@ -61,6 +88,7 @@ class HuggingFaceEmbeddingModel:
     _DIMENSION_CACHE: dict[str, int] = {}
 
     def __init__(self, model_name: str = "BAAI/bge-small-en-v1.5", api_token: str = "") -> None:
+        # Lazy import — httpx is only needed for remote inference mode
         import httpx
 
         self._model_name = model_name
@@ -69,6 +97,7 @@ class HuggingFaceEmbeddingModel:
         if api_token:
             headers["Authorization"] = f"Bearer {api_token}"
         self._async_client = httpx.AsyncClient(timeout=120.0, headers=headers)
+        # Rate-limit concurrent requests to avoid overwhelming the HF Inference API
         self._semaphore = asyncio.Semaphore(self._MAX_CONCURRENT)
 
         self._dimension_val: int | None = None
@@ -102,7 +131,9 @@ class HuggingFaceEmbeddingModel:
         """
         for attempt in range(max_retries):
             resp = await self._async_client.post(self._url, json={"inputs": texts, "options": {"wait_for_model": True}})
+            # 429 = rate-limited, 503 = model still loading on HF infrastructure — both are transient
             if resp.status_code in (429, 503):
+                # Exponential backoff: 1s, 2s, 4s, 8s, 16s… capped at 30s
                 wait = min(2**attempt, 30)
                 logger.warning("HF API %d, retrying in %ds...", resp.status_code, wait)
                 await asyncio.sleep(wait)
@@ -141,6 +172,7 @@ class HuggingFaceEmbeddingModel:
         for offset, result in results:
             arr[offset : offset + len(result)] = result
 
+        # L2-normalise so cosine similarity reduces to a simple dot product
         norms = np.linalg.norm(arr, axis=1, keepdims=True)
         norms[norms == 0] = 1
         return arr / norms
@@ -240,7 +272,18 @@ class EmbeddingService:
 
     @staticmethod
     def _content_hash(term_ids: list[str], term_dicts: list[dict]) -> str:
-        """Compute a fast hash of term content for cache invalidation."""
+        """Compute a deterministic hash of term content for disk cache invalidation.
+
+        Hashes term IDs and the field values used for embedding (from
+        ``FIELD_WEIGHTS``), sorted by ID for stability regardless of input order.
+
+        Args:
+            term_ids: List of ontology term identifiers.
+            term_dicts: Corresponding list of term metadata dicts.
+
+        Returns:
+            A 16-character hex digest string.
+        """
         h = hashlib.sha256()
         # Sort by term ID so the hash is stable regardless of input order.
         for tid, td in sorted(zip(term_ids, term_dicts), key=lambda x: x[0]):
@@ -252,7 +295,17 @@ class EmbeddingService:
         return h.hexdigest()[:16]
 
     def _try_load_cache(self, content_hash: str) -> bool:
-        """Attempt to load a previously saved index from disk."""
+        """Attempt to load a previously saved embedding index from disk.
+
+        Looks for a ``.npz`` file in ``_CACHE_DIR`` keyed by the content hash.
+        On success, populates ``_ids``, ``_field_embeddings``, and ``_field_masks``.
+
+        Args:
+            content_hash: The 16-char hex digest identifying the cached index.
+
+        Returns:
+            ``True`` if the cache was loaded successfully, ``False`` otherwise.
+        """
         cache_file = _CACHE_DIR / f"index_{content_hash}.npz"
         if not cache_file.exists():
             return False
@@ -268,7 +321,14 @@ class EmbeddingService:
             return False
 
     def _save_cache(self, content_hash: str) -> None:
-        """Persist the current index to disk for fast restarts."""
+        """Persist the current embedding index to disk for fast restarts.
+
+        Saves term IDs, per-field embedding matrices, and field masks as a
+        compressed ``.npz`` file in ``_CACHE_DIR``.
+
+        Args:
+            content_hash: The 16-char hex digest used as the cache filename.
+        """
         try:
             _CACHE_DIR.mkdir(parents=True, exist_ok=True)
             arrays: dict[str, np.ndarray] = {"ids": np.array(self._ids, dtype=object)}
@@ -338,6 +398,7 @@ class EmbeddingService:
         self._field_embeddings = {}
         if combined_texts:
             all_vecs = await self._model.encode(combined_texts)
+            # Scatter encoded vectors back into per-term positions; terms missing a field stay as zero vectors
             for field, (start, end) in field_slices.items():
                 mask = self._field_masks[field]
                 full_vecs = np.zeros((n, all_vecs.shape[1]), dtype=np.float32)
@@ -402,6 +463,7 @@ class EmbeddingService:
             if field not in self._field_embeddings:
                 continue
             mask = self._field_masks[field]
+            # Dot product = cosine similarity because all vectors are L2-normalised
             raw_scores = (self._field_embeddings[field] @ query_vec.T).ravel()
             weighted_scores = raw_scores * weight
             better = mask & (weighted_scores > best_weighted_score)
@@ -412,6 +474,7 @@ class EmbeddingService:
         final_scores = np.maximum(best_weighted_score, 0.0)
 
         k = min(top_k, n)
+        # argpartition is O(n) vs O(n log n) for a full sort — we only need the top-k, not full ordering
         partitioned = np.argpartition(final_scores, -k)[-k:]
         top_indices = partitioned[np.argsort(final_scores[partitioned])[::-1]]
 

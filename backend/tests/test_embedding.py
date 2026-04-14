@@ -1,4 +1,4 @@
-"""Unit tests for app.services.embedding — fully mocked, no HF API calls."""
+"""Embedding service: field extraction, text building, indexing, search, and HF model."""
 
 from __future__ import annotations
 
@@ -92,7 +92,7 @@ class TestContentHash:
     def test_returns_16_char_hex(self):
         h = EmbeddingService._content_hash(["X:1"], [{"name": "x"}])
         assert len(h) == 16
-        int(h, 16)  # should not raise
+        int(h, 16)
 
 
 class TestIsReady:
@@ -185,7 +185,6 @@ class TestSearch:
 
         results = await svc.search("cell", top_k=2)
         assert len(results) <= 2
-        # Each result is (term_id, score, field_name)
         for tid, score, field in results:
             assert tid in ids
             assert isinstance(score, float)
@@ -263,13 +262,11 @@ class TestHuggingFaceEmbeddingModel:
         model._async_client = AsyncMock()
         model._async_client.post = AsyncMock(return_value=mock_resp)
 
-        # Clear class-level cache for this model name
         HuggingFaceEmbeddingModel._DIMENSION_CACHE.pop("test/model", None)
 
         await model.ensure_ready()
         assert model.dimension == 3
 
-        # Second call should not hit the API again
         model._async_client.post.reset_mock()
         await model.ensure_ready()
         model._async_client.post.assert_not_called()
@@ -278,7 +275,6 @@ class TestHuggingFaceEmbeddingModel:
     async def test_encode_returns_normalised_vectors(self):
         model = HuggingFaceEmbeddingModel("encode-test/model", "tok")
 
-        # Simulate already-probed dimension
         model._dimension_val = 3
 
         mock_resp = MagicMock()
@@ -289,6 +285,5 @@ class TestHuggingFaceEmbeddingModel:
 
         result = await model.encode(["text1", "text2"])
         assert result.shape == (2, 3)
-        # Verify L2 normalisation
         norms = np.linalg.norm(result, axis=1)
         np.testing.assert_allclose(norms, 1.0, atol=1e-6)

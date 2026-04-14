@@ -1,3 +1,11 @@
+"""FastAPI router for ontology file upload, parsing, preprocessing, and ingestion into Memgraph.
+
+This module exposes endpoints that accept ``.obo`` and ``.owl`` ontology files,
+parse them into terms and relations, run graph-preprocessing steps, and
+persist the result into a Memgraph database.  Upload progress is streamed to
+the client via Server-Sent Events (SSE).
+"""
+
 import asyncio
 import json
 import logging
@@ -17,10 +25,13 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
+#: Supported ontology file extensions accepted by the upload endpoint.
 ALLOWED_EXTENSIONS = {".obo", ".owl"}
 
-# User-friendly error messages keyed by error code / pipeline stage.
-# The raw exception is still logged for debugging.
+#: Map of HTTP status codes to user-facing error messages.
+#:
+#: Each value is a plain-English explanation suitable for returning to the
+#: client.  The raw exception is still logged server-side for debugging.
 USER_FRIENDLY_ERRORS: dict[int, str] = {
     400: ("The file type you uploaded is not supported. Please upload a .obo or .owl file."),
     413: ("The file is too large to process. Please reduce the file size and try again."),
@@ -33,6 +44,8 @@ USER_FRIENDLY_ERRORS: dict[int, str] = {
     503: ("The database could not store the ontology data. Please try again later or contact support."),
 }
 
+#: Map of Gene Ontology namespace strings to hex colour codes used for
+#: front-end visualisation (e.g. graph node fills and legend swatches).
 NAMESPACE_COLORS = {
     "biological_process": "#2563eb",
     "molecular_function": "#9333ea",
@@ -56,13 +69,16 @@ def _ingest_terms(
         terms: Parsed ontology terms to insert.
         source_file: Original filename, stored on each node for provenance.
     """
+    # Memgraph requires ANALYTICAL mode for DROP GRAPH, then back to TRANSACTIONAL for writes
     mg.execute_write("STORAGE MODE IN_MEMORY_ANALYTICAL")
     mg.execute_write("DROP GRAPH")
     mg.execute_write("STORAGE MODE IN_MEMORY_TRANSACTIONAL")
+    # Index frequently queried fields for fast MATCH lookups and substring search
     mg.execute_write("CREATE INDEX ON :OntologyTerm(id)")
     mg.execute_write("CREATE INDEX ON :OntologyTerm(name)")
     mg.execute_write("CREATE INDEX ON :OntologyTerm(namespace)")
     mg.execute_write("CREATE INDEX ON :OntologyTerm(synonyms)")
+    # Exclude obsolete terms — they exist in the source file but aren't useful in the active graph
     term_dicts = [{**t.model_dump(), "source_file": source_file} for t in terms if not t.is_obsolete]
     batch_size = 5000
     for i in range(0, len(term_dicts), batch_size):
@@ -73,10 +89,15 @@ def _ingest_terms(
 
 
 def _ingest_relations(mg: MemgraphService, relations: list[OntologyRelation]) -> None:
-    """Batch-create RELATES_TO edges between existing OntologyTerm nodes.
+    """Batch-create ``RELATES_TO`` edges between existing ``OntologyTerm`` nodes.
+
+    Relations are written in Cypher batches of 5 000 using
+    ``UNWIND`` + ``MATCH`` + ``MERGE``.  Each edge carries a ``type``
+    property that records the original relation type from the ontology
+    (e.g. ``is_a``, ``part_of``).
 
     Args:
-        mg: MemgraphService instance for executing Cypher queries.
+        mg: ``MemgraphService`` instance for executing Cypher queries.
         relations: Parsed relationships to insert.
     """
     rel_dicts = [{"subject": r.subject_id, "object": r.object_id, "type": r.relation_type} for r in relations]
@@ -150,6 +171,7 @@ async def upload_ontology(request: Request, file: UploadFile = File(...)):
                 len(relations),
             )
             yield f"data: {json.dumps({'progress': 25, 'stage': 'parsed'})}\n\n"
+            # Yield control to the event loop so the SSE event is flushed to the client
             await asyncio.sleep(0)
         except Exception as e:
             logger.error("Parse error for %s: %s", filename, e, exc_info=True)
@@ -166,6 +188,7 @@ async def upload_ontology(request: Request, file: UploadFile = File(...)):
             ids = [t.id for t in active_terms]
             term_dicts = [t.model_dump() for t in active_terms]
             embedding_start = time.perf_counter()
+            # Run embedding concurrently with preprocessing + ingestion to overlap CPU and I/O work
             embedding_task = asyncio.create_task(embedding_svc.build_index(ids, term_dicts))
 
         try:
@@ -195,11 +218,13 @@ async def upload_ontology(request: Request, file: UploadFile = File(...)):
             t0 = time.perf_counter()
             await asyncio.to_thread(_ingest_relations, mg, relations)
             logger.info("Relation ingestion completed in %.3fs", time.perf_counter() - t0)
+            # Invalidate the cached graph response so the next GET /graph reflects the new data
             request.app.state.graph_cache = None
 
             # Wait for embeddings to finish (may already be done).
             if embedding_task:
                 try:
+                    # SSE keep-alive comments prevent proxy/client timeout while embeddings finish
                     while not embedding_task.done():
                         yield ": keep-alive\n\n"
                         await asyncio.sleep(1)
@@ -222,6 +247,7 @@ async def upload_ontology(request: Request, file: UploadFile = File(...)):
         headers={
             "Cache-Control": "no-cache",
             "Connection": "keep-alive",
+            # Disable nginx proxy buffering so SSE events reach the client immediately
             "X-Accel-Buffering": "no",
         },
     )
@@ -233,6 +259,9 @@ def list_ontologies(request: Request):
 
     Returns a list of records with the source filename and the number
     of terms ingested from each file.
+
+    Returns:
+        A list of dicts with ``source_file`` (str) and ``term_count`` (int) keys.
     """
     mg = request.app.state.memgraph
     records = mg.execute_read(

@@ -1,3 +1,11 @@
+"""Centralized configuration module for the OBO Explorer backend.
+
+Uses ``pydantic-settings`` to declare every tuneable value in a single
+``Settings`` class.  All values can be overridden via environment
+variables (case-insensitive) or through a ``.env`` file placed at the
+project root.
+"""
+
 from pydantic_settings import BaseSettings
 
 
@@ -67,4 +75,5 @@ class Settings(BaseSettings):
     debug: bool = False
     upload_max_size_mb: int = 250
 
+    # Instructs pydantic-settings to auto-load overrides from a .env file at the project root
     model_config = {"env_file": ".env", "env_file_encoding": "utf-8"}

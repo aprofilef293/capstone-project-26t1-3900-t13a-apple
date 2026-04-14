@@ -3,7 +3,7 @@ name = "obo-explorer-backend"
 version = "0.1.0"
 description = "FastAPI backend for OBO Ontology Explorer"
 readme = "README.md"
-requires-python = ">=3.11"
+requires-python = ">=3.12"
 
 [tool.poetry]
 name = "obo-explorer-backend"
@@ -12,7 +12,7 @@ description = "FastAPI backend for OBO Ontology Explorer"
 package-mode = false
 
 [tool.poetry.dependencies]
-python = "^3.11"
+python = "^3.12"
 fastapi = {version = ">=0.115.0", extras = ["standard"]}
 uvicorn = {version = ">=0.34.0", extras = ["standard"]}
 pydantic = ">=2.10.0"
@@ -54,7 +54,7 @@ markers = ["integration: requires a running Memgraph instance"]
 
 [tool.ruff]
 line-length = 120
-target-version = "py311"
+target-version = "py312"
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I"]

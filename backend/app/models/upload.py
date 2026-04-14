@@ -1,3 +1,5 @@
+"""Pydantic models for ontology data parsed from OBO/OWL files."""
+
 from pydantic import BaseModel
 
 
@@ -5,14 +7,26 @@ class OntologyTerm(BaseModel):
     """A single term parsed from an OBO/OWL ontology file.
 
     Attributes:
-        id: Unique term identifier (e.g. "GO:0008150").
+        id: Unique term identifier (e.g. ``"GO:0008150"``).
         name: Human-readable term name.
-        namespace: Ontology namespace (e.g. "biological_process").
+        namespace: Ontology namespace (e.g. ``"biological_process"``).
         definition: Textual definition of the term.
         synonyms: Alternative names for the term.
         xrefs: Cross-references to other databases or ontologies.
         comment: Informal notes, examples of usage, or editorial remarks.
         is_obsolete: Whether the term has been marked obsolete.
+        url: Resolved URL for the term (e.g. OBO PURL or OWL IRI).
+        size: Display size computed from ``PageRank`` score during graph
+            preprocessing.
+        percentile_rank: Percentile rank of the term's ``PageRank`` score
+            (0.0 to 1.0).
+        pagerank_score: Raw ``PageRank`` score from the graph analysis.
+        colour: Hex color code assigned by Louvain community detection.
+        louvain: Louvain community index for this term.
+        viewLevel: Visibility tier (1--5) based on ``PageRank`` and community
+            rank, used by the frontend to control level-of-detail rendering.
+        x: Horizontal position from t-FDP layout.
+        y: Vertical position from t-FDP layout.
     """
 
     id: str
@@ -23,8 +37,9 @@ class OntologyTerm(BaseModel):
     xrefs: list[str] = []
     comment: str | None = None
     is_obsolete: bool = False
+    url: str | None = None
 
-    # Preprocessing attributes
+    # Populated by OntologyGraphPreprocessor.preprocess() — None until graph analysis runs
     size: float | None = None
     percentile_rank: float | None = None
     pagerank_score: float | None = None
