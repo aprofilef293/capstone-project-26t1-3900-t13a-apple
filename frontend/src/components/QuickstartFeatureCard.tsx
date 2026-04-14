@@ -120,12 +120,12 @@ export function QuickstartFeatureCard({
 }: QuickstartFeatureCardProps) {
   const Icon = feature.icon;
   const [open, setOpen] = useState(defaultOpen);
-
+ 
   return (
     <div
       className={cn(
         "break-inside-avoid rounded-lg border border-sidebar-border bg-sidebar/60 transition-colors",
-        open && "bg-sidebar",
+        open && "bg-sidebar"
       )}
     >
       <button
@@ -136,7 +136,7 @@ export function QuickstartFeatureCard({
         <div className="shrink-0 rounded-md bg-sidebar-accent/50 p-1.5">
           <Icon className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400" />
         </div>
-
+ 
         <div className="min-w-0 flex-1">
           <p className="text-sm font-semibold text-sidebar-foreground leading-tight">
             {feature.title}
@@ -145,23 +145,20 @@ export function QuickstartFeatureCard({
             {feature.summary}
           </p>
         </div>
-
+ 
         <ChevronDown
           className={cn(
             "h-4 w-4 shrink-0 text-sidebar-foreground/50 transition-transform duration-200",
-            open && "rotate-180",
+            open && "rotate-180"
           )}
         />
       </button>
-
+ 
       {open && (
         <div className="px-4 pb-4 pt-1">
           <div className="border-t border-sidebar-border/50 pt-3 space-y-1.5">
             {feature.steps.map((step, i) => (
-              <div
-                key={step}
-                className="flex gap-2.5 text-xs text-sidebar-foreground/80"
-              >
+              <div key={step} className="flex gap-2.5 text-xs text-sidebar-foreground/80">
                 <span className="shrink-0 mt-0.5 w-4 h-4 rounded-full bg-sidebar-accent/50 text-sidebar-foreground/60 flex items-center justify-center text-[10px] font-medium">
                   {i + 1}
                 </span>
@@ -169,7 +166,7 @@ export function QuickstartFeatureCard({
               </div>
             ))}
           </div>
-
+ 
           <div className="mt-3">
             <Button asChild size="sm" className="h-7 text-xs">
               <Link to={feature.to}>{feature.ctaLabel}</Link>
@@ -180,10 +177,10 @@ export function QuickstartFeatureCard({
     </div>
   );
 }
-
+ 
 export function QuickstartGuide() {
   return (
-    <section id="quickstart" className="max-w-4xl w-full">
+    <section id="quickstart" className="w-full">
       <div className="mb-3">
         <h2 className="text-2xl font-bold tracking-tight text-sidebar-foreground">
           Quickstart Guide
@@ -192,10 +189,10 @@ export function QuickstartGuide() {
           Expand any feature to learn more.
         </p>
       </div>
-
+ 
       <div className="flex gap-2.5">
         {[0, 1].map((col) => (
-          <div key={col} className="flex-1 flex flex-col gap-2.5">
+          <div key={col} className="flex-1 min-w-0 flex flex-col gap-2.5">
             {quickstartFeatures
               .filter((_, i) => i % 2 === col)
               .map((feature) => (
