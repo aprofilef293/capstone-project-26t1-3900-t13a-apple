@@ -3,6 +3,7 @@ import { Filter, X, RotateCcw, Check, Asterisk, Ban, HelpCircle, ChevronDown } f
 import { useStore, DEFAULT_FILTERS } from "../../store/useStore";
 import type { TagKeyword, TagMode } from "../../store/useStore";
 import { cn } from "../../lib/utils";
+import { InfoHelpIcon } from "../InfoHelpIcon";
 
 
 function countActiveFilters(filters: {
@@ -222,6 +223,22 @@ function HelpSection() {
     );
 }
 
+function KeywordInfo() {
+    return (<div className="w-70 flex flex-col gap-1.5">
+        <p>Type tags to filter graph nodes. Click any active tag to change its rule:</p>
+        <ul className="pl-4 space-y-0.5 list-none">
+            <li className="relative before:content-[''] before:absolute before:-left-3 before:top-1.5 before:w-1 before:h-1 before:bg-blue-500 before:rounded-full">
+                <span className="font-medium text-foreground/70">Include (OR):</span> Show if node has any of these.
+            </li>
+            <li className="relative before:content-[''] before:absolute before:-left-3 before:top-1.5 before:w-1 before:h-1 before:bg-purple-500 before:rounded-full">
+                <span className="font-medium text-foreground/70">Mandatory (AND):</span> Node must have all of these.
+            </li>
+            <li className="relative before:content-[''] before:absolute before:-left-3 before:top-1.5 before:w-1 before:h-1 before:bg-red-500 before:rounded-full">
+                <span className="font-medium text-foreground/70">Exclude (NOT):</span> Always hide if node has these.
+            </li>
+        </ul>
+    </div>)
+}
 
 export function GraphFilterPanel() {
     const { graphFilters: rawFilters, setGraphFilters, resetGraphFilters } = useStore();
@@ -280,6 +297,7 @@ export function GraphFilterPanel() {
                         <div className="flex items-center gap-2">
                             <Filter className="w-3.5 h-3.5 text-sidebar-foreground/70" />
                             <span className="text-xs font-semibold text-sidebar-foreground">Graph Filter Conditions</span>
+                            <InfoHelpIcon innerText={KeywordInfo()} />
                         </div>
                         <div className="flex items-center gap-1.5">
                             {activeCount > 0 && (
