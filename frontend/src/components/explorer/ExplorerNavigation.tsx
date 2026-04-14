@@ -22,7 +22,7 @@ export function ExplorerToolbar({
     onViewModeChange: (mode: "graph" | "hierarchy") => void;
 }) {
     const { nodes, edges, viewLevel, searchQuery, selectedNodeId, graphFilters } = useStore();
-    const { isMultiSelect, setIsMultiSelect, infoPanelMode, setInfoPanelMode } = useStore();
+    const { isMultiSelect, setIsMultiSelect, infoPanelMode, setInfoPanelMode, clearSelectedNodes, clearPath, clearSearchScope } = useStore();
 
     const deferredSearchQuery = useDeferredValue(searchQuery);
 
@@ -124,6 +124,9 @@ export function ExplorerToolbar({
 
                                     // turn multi-select off - reset multi-select/search-scope state
                                     setIsMultiSelect(false);
+                                    clearSelectedNodes();
+                                    clearPath();
+                                    clearSearchScope();
                                     setInfoPanelMode("closed");
                                 }}
                                 aria-label="Toggle multi-select mode"
