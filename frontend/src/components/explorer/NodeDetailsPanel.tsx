@@ -8,6 +8,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "..
 import { DropdownMenu, DropdownMenuContent, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuSeparator, DropdownMenuTrigger } from "../ui/dropdown-menu";
 import { Button } from "../ui/button";
 import React, { useMemo } from "react";
+import { InfoHelpIcon } from "../InfoHelpIcon";
 
 /* ── Reusable connection card list ── */
 interface ConnectionItem {
@@ -124,14 +125,17 @@ function ConnectionsContent({
     return (
         <Tabs defaultValue="tab1">
             <div className="flex justify-between">
-                <TabsList className="flex items-center gap-2" aria-label="View node connections">
-                    <TabsTrigger value="tab1">
-                        Incoming ({inputs.length})
-                    </TabsTrigger>
-                    <TabsTrigger value="tab2">
-                        Outgoing ({outputs.length})
-                    </TabsTrigger>
-                </TabsList>
+                <div className="flex justify-start items-center gap-2">
+                    <TabsList className="flex items-center gap-2" aria-label="View node connections">
+                        <TabsTrigger value="tab1">
+                            Incoming ({inputs.length})
+                        </TabsTrigger>
+                        <TabsTrigger value="tab2">
+                            Outgoing ({outputs.length})
+                        </TabsTrigger>
+                    </TabsList>
+                    <InfoHelpIcon innerText={<p>Lists of nodes that are directly connected to the selected node.</p>} iconSize="w-5 h-5" boxWidth="w-55" side="bottom" align="end" />
+                </div>
                 <DropdownMenu>
                     <DropdownMenuTrigger asChild className="cursor-pointer">
                         <Button variant="secondary">Sort</Button>

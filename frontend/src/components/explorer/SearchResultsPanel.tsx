@@ -3,6 +3,7 @@ import { ScrollArea } from "../ui/scroll-area";
 import { useStore, type GraphNode } from "../../store/useStore";
 import { cn } from "@/lib/utils";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "../ui/accordion";
+import { InfoHelpIcon } from "../InfoHelpIcon";
 
 function SearchResults({
     items,
@@ -95,7 +96,32 @@ export function SearchResultsPanel() {
             {/* Header */}
             <div className="p-6 pb-4 border-b border-sidebar-border shadow-sm bg-sidebar/50">
                 <div className="flex justify-between">
-                    <h2 className="text-xl font-bold text-sidebar-foreground pt-2 mb-1 leading-tight">Search Results</h2>
+                    <div className="flex justify-start gap-3 items-center">
+                        <h2 className="text-xl font-bold text-sidebar-foreground pt-2 mb-1 leading-tight">Search Results</h2>
+                        {searchMode === "keyword" &&
+                            <InfoHelpIcon
+                                innerText={<p>
+                                    Search results include exact matches on node labels and descriptions (if available).<br/>
+                                    Suggested results use fuzzy matching to find potential similar matches.
+                                </p>}
+                                iconSize="w-5 h-5 mt-1.5"
+                                boxWidth="w-70"
+                                side="bottom"
+                                align="center"
+                            />
+                        }
+                        {searchMode === "semantic" &&
+                            <InfoHelpIcon
+                                innerText={<p>
+                                    Search results include semantic (meaning-based) matches on node labels and descriptions.
+                                </p>}
+                                iconSize="w-5 h-5 mt-1.5"
+                                boxWidth="w-60"
+                                side="bottom"
+                                align="center"
+                            />
+                        }
+                    </div>
                     <button
                         onClick={() => {
                             setSearchQuery("");
@@ -109,11 +135,6 @@ export function SearchResultsPanel() {
                     </button>
                 </div>
                 <div className="text-[12px] text-sidebar-foreground font-mono tracking-wider mr-auto mt-2 mb-2">Query: {searchQuery}</div>
-                <div className="text-[12px] text-sidebar-foreground/70 font-mono tracking-wider mr-auto">
-                    {searchMode === "keyword" ?
-                        "Search results include exact matches on node labels and descriptions (if available).\nSuggested results use fuzzy matching to find potential similar matches."
-                        : "Search results include semantic (meaning-based) matches on node labels and descriptions."}
-                </div>
             </div>
 
             <ScrollArea className="flex-1 min-h-0 pb-6 px-6 pt-2">
