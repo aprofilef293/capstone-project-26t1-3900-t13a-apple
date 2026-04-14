@@ -141,7 +141,6 @@ async def upload_ontology(request: Request, file: UploadFile = File(...)):
     max_size = request.app.state.settings.upload_max_size_mb * 1024 * 1024
     filename = file.filename or "unknown"
 
-
     tmp_fd, tmp_path = tempfile.mkstemp(suffix=ext)
     try:
         bytes_received = 0

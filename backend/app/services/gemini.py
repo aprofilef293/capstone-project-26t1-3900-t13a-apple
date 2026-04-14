@@ -21,7 +21,7 @@ _EXPAND_TIMEOUT = 15.0
 class GeminiTermExtractor:
     def __init__(self, api_key: str) -> None:
         self._client = genai.Client(api_key=api_key) if api_key else None
-        #Search cache save on gemini api
+        # Search cache save on gemini api
         self._cache: dict[str, list[str] | None] = {}
 
     async def expand(self, query: str) -> list[str] | None:
@@ -49,9 +49,13 @@ class GeminiTermExtractor:
                 return terms
             logger.warning("Gemini returned unparseable response: %r", response.text)
         except TimeoutError:
-            logger.warning("Gemini timed out after %.1fs for %r — falling back to direct semantic search", _EXPAND_TIMEOUT, query)
+            logger.warning(
+                "Gemini timed out after %.1fs for %r — falling back to direct semantic search", _EXPAND_TIMEOUT, query
+            )
         except Exception as exc:
-            logger.warning("Gemini expansion failed (%s): %s — falling back to direct semantic search", type(exc).__name__, exc)
+            logger.warning(
+                "Gemini expansion failed (%s): %s — falling back to direct semantic search", type(exc).__name__, exc
+            )
 
         self._cache[query] = None
         return None
