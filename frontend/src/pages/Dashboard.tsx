@@ -10,20 +10,22 @@ export function Dashboard() {
                 description="Visualise and Query OBO Ontologies instantly."
             />
 
-            <div className="flex-1 flex flex-col items-center px-10 py-8 w-full gap-8">
-                <div className="max-w-4xl w-full">
-                    <h1 className="text-5xl font-bold tracking-tight text-sidebar-foreground mb-2 leading-tight">
+            <div className="flex-1 w-full px-4 sm:px-8 lg:px-10 py-8">
+                <div className="mx-auto w-full max-w-4xl space-y-8 text-left">
+                    <h1 className="text-4xl sm:text-5xl font-bold tracking-tight text-sidebar-foreground leading-tight">
                         Research-Scale Ontology<br />Exploration
                     </h1>
-                    
-                    <p className="text-lg text-sidebar-foreground/70 leading-relaxed max-w-2xl mb-8">
-                        Upload your OBO file to start exploring hierarchical data and network graphs. Designed for researchers, built for scale.
-                    </p>
-                    
-                    <QuickstartGuide />
-                </div>
 
-                <UploadBox className="max-w-4xl py-20 mb-8 shadow-inner bg-sidebar-accent/5" />
+                    <QuickstartGuide />
+
+                    <div className="space-y-4">
+                        <p className="text-lg text-sidebar-foreground/70 leading-relaxed max-w-2xl">
+                        Upload your OBO file to start exploring.
+                        </p>
+
+                        <UploadBox className="w-full py-20 shadow-inner bg-sidebar-accent/5" />
+                    </div>
+                </div>
             </div>
         </div>
     );
