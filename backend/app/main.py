@@ -58,6 +58,9 @@ def create_app() -> FastAPI:
             try:
                 logger.info("Launching %s embedding service...", mode)
                 app.state.embedding_service = EmbeddingService(model)
+                # Warm up the model with a dummy encode so first search isn't so slow
+                await model.encode(["warmup"])
+                logger.info("Embedding model warmed up")
                 await _rebuild_embedding_index(app.state.memgraph, app.state.embedding_service)
             except Exception as e:
                 logger.warning("Embedding service failed to start, search will be unavailable: %s", e)

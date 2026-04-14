@@ -403,7 +403,8 @@ async def embedding_search(
         expanded_terms = await gemini.expand(q)
         if expanded_terms:
             search_query = ", ".join(expanded_terms)
-            logger.info("Gemini expanded %r → %s", q, expanded_terms)
+        else:
+            logger.info("Gemini unavailable or returned nothing for %r — using direct semantic search", q)
 
     results = await embedding_svc.search(search_query, top_k=limit)
     if not results:
