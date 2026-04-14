@@ -51,7 +51,11 @@ const quickstartFeatures: QuickstartFeature[] = [
     title: "Graph View",
     summary: "Explore ontology file as a network graph.",
     steps: [
-      "steps"
+      "After a file is uploaded, the graph can be viewed in the Network Graph page.",
+      "Clicking on a graph node will open a side panel containing the details for the clicked node.",
+      "The side panel contains information about node's Data, Connections, and Computed Attributes.",
+      "The Connections dropdown allows for sorting connected nodes by different attributes",
+      "A Back button in the side panel allows users to navigate back to previously viewed nodes.",
     ],
     ctaLabel: "Go to Network Graph",
     to: "/explorer",
@@ -62,7 +66,9 @@ const quickstartFeatures: QuickstartFeature[] = [
     title: "Hierarchy Panel",
     summary: "Explore ontology file in a folder-like structure.",
     steps: [
-      "steps"
+      "In the Network Graph page, switch from Graph to Hierarchy in the top right corner.",
+      "Click on arrows to expand folders.",
+      "Click on folders to show side panel which contains information about the selected node.",
     ],
     ctaLabel: "Go to Network Graph",
     to: "/explorer",
@@ -73,7 +79,11 @@ const quickstartFeatures: QuickstartFeature[] = [
     title: "Keyword Search",
     summary: "Search for ontology terms by exact or close text matches.",
     steps: [
-      "steps"
+      "In the Network Graph page, make sure the 'Keyword' option is selected in the search bar.",
+      "Type in the search bar to see graph updates and a drop-down of suggested nodes.",
+      "Press Enter or click the search icon to open a results side panel.",
+      "Results are grouped into 3 categories: Most Relevant, Related, and Suggested.",
+      "Click a result to open node details.",
     ],
     ctaLabel: "Try Keyword Search",
     to: "/explorer",
@@ -84,7 +94,10 @@ const quickstartFeatures: QuickstartFeature[] = [
     title: "Semantic Search",
     summary: "Search for ontology terms with natural language queries.",
     steps: [
-      "steps"
+      "In the Network Graph page, make sure the 'Advanced' option is selected in the search bar.",
+      "Type in a query and press Enter.",
+      "Search results side panel will show up and display nodes with similarity percentages.",
+      "Click a result to open node details.",
     ],
     ctaLabel: "Try Advanced Search",
     to: "/explorer",
@@ -95,9 +108,13 @@ const quickstartFeatures: QuickstartFeature[] = [
     title: "Filter Panel",
     summary: "Filter ontology by name, description, boolean logic, and importance slider.",
     steps: [
-      "steps"
+      "In the Network Graph page, click the funnel icon to open the Filter Panel.",
+      "Type in search bar to add tag for search term (searches by name or description or both).",
+      "Click on tags to switch between boolean logic (OR, AND, and NOT).",
+      "Drag the importance slider to see all nodes or only the most important nodes.",
+      "Click on Reset button to clear all filters.",
     ],
-    ctaLabel: "Open Filters",
+    ctaLabel: "Try Filter Panel",
     to: "/explorer",
     icon: SlidersHorizontal,
   },
@@ -106,7 +123,11 @@ const quickstartFeatures: QuickstartFeature[] = [
     title: "Multi-Select & Export",
     summary: "Select multiple nodes and see shortest paths.",
     steps: [
-      "steps"
+      "In the Network Graph page, toggle on the Multi-Select switch.",
+      "Select multiple nodes to see how they are connected in the graph.",
+      "Use Path View to focus on relevant nodes and connections.",
+      "Select an attribute from the drop down to compare values across selected nodes.",
+      "Click on Export CSV to export selected and in path nodes as a CSV file.",
     ],
     ctaLabel: "Try Multi-Select",
     to: "/explorer",
