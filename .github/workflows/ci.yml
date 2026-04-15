@@ -37,12 +37,12 @@ jobs:
           path: |
             ~/.cache/pypoetry
             backend/.venv
-          key: poetry-${{ hashFiles('backend/poetry.lock') }}
+          key: poetry-lint-${{ hashFiles('backend/poetry.lock') }}
 
       - name: Install dependencies
         run: |
           poetry config virtualenvs.in-project true
-          poetry install --no-interaction
+          poetry install --no-interaction --only dev
 
       - name: Check formatting
         run: poetry run ruff format --check .
@@ -68,6 +68,9 @@ jobs:
         with:
           python-version: "3.12"
 
+      - name: Install system dependencies
+        run: sudo apt-get install -y libfftw3-dev
+
       - name: Install Poetry
         run: pip install poetry
 
@@ -77,7 +80,7 @@ jobs:
           path: |
             ~/.cache/pypoetry
             backend/.venv
-          key: poetry-${{ hashFiles('backend/poetry.lock') }}
+          key: poetry-test-${{ hashFiles('backend/poetry.lock') }}
 
       - name: Install dependencies
         run: |

@@ -32,6 +32,7 @@ numba-kdtree = ">=0.3.0"
 pygments = ">=2.20.0"
 torch = {version = "^2.11.0", source = "pytorch"}
 sentence-transformers = "^5.3.0"
+google-genai = ">=1.0.0"
 
 [tool.poetry.group.dev.dependencies]
 pytest = ">=8.0"
