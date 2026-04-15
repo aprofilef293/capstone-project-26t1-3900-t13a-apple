@@ -42,7 +42,13 @@ const MultiSelectNodeSidebar: React.FC = () => {
     .filter((n): n is GraphNode => n !== undefined);
 
   const attributeKeys = Array.from(
-    new Set(displayNodes.flatMap((node) => Object.keys(node.attributes || {}))),
+    new Set(
+      displayNodes.flatMap((node) =>
+        Object.keys(node.attributes || {}).map((key) =>
+          key === "color" ? "colour" : key,
+        ),
+      ),
+    ),
   );
 
   const handleAttributeChange = (value: string) => {
@@ -211,7 +217,13 @@ const MultiSelectNodeSidebar: React.FC = () => {
                       <>
                         {selectedAttribute}: &nbsp;
                         <span className="font-mono text-gray-400 dark:text-zinc-500">
-                          {String(node.attributes[selectedAttribute] ?? "N/A")}
+                          {String(
+                            node.attributes[selectedAttribute] ??
+                              (selectedAttribute === "colour"
+                                ? node.attributes.color
+                                : undefined) ??
+                              "N/A",
+                          )}
                         </span>
                       </>
                     ) : (
