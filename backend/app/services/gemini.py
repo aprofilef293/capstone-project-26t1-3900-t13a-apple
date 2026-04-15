@@ -26,6 +26,80 @@ _PROMPT = (
     'Return only the comma-separated list.\n\n"{query}"'
 )
 
+# Words that indicate a natural-language query rather than bare keywords.
+# Used to decide whether to send the query to Gemini for expansion.
+_QUESTION_WORDS = {
+    "what",
+    "how",
+    "why",
+    "who",
+    "where",
+    "when",
+    "which",
+    "is",
+    "are",
+    "does",
+    "do",
+    "can",
+    "could",
+    "would",
+    "should",
+    "tell",
+    "explain",
+    "describe",
+    "find",
+    "show",
+}
+_FUNCTION_WORDS = {
+    "the",
+    "a",
+    "an",
+    "of",
+    "in",
+    "for",
+    "between",
+    "about",
+    "with",
+    "from",
+    "through",
+    "during",
+    "into",
+    "onto",
+    "and",
+    "or",
+    "but",
+    "that",
+    "this",
+    "these",
+    "those",
+}
+_MEDICAL_INTENT_WORDS = {
+    "treatment",
+    "therapy",
+    "diagnosis",
+    "symptoms",
+    "causes",
+    "prognosis",
+    "prevention",
+    "pathology",
+    "etiology",
+    "complication",
+    "complications",
+    "management",
+    "mechanism",
+    "risk",
+    "factors",
+    "side",
+    "effects",
+    "screening",
+    "biomarker",
+    "biomarkers",
+    "indicator",
+    "indicators",
+    "outcome",
+    "outcomes",
+}
+
 
 def _parse_terms(text: str) -> list[str]:
     """Split a comma-separated Gemini response into cleaned terms.
@@ -82,13 +156,18 @@ class GeminiTermExtractor:
             return None
 
         q_lower = query.lower().strip()
-        first_word = q_lower.split()[0] if q_lower else ""
-        is_question = q_lower.endswith("?") or first_word in (
-            "what", "how", "why", "who", "where", "when", "which",
-            "is", "are", "does", "do", "can", "could", "would", "should",
-            "tell", "explain", "describe", "find", "show",
+        words = q_lower.split()
+        if not words:
+            return None
+
+        word_set = set(words)
+        is_natural_language = (
+            q_lower.endswith("?")
+            or words[0] in _QUESTION_WORDS
+            or bool(word_set & _FUNCTION_WORDS)
+            or bool(word_set & _MEDICAL_INTENT_WORDS)
         )
-        if not is_question:
+        if not is_natural_language:
             return None
 
         if query in self._cache:
