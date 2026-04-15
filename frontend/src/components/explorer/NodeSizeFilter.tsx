@@ -12,7 +12,7 @@ export function NodeSizeFilter() {
     return (
         <div
             className={cn(
-                "group flex items-center bg-sidebar/90 backdrop-blur-sm border border-sidebar-border rounded-lg shadow-sm transition-all duration-300 ease-out h-9 pointer-events-auto",
+                "group flex items-center bg-sidebar/90 backdrop-blur-sm border border-sidebar-border rounded-lg shadow-sm transition-all duration-300 ease-out h-10 pointer-events-auto",
                 isExpanded ? "w-52 px-3 gap-3 overflow-visible" : "w-10 overflow-hidden justify-center hover:bg-sidebar-accent cursor-pointer"
             )}
             onMouseEnter={() => setIsExpanded(true)}
@@ -20,7 +20,7 @@ export function NodeSizeFilter() {
         >
             <div className="relative flex items-center justify-center w-5 h-5 flex-shrink-0">
                 <SlidersHorizontal className={cn(
-                    "w-[15px] h-[15px] transition-all absolute",
+                    "w-[18px] h-[18px] transition-all absolute",
                     isExpanded
                         ? "text-foreground opacity-100 scale-100"
                         : "text-muted-foreground opacity-0 scale-50"
