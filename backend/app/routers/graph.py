@@ -1,5 +1,6 @@
 """FastAPI router for querying, searching, and exporting ontology graph data from Memgraph."""
 
+import asyncio
 import csv
 import io
 import logging
@@ -669,18 +670,24 @@ async def embedding_search(
             content={"detail": "Embedding index not available. Upload an ontology first."},
         )
 
-    expanded_terms: list[str] | None = None
+    # Run the original embedding search and Gemini expansion concurrently
+    # so we don't wait for Gemini before starting the search.
     gemini = getattr(request.app.state, "gemini", None)
-    if gemini is not None:
+
+    async def _safe_expand() -> list[str] | None:
+        if gemini is None:
+            return None
         try:
-            expanded_terms = await gemini.expand(q)
+            return await gemini.expand(q)
         except Exception:
-            expanded_terms = None
+            return None
 
-    # Always search the original query
-    results = await embedding_svc.search(q, top_k=limit)
+    results, expanded_terms = await asyncio.gather(
+        embedding_svc.search(q, top_k=limit),
+        _safe_expand(),
+    )
 
-    # If Gemini expanded, search the centroid too and keep the higher score per term
+    # If Gemini expanded, search the centroid too and merge the higher score per term
     if expanded_terms:
         gemini_query = ", ".join(expanded_terms)
         gemini_results = await embedding_svc.search(gemini_query, top_k=limit)
@@ -724,9 +731,9 @@ async def embedding_search(
     graph.nodes.sort(key=lambda n: n.attributes.get("searchScore", -1), reverse=True)
 
     logger.info(
-        "GET /semantic-search q=%r expanded=%s completed in %.3fs (%d matches)",
+        "GET /semantic-search q=%r%s completed in %.3fs (%d matches)",
         q,
-        expanded_terms,
+        f" expanded={expanded_terms}" if expanded_terms else "",
         time.perf_counter() - t0,
         len(top_ids),
     )
