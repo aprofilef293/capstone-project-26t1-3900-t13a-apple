@@ -78,7 +78,17 @@ class GeminiTermExtractor:
             expansion was skipped, the API call failed, or the response
             was unusable (e.g. safety-filtered).
         """
-        if not self._client or "," in query or len(query.split()) <= 2:
+        if not self._client or "," in query:
+            return None
+
+        q_lower = query.lower().strip()
+        first_word = q_lower.split()[0] if q_lower else ""
+        is_question = q_lower.endswith("?") or first_word in (
+            "what", "how", "why", "who", "where", "when", "which",
+            "is", "are", "does", "do", "can", "could", "would", "should",
+            "tell", "explain", "describe", "find", "show",
+        )
+        if not is_question:
             return None
 
         if query in self._cache:

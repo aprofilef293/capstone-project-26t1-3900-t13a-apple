@@ -651,7 +651,7 @@ async def embedding_search(
         description=("Free-text search query. Separate multiple terms with commas "),
     ),
     limit: int = Query(20, ge=1, le=100, description="Max results (1-100)."),
-    threshold: float = Query(0.4, ge=0.0, le=1.0, description="Minimum similarity score (0-1)."),
+    threshold: float = Query(0.5, ge=0.0, le=1.0, description="Minimum similarity score (0-1)."),
 ):
     """Semantic search powered by dense vector embeddings.
 
@@ -669,16 +669,29 @@ async def embedding_search(
             content={"detail": "Embedding index not available. Upload an ontology first."},
         )
 
-    search_query = q
     expanded_terms: list[str] | None = None
     gemini = getattr(request.app.state, "gemini", None)
     if gemini is not None:
-        expanded_terms = await gemini.expand(q)
-        if expanded_terms:
-            search_query = ", ".join(expanded_terms)
-            logger.info("Gemini expanded %r → %s", q, expanded_terms)
+        try:
+            expanded_terms = await gemini.expand(q)
+        except Exception:
+            expanded_terms = None
 
-    results = await embedding_svc.search(search_query, top_k=limit)
+    # Always search the original query
+    results = await embedding_svc.search(q, top_k=limit)
+
+    # If Gemini expanded, search the centroid too and keep the higher score per term
+    if expanded_terms:
+        gemini_query = ", ".join(expanded_terms)
+        gemini_results = await embedding_svc.search(gemini_query, top_k=limit)
+        score_map = {tid: (score, field) for tid, score, field in results}
+        for tid, score, field in gemini_results:
+            if tid not in score_map or score > score_map[tid][0]:
+                score_map[tid] = (score, field)
+        results = [(tid, score, field) for tid, (score, field) in score_map.items()]
+        results.sort(key=lambda x: x[1], reverse=True)
+        results = results[:limit]
+
     if not results:
         return GraphData()
 
@@ -698,6 +711,7 @@ async def embedding_search(
 
     graph = _build_graph_data_from_paths(neighbor_records)
 
+    # Annotate matched nodes with their similarity score and best-matching field for the frontend
     for node in graph.nodes:
         if node.key in score_map:
             score, best_field = score_map[node.key]
