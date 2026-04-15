@@ -36,7 +36,7 @@ class TestExpandBypass:
     @pytest.mark.asyncio
     async def test_no_client(self):
         extractor = GeminiTermExtractor(api_key="")
-        assert await extractor.expand("heart failure treatment") is None
+        assert await extractor.expand("diabetes treatment options") is None
 
     @pytest.mark.asyncio
     async def test_query_contains_comma(self):
@@ -45,22 +45,67 @@ class TestExpandBypass:
         assert await extractor.expand("heart failure, stroke") is None
 
     @pytest.mark.asyncio
-    async def test_query_two_words_or_fewer(self):
+    async def test_single_keyword(self):
         with patch("app.services.gemini.genai"):
             extractor = GeminiTermExtractor(api_key="fake-key")
         assert await extractor.expand("heart") is None
-        assert await extractor.expand("heart failure") is None
 
     @pytest.mark.asyncio
-    async def test_three_words_not_bypassed(self):
-        with patch("app.services.gemini.genai") as mock_genai:
+    async def test_bare_keywords_bypassed(self):
+        """Multi-word keyword queries without question/function/medical words skip Gemini."""
+        with patch("app.services.gemini.genai"):
             extractor = GeminiTermExtractor(api_key="fake-key")
-        mock_response = MagicMock()
-        mock_response.text = "Heart Failure, Cardiac Output"
-        mock_genai.Client.return_value.models.generate_content = MagicMock(return_value=mock_response)
+        assert await extractor.expand("heart failure") is None
+        assert await extractor.expand("cell division apoptosis") is None
+        assert await extractor.expand("foster daughter mother") is None
 
-        result = await extractor.expand("heart failure treatment")
-        assert result == ["Heart Failure", "Cardiac Output"]
+
+class TestExpandDetection:
+    """Tests for the different query types that trigger Gemini expansion."""
+
+    def _make_extractor(self, mock_genai):
+        mock_response = MagicMock()
+        mock_response.text = "Term A, Term B"
+        mock_genai.Client.return_value.models.generate_content = MagicMock(return_value=mock_response)
+        return GeminiTermExtractor(api_key="fake-key")
+
+    @pytest.mark.asyncio
+    async def test_question_word_triggers(self):
+        """Queries starting with question words trigger Gemini."""
+        with patch("app.services.gemini.genai") as mock_genai:
+            extractor = self._make_extractor(mock_genai)
+        assert await extractor.expand("what causes heart failure") is not None
+        assert await extractor.expand("how does insulin resistance develop") is not None
+        assert await extractor.expand("why do cells undergo apoptosis") is not None
+
+    @pytest.mark.asyncio
+    async def test_question_mark_triggers(self):
+        """Any query ending with ? triggers Gemini."""
+        with patch("app.services.gemini.genai") as mock_genai:
+            extractor = self._make_extractor(mock_genai)
+        assert await extractor.expand("heart failure?") is not None
+        assert await extractor.expand("sleep deprivation effects?") is not None
+
+    @pytest.mark.asyncio
+    async def test_function_words_trigger(self):
+        """Queries containing articles/prepositions trigger Gemini."""
+        with patch("app.services.gemini.genai") as mock_genai:
+            extractor = self._make_extractor(mock_genai)
+        assert await extractor.expand("the relationship between sleep and memory") is not None
+        assert await extractor.expand("effects of alcohol on the liver") is not None
+        assert await extractor.expand("genes associated with breast cancer") is not None
+
+    @pytest.mark.asyncio
+    async def test_medical_intent_words_trigger(self):
+        """Queries containing medical intent words trigger Gemini."""
+        with patch("app.services.gemini.genai") as mock_genai:
+            extractor = self._make_extractor(mock_genai)
+        assert await extractor.expand("diabetes treatment options") is not None
+        assert await extractor.expand("lung cancer symptoms") is not None
+        assert await extractor.expand("alzheimer diagnosis criteria") is not None
+        assert await extractor.expand("stroke prevention strategies") is not None
+        assert await extractor.expand("heart failure prognosis") is not None
+        assert await extractor.expand("sepsis risk factors") is not None
 
 
 class TestExpandSuccess:
@@ -84,7 +129,7 @@ class TestExpandSuccess:
         mock_client = mock_genai.Client.return_value
         mock_client.models.generate_content = MagicMock(return_value=mock_response)
 
-        await extractor.expand("some medical query here")
+        await extractor.expand("effects of chemotherapy on bone marrow")
         mock_client.models.generate_content.assert_called_once()
         call_kwargs = mock_client.models.generate_content.call_args
         assert call_kwargs[1]["model"] == "gemini-custom" or call_kwargs.kwargs.get("model") == "gemini-custom"
@@ -100,8 +145,8 @@ class TestExpandCache:
         mock_client = mock_genai.Client.return_value
         mock_client.models.generate_content = MagicMock(return_value=mock_response)
 
-        result1 = await extractor.expand("heart failure treatment options")
-        result2 = await extractor.expand("heart failure treatment options")
+        result1 = await extractor.expand("diabetes treatment options")
+        result2 = await extractor.expand("diabetes treatment options")
         assert result1 == result2
         assert mock_client.models.generate_content.call_count == 1
 
@@ -114,11 +159,10 @@ class TestExpandCache:
         mock_client = mock_genai.Client.return_value
         mock_client.models.generate_content = MagicMock(return_value=mock_response)
 
-        # Fill cache beyond _MAX_CACHE_SIZE
         from app.services.gemini import _MAX_CACHE_SIZE
 
         for i in range(_MAX_CACHE_SIZE + 1):
-            await extractor.expand(f"query number {i} words here")
+            await extractor.expand(f"what is query number {i}")
 
         assert len(extractor._cache) == _MAX_CACHE_SIZE
 
@@ -132,7 +176,7 @@ class TestExpandErrors:
         mock_client.models.generate_content = MagicMock(side_effect=TimeoutError)
 
         with patch("app.services.gemini._EXPAND_TIMEOUT", 0.001):
-            result = await extractor.expand("heart failure treatment options")
+            result = await extractor.expand("diabetes treatment options")
         assert result is None
 
     @pytest.mark.asyncio
@@ -142,7 +186,7 @@ class TestExpandErrors:
         mock_client = mock_genai.Client.return_value
         mock_client.models.generate_content = MagicMock(side_effect=RuntimeError("API down"))
 
-        result = await extractor.expand("heart failure treatment options")
+        result = await extractor.expand("lung cancer symptoms")
         assert result is None
 
     @pytest.mark.asyncio
@@ -153,7 +197,7 @@ class TestExpandErrors:
         mock_response.text = "  ,  , "
         mock_genai.Client.return_value.models.generate_content = MagicMock(return_value=mock_response)
 
-        result = await extractor.expand("heart failure treatment options")
+        result = await extractor.expand("stroke prevention strategies")
         assert result is None
 
     @pytest.mark.asyncio
@@ -163,19 +207,18 @@ class TestExpandErrors:
         mock_client = mock_genai.Client.return_value
         mock_client.models.generate_content = MagicMock(side_effect=RuntimeError("API down"))
 
-        await extractor.expand("heart failure treatment options")
-        assert "heart failure treatment options" not in extractor._cache
+        await extractor.expand("alzheimer diagnosis criteria")
+        assert "alzheimer diagnosis criteria" not in extractor._cache
 
     @pytest.mark.asyncio
     async def test_safety_filtered_value_error(self):
         with patch("app.services.gemini.genai") as mock_genai:
             extractor = GeminiTermExtractor(api_key="fake-key")
         mock_response = MagicMock()
-        mock_response.text = property(lambda self: (_ for _ in ()).throw(ValueError("no candidates")))
         type(mock_response).text = property(lambda self: (_ for _ in ()).throw(ValueError("no candidates")))
         mock_genai.Client.return_value.models.generate_content = MagicMock(return_value=mock_response)
 
-        result = await extractor.expand("heart failure treatment options")
+        result = await extractor.expand("heart failure prognosis")
         assert result is None
 
     @pytest.mark.asyncio
@@ -186,7 +229,7 @@ class TestExpandErrors:
         type(mock_response).text = property(lambda self: (_ for _ in ()).throw(AttributeError("no text")))
         mock_genai.Client.return_value.models.generate_content = MagicMock(return_value=mock_response)
 
-        result = await extractor.expand("heart failure treatment options")
+        result = await extractor.expand("sepsis risk factors")
         assert result is None
 
     @pytest.mark.asyncio
@@ -197,5 +240,5 @@ class TestExpandErrors:
         type(mock_response).text = property(lambda self: (_ for _ in ()).throw(ValueError("no candidates")))
         mock_genai.Client.return_value.models.generate_content = MagicMock(return_value=mock_response)
 
-        await extractor.expand("heart failure treatment options")
-        assert "heart failure treatment options" not in extractor._cache
+        await extractor.expand("cancer screening biomarkers")
+        assert "cancer screening biomarkers" not in extractor._cache
