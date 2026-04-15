@@ -7,13 +7,13 @@ import { useEffect, useState } from "react";
 export function FileImportStatusInfo() {
     const { fileName, importStatus, importProgress, importDate, importError } = useStore();
     const [showSpinner, setShowSpinner] = useState(false);
+    const roundedProgress = Math.round(importProgress);
 
     useEffect(() => {
         if (importStatus !== "loading") {
             setShowSpinner(false);
             return;
         }
-
         setShowSpinner(false);
 
         const timer = window.setTimeout(() => {
@@ -23,7 +23,7 @@ export function FileImportStatusInfo() {
         }, 450);
 
         return () => window.clearTimeout(timer);
-    }, [importStatus, importProgress]);
+    }, [importStatus, roundedProgress]);
 
     return (
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -40,10 +40,10 @@ export function FileImportStatusInfo() {
                 <span className="text-sm font-semibold tracking-wider text-sidebar-foreground">Import Status</span>
                {importStatus === 'loading' && (
                     <div className="flex flex-col gap-1.5">
-                        <Progress value={importProgress} />
+                        <Progress value={roundedProgress} />
                         <div className="flex items-center gap-2">
                             <span className="text-xs text-sidebar-foreground/50">
-                                {Math.round(importProgress)}%
+                                {roundedProgress}%
                             </span>
                             {showSpinner && (
                                 <LoaderIcon className="w-3.5 h-3.5 animate-spin text-sidebar-foreground/50" />
