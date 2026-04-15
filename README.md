@@ -111,8 +111,8 @@ These environment variables are stored in the backend. Make sure you copy .env.e
 | `GEMINI_MODEL` | No | `gemini-2.5-flash` | Gemini model ID used for query expansion. |
 | `GEMINI_ENABLED` | No | `true` | Set to `false` to disable Gemini query expansion even when a key is set. |
 | `MEMGRAPH_URI` | No | `bolt://localhost:7687` | Bolt protocol URI for the Memgraph database. |
-| `MEMGRAPH_USER` | No | (empty) | Memgraph authentication username. |
-| `MEMGRAPH_PASSWORD` | No | (empty) | Memgraph authentication password. |
+| `MEMGRAPH_USER` | No | `memgraph` | Memgraph authentication username. |
+| `MEMGRAPH_PASSWORD` | No | `memgraph` | Memgraph authentication password. |
 | `CORS_ORIGINS` | No | `["http://localhost:5173"]` | Allowed CORS origins JSON array. |
 | `DEBUG` | No | `false` | Enable debug mode. |
 | `UPLOAD_MAX_SIZE_MB` | No | `250` | Maximum ontology file upload size in MB. |

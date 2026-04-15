@@ -9,8 +9,8 @@ services:
       - memgraph-log:/var/log/memgraph
     command: ["--log-level=TRACE"]
     environment:
-      - MEMGRAPH_USER=memgraph
-      - MEMGRAPH_PASSWORD=memgraph
+      - MEMGRAPH_USER=${MEMGRAPH_USER:-memgraph}
+      - MEMGRAPH_PASSWORD=${MEMGRAPH_PASSWORD:-memgraph}
 
   backend:
     build:
@@ -20,8 +20,8 @@ services:
       - "8000:8000"
     environment:
       MEMGRAPH_URI: bolt://memgraph:7687
-      MEMGRAPH_USER: memgraph
-      MEMGRAPH_PASSWORD: memgraph
+      MEMGRAPH_USER: "${MEMGRAPH_USER:-memgraph}"
+      MEMGRAPH_PASSWORD: "${MEMGRAPH_PASSWORD:-memgraph}"
       CORS_ORIGINS: '["http://localhost:5173"]'
       EMBEDDING_HF_TOKEN: "${EMBEDDING_HF_TOKEN}"
       EMBEDDING_MODEL_NAME: "${EMBEDDING_MODEL_NAME}"
