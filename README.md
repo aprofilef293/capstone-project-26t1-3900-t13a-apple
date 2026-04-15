@@ -103,9 +103,9 @@ These environment variables are stored in the backend. Make sure you copy .env.e
 
 | Variable | Required | Default | Description |
 |---|---|---|---|
-| `EMBEDDING_HF_TOKEN` | Yes | (empty) | Hugging Face API token for semantic search. |
-| `EMBEDDING_MODEL_NAME` | No | `BAAI/bge-small-en-v1.5` | Sentence Transformer model used to generate embeddings. |
-| `EMBEDDING_LOCAL` | No | `true` | Set to `false` to use remote Hugging Face inference instead of local model. |
+| `EMBEDDING_HF_TOKEN` | No | (empty) | Hugging Face API token. Only required when `EMBEDDING_LOCAL=false`. |
+| `EMBEDDING_MODEL_NAME` | No | `aleynahukmet/bge-medical-small-en-v1.5` | Sentence Transformer model for embeddings. Local mode uses the medical fine-tune; for remote HF Inference use `BAAI/bge-small-en-v1.5` instead (the medical model is not hosted on HF Inference). |
+| `EMBEDDING_LOCAL` | No | `true` | Set to `false` to use remote Hugging Face Inference instead of local model. |
 | `EMBEDDING_ENABLED` | No | `true` | Set to `false` to disable semantic search. |
 | `GEMINI_API_KEY` | No | (empty) | Google AI Studio API key for query expansion. Leave empty to disable. |
 | `GEMINI_MODEL` | No | `gemini-2.5-flash` | Gemini model ID used for query expansion. |
@@ -119,7 +119,7 @@ These environment variables are stored in the backend. Make sure you copy .env.e
 
 ### 3.4 Local Hosting Embedding Model
 
-The embedding model by default is run locally. The sentence-transformers library allows for different models to be downloaded and served on local machines. This requires a machine with sufficient GPU to run. To disable the embedding service, set `EMBEDDING_ENABLED=false` in `.env`.
+The embedding model by default is run locally using `aleynahukmet/bge-medical-small-en-v1.5`, a medical-domain fine-tune of BGE. The sentence-transformers library downloads the model on first startup and caches it for subsequent runs. To disable the embedding service, set `EMBEDDING_ENABLED=false` in `.env`.
 
 ### 3.5 HuggingFace Inference Providers
 
@@ -135,11 +135,11 @@ To use Inference Providers, a HuggingFace API token is required:
 4. Copy the token and paste it into the `EMBEDDING_HF_TOKEN` variable in the `.env` file.
 5. Set `EMBEDDING_ENABLED=true` in the `.env` file to enable the hosted embedding service.
 6. Set `EMBEDDING_LOCAL=false` in the `.env` file to use the HuggingFace Inference.
-7. Optionally, change the model by setting `EMBEDDING_MODEL_NAME` to a different sentence transformer model. Defaults to `BAAI/bge-small-en-v1.5`.
+7. Set `EMBEDDING_MODEL_NAME=BAAI/bge-small-en-v1.5` — the default medical model (`aleynahukmet/bge-medical-small-en-v1.5`) is not hosted on HF Inference.
 
 ### 3.6 Gemini Query Expansion
 
-When a user submits a natural-language sentence to the semantic search endpoint (e.g. "what are the signs of heart failure"), Gemini rewrites the query into formal MeSH terms and clinical descriptors before embedding. The expanded terms are averaged into a single vector, improving recall for sentence-style queries. If Gemini is unavailable or returns nothing useful, the search falls back to using the original query directly.
+When a user submits a natural-language question or medical query to the semantic search endpoint (e.g. "what are the signs of heart failure", "diabetes treatment options"), Gemini expands the query into formal MeSH terms and clinical descriptors. The search always runs the original query first; if Gemini returns expanded terms, they are also searched and the best scores from both are merged. Gemini only activates for questions (starting with "what", "how", etc.), queries containing function words ("the", "of", "between"), or medical intent words ("treatment", "symptoms", "diagnosis"). Plain keyword searches are never sent to Gemini.
 
 Gemini query expansion is optional. To enable it:
 
