@@ -19,6 +19,8 @@
     - [3.3 Backend Environment Variables](#33-backend-environment-variables)
     - [3.4 Local Hosting Embedding Model](#34-local-hosting-embedding-model)
     - [3.5 HuggingFace Inference Providers](#35-huggingface-inference-providers)
+    - [3.6 Gemini Query Expansion](#36-gemini-query-expansion)
+    - [3.7 Ontology Data Files](#37-ontology-data-files)
   - [4. Contributing](#4-contributing)
   - [5. License](#5-license)
   - [6. Acknowledgements](#6-acknowledgements)
@@ -105,6 +107,9 @@ These environment variables are stored in the backend. Make sure you copy .env.e
 | `EMBEDDING_MODEL_NAME` | No | `BAAI/bge-small-en-v1.5` | Sentence Transformer model used to generate embeddings. |
 | `EMBEDDING_LOCAL` | No | `true` | Set to `false` to use remote Hugging Face inference instead of local model. |
 | `EMBEDDING_ENABLED` | No | `true` | Set to `false` to disable semantic search. |
+| `GEMINI_API_KEY` | No | (empty) | Google AI Studio API key for query expansion. Leave empty to disable. |
+| `GEMINI_MODEL` | No | `gemini-2.5-flash` | Gemini model ID used for query expansion. |
+| `GEMINI_ENABLED` | No | `true` | Set to `false` to disable Gemini query expansion even when a key is set. |
 | `MEMGRAPH_URI` | No | `bolt://localhost:7687` | Bolt protocol URI for the Memgraph database. |
 | `MEMGRAPH_USER` | No | (empty) | Memgraph authentication username. |
 | `MEMGRAPH_PASSWORD` | No | (empty) | Memgraph authentication password. |
@@ -131,6 +136,39 @@ To use Inference Providers, a HuggingFace API token is required:
 5. Set `EMBEDDING_ENABLED=true` in the `.env` file to enable the hosted embedding service.
 6. Set `EMBEDDING_LOCAL=false` in the `.env` file to use the HuggingFace Inference.
 7. Optionally, change the model by setting `EMBEDDING_MODEL_NAME` to a different sentence transformer model. Defaults to `BAAI/bge-small-en-v1.5`.
+
+### 3.6 Gemini Query Expansion
+
+When a user submits a natural-language sentence to the semantic search endpoint (e.g. "what are the signs of heart failure"), Gemini rewrites the query into formal MeSH terms and clinical descriptors before embedding. The expanded terms are averaged into a single vector, improving recall for sentence-style queries. If Gemini is unavailable or returns nothing useful, the search falls back to using the original query directly.
+
+Gemini query expansion is optional. To enable it:
+
+1. Create a Google AI Studio account at https://aistudio.google.com/.
+2. Go to https://aistudio.google.com/app/apikey and create an API key.
+3. Set `GEMINI_API_KEY` to the key in the `.env` file.
+4. Optionally, change the model by setting `GEMINI_MODEL`. Defaults to `gemini-2.5-flash`.
+
+To disable query expansion, either leave `GEMINI_API_KEY` empty or set `GEMINI_ENABLED=false`.
+
+### 3.7 Ontology Data Files
+
+Ontology Explorer supports uploading `.obo` and `.owl` files. Download a `.owl` file from the [Behaviour Change Intervention Ontology](https://github.com/HumanBehaviourChangeProject/ontologies) (BCIO) repository and use the upload feature in the app.
+
+The following `.owl` files can be uploaded directly into the application:
+
+| File | Description |
+|---|---|
+| [`bcio.owl`](https://github.com/HumanBehaviourChangeProject/ontologies/blob/master/bcio.owl) | Complete BCIO with all lower-level ontologies. |
+| [`bcio_behaviour.owl`](https://github.com/HumanBehaviourChangeProject/ontologies/blob/master/Behaviour/bcio_behaviour.owl) | Behaviour ontology. |
+| [`bcto.owl`](https://github.com/HumanBehaviourChangeProject/ontologies/blob/master/BehaviourChangeTechniques/bcto.owl) | Behaviour Change Techniques ontology. |
+| [`bcio_engagement.owl`](https://github.com/HumanBehaviourChangeProject/ontologies/blob/master/Engagement/bcio_engagement.owl) | Engagement ontology. |
+| [`bcio_moa.owl`](https://github.com/HumanBehaviourChangeProject/ontologies/blob/master/MechanismOfAction/bcio_moa.owl) | Mechanism of Action ontology. |
+| [`bcio_mode_of_delivery.owl`](https://github.com/HumanBehaviourChangeProject/ontologies/blob/master/ModeOfDelivery/bcio_mode_of_delivery.owl) | Mode of Delivery ontology. |
+| [`bcio_population.owl`](https://github.com/HumanBehaviourChangeProject/ontologies/blob/master/Population/bcio_population.owl) | Population ontology. |
+| [`bcio_schedule.owl`](https://github.com/HumanBehaviourChangeProject/ontologies/blob/master/Schedule/bcio_schedule.owl) | Schedule ontology. |
+| [`bcio_setting.owl`](https://github.com/HumanBehaviourChangeProject/ontologies/blob/master/Setting/bcio_setting.owl) | Setting ontology. |
+| [`bcio_source.owl`](https://github.com/HumanBehaviourChangeProject/ontologies/blob/master/Source/bcio_source.owl) | Source ontology. |
+| [`bcio_style.owl`](https://github.com/HumanBehaviourChangeProject/ontologies/blob/master/StyleOfDelivery/bcio_style.owl) | Style of Delivery ontology. |
 
 ## 4. Contributing
 
