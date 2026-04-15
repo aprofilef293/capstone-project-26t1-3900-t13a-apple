@@ -60,7 +60,12 @@ class LocalEmbeddingModel:
             return np.array([], dtype=np.float32)
         return (
             await asyncio.to_thread(
-                self._model.encode, texts, batch_size=self._BATCH_SIZE, normalize_embeddings=True, convert_to_numpy=True
+                self._model.encode,
+                texts,
+                batch_size=self._BATCH_SIZE,
+                normalize_embeddings=True,
+                convert_to_numpy=True,
+                show_progress_bar=False,
             )
         ).astype(np.float32)
 
@@ -428,16 +433,33 @@ class EmbeddingService:
         if not self._ids or not self._field_embeddings:
             return []
 
-        query_vec = await self._model.encode([query])  # (1, dim)
+        # Split on commas and strip whitespace
+        terms = [t.strip() for t in query.split(",") if t.strip()]
+        if not terms:
+            return []
+
+        if len(terms) == 1:
+            query_vec = await self._model.encode(terms)
+        else:
+            # Encode all terms in a single batch call, then average + re-normalise.
+            all_vecs = await self._model.encode(terms)  # (n_terms, dim)
+            centroid = all_vecs.mean(axis=0)  # (dim,)
+            norm = np.linalg.norm(centroid)
+            if norm > 0:
+                centroid /= norm
+            query_vec = centroid[np.newaxis, :]  # (1, dim)
+            logger.debug("Multi-term query: %d terms averaged into centroid", len(terms))
+
         n = len(self._ids)
         # Track the best *weighted* cosine similarity per term across all
         # fields.  Each field's raw similarity is multiplied by its weight
         # so that name matches dominate and low-weight fields (synonyms,
         # comments) only surface when nothing better exists.
+        field_names = list(FIELD_WEIGHTS.keys())
         best_weighted_score = np.full(n, -np.inf, dtype=np.float32)
-        best_field_name: list[str] = [""] * n
+        best_field_idx = np.full(n, -1, dtype=np.int8)
 
-        for field, weight in FIELD_WEIGHTS.items():
+        for fi, (field, weight) in enumerate(FIELD_WEIGHTS.items()):
             if field not in self._field_embeddings:
                 continue
             mask = self._field_masks[field]
@@ -445,9 +467,8 @@ class EmbeddingService:
             raw_scores = (self._field_embeddings[field] @ query_vec.T).ravel()
             weighted_scores = raw_scores * weight
             better = mask & (weighted_scores > best_weighted_score)
-            for i in np.where(better)[0]:
-                best_weighted_score[i] = weighted_scores[i]
-                best_field_name[i] = field
+            best_weighted_score = np.where(better, weighted_scores, best_weighted_score)
+            best_field_idx = np.where(better, fi, best_field_idx)
 
         # Terms with no fields at all keep -inf; clamp to 0.
         final_scores = np.maximum(best_weighted_score, 0.0)
@@ -457,7 +478,14 @@ class EmbeddingService:
         partitioned = np.argpartition(final_scores, -k)[-k:]
         top_indices = partitioned[np.argsort(final_scores[partitioned])[::-1]]
 
-        return [(self._ids[i], float(final_scores[i]), best_field_name[i]) for i in top_indices]
+        return [
+            (
+                self._ids[i],
+                float(final_scores[i]),
+                field_names[int(best_field_idx[i])] if best_field_idx[i] >= 0 else "",
+            )
+            for i in top_indices
+        ]
 
     @property
     def is_ready(self) -> bool:

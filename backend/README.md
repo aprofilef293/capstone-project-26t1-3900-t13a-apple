@@ -96,6 +96,9 @@ On failure, an error event is sent instead: `{error: "...", error_code: <status>
 | `EMBEDDING_MODEL_NAME` | No | `aleynahukmet/bge-medical-small-en-v1.5` | Sentence Transformer model for embeddings. Medical-trained variant of `BAAI/bge-small-en-v1.5` (local only — use the BAAI model for remote HF inference). |
 | `EMBEDDING_LOCAL` | No | `true` | Set to `false` to use remote Hugging Face Inference API instead of local model. |
 | `EMBEDDING_ENABLED` | No | `true` | Set to `false` to disable semantic search. |
+| `GEMINI_API_KEY` | No | (empty) | Google AI Studio API key for query expansion. Leave empty to disable. |
+| `GEMINI_MODEL` | No | `gemini-2.5-flash` | Gemini model ID used for query expansion. |
+| `GEMINI_ENABLED` | No | `true` | Set to `false` to disable Gemini query expansion even when a key is set. |
 | `MEMGRAPH_URI` | No | `bolt://localhost:7687` | Bolt protocol URI for the Memgraph database. |
 | `MEMGRAPH_USER` | No | (empty) | Memgraph authentication username. Set to `memgraph` in `.env.example`. |
 | `MEMGRAPH_PASSWORD` | No | (empty) | Memgraph authentication password. Set to `memgraph` in `.env.example`. |

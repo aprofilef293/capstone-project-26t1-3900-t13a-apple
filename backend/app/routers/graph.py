@@ -1,5 +1,6 @@
 """FastAPI router for querying, searching, and exporting ontology graph data from Memgraph."""
 
+import asyncio
 import csv
 import io
 import logging
@@ -645,11 +646,22 @@ def search_graph(
 )
 async def embedding_search(
     request: Request,
-    q: str = Query(..., min_length=1, description="Free-text search query."),
+    q: str = Query(
+        ...,
+        min_length=1,
+        description=("Free-text search query. Separate multiple terms with commas "),
+    ),
     limit: int = Query(20, ge=1, le=100, description="Max results (1-100)."),
     threshold: float = Query(0.5, ge=0.0, le=1.0, description="Minimum similarity score (0-1)."),
 ):
-    """Semantic search powered by dense vector embeddings."""
+    """Semantic search powered by dense vector embeddings.
+
+    If the query looks like a sentence (no commas, more than two words) and the
+    Gemini service is configured, the sentence is first expanded into a list of
+    ontology-style terms via Gemini.  Those terms are then averaged into a
+    semantic centroid for the vector search.  Falls back to a direct search if
+    Gemini is unavailable or returns nothing useful.
+    """
     t0 = time.perf_counter()
     embedding_svc = getattr(request.app.state, "embedding_service", None)
     if embedding_svc is None or not embedding_svc.is_ready:
@@ -658,7 +670,35 @@ async def embedding_search(
             content={"detail": "Embedding index not available. Upload an ontology first."},
         )
 
-    results = await embedding_svc.search(q, top_k=limit)
+    # Run the original embedding search and Gemini expansion concurrently
+    # so we don't wait for Gemini before starting the search.
+    gemini = getattr(request.app.state, "gemini", None)
+
+    async def _safe_expand() -> list[str] | None:
+        if gemini is None:
+            return None
+        try:
+            return await gemini.expand(q)
+        except Exception:
+            return None
+
+    results, expanded_terms = await asyncio.gather(
+        embedding_svc.search(q, top_k=limit),
+        _safe_expand(),
+    )
+
+    # If Gemini expanded, search the centroid too and merge the higher score per term
+    if expanded_terms:
+        gemini_query = ", ".join(expanded_terms)
+        gemini_results = await embedding_svc.search(gemini_query, top_k=limit)
+        score_map = {tid: (score, field) for tid, score, field in results}
+        for tid, score, field in gemini_results:
+            if tid not in score_map or score > score_map[tid][0]:
+                score_map[tid] = (score, field)
+        results = [(tid, score, field) for tid, (score, field) in score_map.items()]
+        results.sort(key=lambda x: x[1], reverse=True)
+        results = results[:limit]
+
     if not results:
         return GraphData()
 
@@ -684,9 +724,17 @@ async def embedding_search(
             score, best_field = score_map[node.key]
             node.attributes["searchScore"] = round(score, 4)
             node.attributes["matchFields"] = [best_field]
+            if expanded_terms:
+                node.attributes["expandedTerms"] = expanded_terms
 
     # Return nodes sorted by score descending (matched nodes first, then neighbors)
     graph.nodes.sort(key=lambda n: n.attributes.get("searchScore", -1), reverse=True)
 
-    logger.info("GET /semantic-search q=%r completed in %.3fs (%d matches)", q, time.perf_counter() - t0, len(top_ids))
+    logger.info(
+        "GET /semantic-search q=%r%s completed in %.3fs (%d matches)",
+        q,
+        f" expanded={expanded_terms}" if expanded_terms else "",
+        time.perf_counter() - t0,
+        len(top_ids),
+    )
     return graph
