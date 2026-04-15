@@ -63,7 +63,9 @@ The upload endpoint streams progress via Server-Sent Events:
 | 25 | `parsed` | File parsed successfully. |
 | 50 | `preprocessed` | Graph preprocessing complete. |
 | 75 | `terms_ingested` | Terms written to database. |
-| 100 | `complete` | Upload complete. |
+| 100 | `complete` | Upload complete. Includes `filename`. |
+
+On failure, an error event is sent instead: `{error: "...", error_code: <status>}`.
 
 ### 2.2 Graph
 
@@ -72,7 +74,7 @@ The upload endpoint streams progress via Server-Sent Events:
 | GET | `/api/graph/` | Get the full graph. | |
 | GET | `/api/graph/node/{node_id}` | Get a node and its neighbors. | `depth` (1-3, default 1) |
 | GET | `/api/graph/search` | Search nodes by name (substring match). | `q` |
-| GET | `/api/graph/semantic-search` | Semantic vector search ranked by similarity. | `q`, `limit` (1-100), `threshold` (0.0-1.0) |
+| GET | `/api/graph/semantic-search` | Semantic vector search with optional Gemini query expansion. | `q`, `limit` (1-100), `threshold` (0.0-1.0) |
 | GET | `/api/graph/path` | Shortest path between two nodes. | `source`, `target`, `max_depth` (1-50) |
 | GET | `/api/graph/paths` | Shortest paths between multiple nodes. | `ids` (2-10 node IDs), `max_depth` (1-50) |
 | GET | `/api/graph/paths/export` | Export paths and neighbors as CSV. | `path_ids`, `selected_ids` |
@@ -90,16 +92,16 @@ The upload endpoint streams progress via Server-Sent Events:
 
 | Variable | Required | Default | Description |
 |---|---|---|---|
-| `EMBEDDING_HF_TOKEN` | Yes | (empty) | Hugging Face API token for semantic search. |
-| `EMBEDDING_MODEL_NAME` | No | `BAAI/bge-small-en-v1.5` | Sentence Transformer model used to generate embeddings. |
-| `EMBEDDING_LOCAL` | No | `true` | Set to `false` to use remote Hugging Face inference instead of local model. |
+| `EMBEDDING_HF_TOKEN` | No | (empty) | Hugging Face API token. Only required when `EMBEDDING_LOCAL=false`. |
+| `EMBEDDING_MODEL_NAME` | No | `aleynahukmet/bge-medical-small-en-v1.5` | Sentence Transformer model for embeddings. Medical-trained variant of `BAAI/bge-small-en-v1.5` (local only — use the BAAI model for remote HF inference). |
+| `EMBEDDING_LOCAL` | No | `true` | Set to `false` to use remote Hugging Face Inference API instead of local model. |
 | `EMBEDDING_ENABLED` | No | `true` | Set to `false` to disable semantic search. |
 | `GEMINI_API_KEY` | No | (empty) | Google AI Studio API key for query expansion. Leave empty to disable. |
 | `GEMINI_MODEL` | No | `gemini-2.5-flash` | Gemini model ID used for query expansion. |
 | `GEMINI_ENABLED` | No | `true` | Set to `false` to disable Gemini query expansion even when a key is set. |
 | `MEMGRAPH_URI` | No | `bolt://localhost:7687` | Bolt protocol URI for the Memgraph database. |
-| `MEMGRAPH_USER` | No | `memgraph` | Memgraph authentication username. |
-| `MEMGRAPH_PASSWORD` | No | `memgraph` | Memgraph authentication password. |
+| `MEMGRAPH_USER` | No | (empty) | Memgraph authentication username. Set to `memgraph` in `.env.example`. |
+| `MEMGRAPH_PASSWORD` | No | (empty) | Memgraph authentication password. Set to `memgraph` in `.env.example`. |
 | `CORS_ORIGINS` | No | `["http://localhost:5173"]` | Allowed CORS origins JSON array. |
 | `DEBUG` | No | `false` | Enable debug mode. |
 | `UPLOAD_MAX_SIZE_MB` | No | `250` | Maximum ontology file upload size in MB. |
