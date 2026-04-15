@@ -651,7 +651,7 @@ async def embedding_search(
         description=("Free-text search query. Separate multiple terms with commas "),
     ),
     limit: int = Query(20, ge=1, le=100, description="Max results (1-100)."),
-    threshold: float = Query(0.5, ge=0.0, le=1.0, description="Minimum similarity score (0-1)."),
+    threshold: float = Query(0.4, ge=0.0, le=1.0, description="Minimum similarity score (0-1)."),
 ):
     """Semantic search powered by dense vector embeddings.
 
@@ -676,8 +676,7 @@ async def embedding_search(
         expanded_terms = await gemini.expand(q)
         if expanded_terms:
             search_query = ", ".join(expanded_terms)
-        else:
-            logger.info("Gemini unavailable or returned nothing for %r — using direct semantic search", q)
+            logger.info("Gemini expanded %r → %s", q, expanded_terms)
 
     results = await embedding_svc.search(search_query, top_k=limit)
     if not results:
@@ -699,18 +698,16 @@ async def embedding_search(
 
     graph = _build_graph_data_from_paths(neighbor_records)
 
-    # Annotate matched nodes with their similarity score and best-matching field for the frontend
     for node in graph.nodes:
         if node.key in score_map:
             score, best_field = score_map[node.key]
             node.attributes["searchScore"] = round(score, 4)
             node.attributes["matchFields"] = [best_field]
+            if expanded_terms:
+                node.attributes["expandedTerms"] = expanded_terms
 
     # Return nodes sorted by score descending (matched nodes first, then neighbors)
     graph.nodes.sort(key=lambda n: n.attributes.get("searchScore", -1), reverse=True)
-
-    if expanded_terms:
-        graph.attributes["expandedTerms"] = expanded_terms
 
     logger.info(
         "GET /semantic-search q=%r expanded=%s completed in %.3fs (%d matches)",
