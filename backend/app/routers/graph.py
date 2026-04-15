@@ -705,11 +705,12 @@ async def embedding_search(
             score, best_field = score_map[node.key]
             node.attributes["searchScore"] = round(score, 4)
             node.attributes["matchFields"] = [best_field]
-            if expanded_terms:
-                node.attributes["expandedTerms"] = expanded_terms
 
     # Return nodes sorted by score descending (matched nodes first, then neighbors)
     graph.nodes.sort(key=lambda n: n.attributes.get("searchScore", -1), reverse=True)
+
+    if expanded_terms:
+        graph.attributes["expandedTerms"] = expanded_terms
 
     logger.info(
         "GET /semantic-search q=%r expanded=%s completed in %.3fs (%d matches)",
