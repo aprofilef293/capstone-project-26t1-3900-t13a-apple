@@ -153,7 +153,7 @@ async def upload_ontology(request: Request, file: UploadFile = File(...)):
                         detail=USER_FRIENDLY_ERRORS[413],
                     )
                 tmp.write(chunk)
-    except HTTPException:
+    except Exception:
         os.unlink(tmp_path)
         raise
 
