@@ -140,9 +140,9 @@ describe('happy path for multi-select', () => {
     cy.contains('h2', 'Path between Nodes')
       .closest('aside')
       .within(() => {
-        cy.contains('button', 'colour').should('be.visible').click();
+        cy.contains('button', /^colour$/).should('be.visible').click();
       });
-    cy.contains('[data-slot="dropdown-menu-radio-item"]', 'colour')
+    cy.contains('[data-slot="dropdown-menu-radio-item"]', /^colour$/)
       .should('be.visible')
       .click({ force: true });
 
