@@ -20,6 +20,7 @@ from app.services.embedding import (
     HuggingFaceEmbeddingModel,
     LocalEmbeddingModel,
 )
+from app.services.gemini import GeminiTermExtractor
 from app.services.memgraph import MemgraphService
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(levelname)s %(message)s")
@@ -90,11 +91,24 @@ def create_app() -> FastAPI:
             try:
                 logger.info("Launching %s embedding service...", mode)
                 app.state.embedding_service = EmbeddingService(model)
+                # Warm up the model with a dummy encode so first search isn't so slow
+                await model.encode(["warmup"])
+                logger.info("Embedding model warmed up")
                 # Restore the vector index from existing DB data so semantic search works immediately after restart
                 await _rebuild_embedding_index(app.state.memgraph, app.state.embedding_service)
             except Exception as e:
                 logger.warning("Embedding service failed to start, search will be unavailable: %s", e)
                 app.state.embedding_service = None
+
+        app.state.gemini = None
+        if settings.gemini_enabled and settings.gemini_api_key:
+            try:
+                app.state.gemini = GeminiTermExtractor(settings.gemini_api_key, settings.gemini_model)
+                logger.info("Gemini query expansion enabled")
+            except Exception as e:
+                logger.warning("Gemini failed to initialise, query expansion disabled: %s", e)
+        else:
+            logger.info("Gemini query expansion disabled (set GEMINI_API_KEY to enable)")
 
         # --- startup complete / shutdown begins ---
         yield

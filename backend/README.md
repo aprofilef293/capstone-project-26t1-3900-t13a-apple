@@ -94,9 +94,12 @@ The upload endpoint streams progress via Server-Sent Events:
 | `EMBEDDING_MODEL_NAME` | No | `BAAI/bge-small-en-v1.5` | Sentence Transformer model used to generate embeddings. |
 | `EMBEDDING_LOCAL` | No | `true` | Set to `false` to use remote Hugging Face inference instead of local model. |
 | `EMBEDDING_ENABLED` | No | `true` | Set to `false` to disable semantic search. |
+| `GEMINI_API_KEY` | No | (empty) | Google AI Studio API key for query expansion. Leave empty to disable. |
+| `GEMINI_MODEL` | No | `gemini-2.5-flash` | Gemini model ID used for query expansion. |
+| `GEMINI_ENABLED` | No | `true` | Set to `false` to disable Gemini query expansion even when a key is set. |
 | `MEMGRAPH_URI` | No | `bolt://localhost:7687` | Bolt protocol URI for the Memgraph database. |
-| `MEMGRAPH_USER` | No | (empty) | Memgraph authentication username. |
-| `MEMGRAPH_PASSWORD` | No | (empty) | Memgraph authentication password. |
+| `MEMGRAPH_USER` | No | `memgraph` | Memgraph authentication username. |
+| `MEMGRAPH_PASSWORD` | No | `memgraph` | Memgraph authentication password. |
 | `CORS_ORIGINS` | No | `["http://localhost:5173"]` | Allowed CORS origins JSON array. |
 | `DEBUG` | No | `false` | Enable debug mode. |
 | `UPLOAD_MAX_SIZE_MB` | No | `250` | Maximum ontology file upload size in MB. |

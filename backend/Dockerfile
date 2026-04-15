@@ -20,6 +20,12 @@ COPY pyproject.toml poetry.lock* ./
 RUN poetry install --no-interaction --no-ansi
 
 COPY . .
+
+ARG EMBEDDING_MODEL_NAME
+RUN if [ -n "$EMBEDDING_MODEL_NAME" ]; then \
+      python -c "from sentence_transformers import SentenceTransformer; SentenceTransformer('${EMBEDDING_MODEL_NAME}', device='cpu')"; \
+    fi
+
 EXPOSE 8000
 
 FROM base AS dev
