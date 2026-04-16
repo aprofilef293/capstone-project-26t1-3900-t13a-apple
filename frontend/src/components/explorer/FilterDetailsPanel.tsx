@@ -177,7 +177,7 @@ function TagInput({
                 onBlur={handleBlur}
                 placeholder={tags.length === 0 ? placeholder : "Add..."}
                 className={cn(
-                    "flex-1 bg-transparent border-none outline-none text-xs text-sidebar-foreground placeholder:text-sidebar-foreground/40 min-w-[60px] py-1",
+                    "flex-1 bg-transparent border-none outline-none text-xs text-sidebar-foreground placeholder:text-sidebar-foreground/40 min-w-[60px] py-1 ml-1",
                     tags.length > 0 ? "placeholder:text-sidebar-foreground/20" : ""
                 )}
             />
@@ -309,7 +309,7 @@ export function GraphFilterPanel() {
                                                 descriptionKeywords: graphFilters.descriptionKeywords.map(update),
                                             });
                                         }}
-                                        placeholder="e.g. cancer, allergy…"
+                                        placeholder="Filter by keywords"
                                     />
                                 </div>
                             ) : (
@@ -345,7 +345,7 @@ export function GraphFilterPanel() {
                                                         : t
                                                 )
                                             })}
-                                            placeholder="e.g. cancer, allergy…"
+                                            placeholder="Filter name by keywords"
                                         />
                                     </div>
                                     <div>
@@ -362,7 +362,7 @@ export function GraphFilterPanel() {
                                                         : t
                                                 )
                                             })}
-                                            placeholder="e.g. chronic, viral…"
+                                            placeholder="Filter description by keywords"
                                         />
                                     </div>
                                 </>
