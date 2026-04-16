@@ -170,6 +170,7 @@ function TagInput({
                 id={id}
                 type="text"
                 value={inputValue}
+                spellCheck
                 onChange={(e) => setInputValue(e.target.value)}
                 onKeyDown={handleKeyDown}
                 onBlur={handleBlur}

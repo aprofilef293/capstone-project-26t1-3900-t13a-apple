@@ -176,6 +176,7 @@ export function ExplorerSearch({ viewMode = "graph" }: { viewMode?: "graph" | "h
                     <input
                         type="text"
                         value={inputValue}
+                        spellCheck
                         onFocus={() => setIsOpen(true)}
                         onKeyDown={(e) => {
                             if (e.key === 'Enter') {
