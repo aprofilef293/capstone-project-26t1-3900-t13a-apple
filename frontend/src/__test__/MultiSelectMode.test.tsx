@@ -1,7 +1,13 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import MultiSelectNodeSidebar from "../components/explorer/MultiSelectNodeSidebar";
 
+const { exportMultiShortestPathsCsvMock } = vi.hoisted(() => ({
+  exportMultiShortestPathsCsvMock: vi.fn(),
+}));
+vi.mock("../lib/api", () => ({
+  exportMultiShortestPathsCsv: exportMultiShortestPathsCsvMock,
+}));
 const setSelectedNodeIdMock = vi.fn();
 const setInfoPanelModeMock = vi.fn();
 const clearSelectedNodesMock = vi.fn();
@@ -69,6 +75,10 @@ describe("tests for multi-select mode", () => {
     mockState.infoPanelMode = "multi-select";
     mockState.pathNodeIds = [];
     mockState.pathLoading = false;
+    exportMultiShortestPathsCsvMock.mockResolvedValue({
+      blob: new Blob(["id,label\n1,a"], { type: "text/csv" }),
+      filename: "paths.csv",
+    });
   });
 
   it("check that multi-select sidebar renders when info panel mode is multi-select", () => {
@@ -115,5 +125,23 @@ describe("tests for multi-select mode", () => {
     render(<MultiSelectNodeSidebar />);
 
     expect(screen.getByText("No path found between selected nodes.")).toBeInTheDocument();
+  });
+
+  it("clicking export csv button has correct behaviour", async () => {
+    // make button enabled
+    mockState.pathNodeIds = ["test1", "test2"];
+    
+    render(<MultiSelectNodeSidebar />);
+    const exportBtn = screen.getByRole("button", { name: /export csv/i });
+    expect(exportBtn).toBeEnabled();
+    fireEvent.click(exportBtn);
+
+    await waitFor(() => {
+      expect(exportMultiShortestPathsCsvMock).toHaveBeenCalledTimes(1);
+      expect(exportMultiShortestPathsCsvMock).toHaveBeenCalledWith(
+        ["test1", "test2"],
+        ["test1", "test2"],
+      );
+    });
   });
 });

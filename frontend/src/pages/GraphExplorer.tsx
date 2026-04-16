@@ -41,21 +41,24 @@ export function GraphExplorer() {
                 <div className="flex-1 relative flex flex-col">
                     <ExplorerToolbar viewMode={viewMode} onViewModeChange={setViewMode} />
 
-                    {/* Right-side controls: size filter + zoom */}
+                    {/* Right-side controls: size filter + zoom + path view btn in multi-select mode */}
                     {viewMode === 'graph' && (
                         <div className="absolute bottom-6 right-6 z-10 flex items-end gap-3">
                             {isMultiSelect && pathNodeIds.length > 0 && (
-                                <button
-                                    onClick={togglePathViewOnly}
-                                    title="Toggle path view"
-                                    className={`px-3 py-1.5 rounded-lg text-xs font-medium border shadow-sm backdrop-blur-sm transition-colors ${
-                                        pathViewOnly
-                                            ? "bg-sidebar-accent border-sidebar-border text-foreground hover:bg-sidebar-accent/80"
-                                            : "bg-sidebar/90 border-sidebar-border text-muted-foreground hover:bg-sidebar-accent"
-                                    }`}
-                                >
-                                    Path View
-                                </button>
+                                <div className="flex flex-col bg-sidebar/90 backdrop-blur-sm border border-sidebar-border rounded-lg shadow-sm overflow-hidden pointer-events-auto">
+                                    <Button
+                                        variant="ghost"
+                                        onClick={togglePathViewOnly}
+                                        className={`h-10 px-3 rounded-none text-xs font-medium transition-colors ${
+                                            pathViewOnly
+                                                ? "text-blue-500 bg-sidebar-accent hover:bg-sidebar-accent/80"
+                                                : "text-foreground hover:text-foreground hover:bg-sidebar-accent"
+                                        }`}
+                                        title="Toggle path view"
+                                    >
+                                        Path View
+                                    </Button>
+                                </div>
                             )}
 
                             {/* Node size filter slider */}
@@ -63,14 +66,14 @@ export function GraphExplorer() {
 
                             {/* Zoom controls */}
                             <div className="flex flex-col bg-sidebar/90 backdrop-blur-sm border border-sidebar-border rounded-lg shadow-sm overflow-hidden pointer-events-auto">
-                                <Button variant="ghost" onClick={() => graphViewRef.current?.resetCamera()} className="h-9 w-9 rounded-none border-b border-sidebar-border text-muted-foreground hover:text-foreground hover:bg-sidebar-accent transition-colors" title="Fit to view">
-                                    <Maximize className="w-[15px] h-[15px]" />
+                                <Button variant="ghost" onClick={() => graphViewRef.current?.resetCamera()} className="h-10 w-10 rounded-none border-b border-sidebar-border text-muted-foreground hover:text-foreground hover:bg-sidebar-accent transition-colors" title="Fit to view">
+                                    <Maximize className="w-[18px] h-[18px]" />
                                 </Button>
-                                <Button variant="ghost" onClick={() => graphViewRef.current?.zoomIn()} className="h-9 w-9 rounded-none border-b border-sidebar-border text-muted-foreground hover:text-foreground hover:bg-sidebar-accent transition-colors">
-                                    <ZoomIn className="w-[15px] h-[15px]" />
+                                <Button variant="ghost" onClick={() => graphViewRef.current?.zoomIn()} className="h-10 w-10 rounded-none border-b border-sidebar-border text-muted-foreground hover:text-foreground hover:bg-sidebar-accent transition-colors">
+                                    <ZoomIn className="w-[18px] h-[18px]" />
                                 </Button>
-                                <Button variant="ghost" onClick={() => graphViewRef.current?.zoomOut()} className="h-9 w-9 rounded-none text-muted-foreground hover:text-foreground hover:bg-sidebar-accent transition-colors">
-                                    <ZoomOut className="w-[15px] h-[15px]" />
+                                <Button variant="ghost" onClick={() => graphViewRef.current?.zoomOut()} className="h-10 w-10 rounded-none text-muted-foreground hover:text-foreground hover:bg-sidebar-accent transition-colors">
+                                    <ZoomOut className="w-[18px] h-[18px]" />
                                 </Button>
                             </div>
                         </div>

@@ -46,6 +46,7 @@ class Settings(BaseSettings):
 
             - ``gemini_api_key`` — Google AI Studio API key.  Obtain one at
               https://aistudio.google.com/app/apikey.  Leave empty to disable.
+            - ``gemini_model`` — Gemini model ID (default ``gemini-2.5-flash``).
             - ``gemini_enabled`` — Set to ``false`` to disable expansion even
               when a key is present.
 
@@ -64,11 +65,12 @@ class Settings(BaseSettings):
     memgraph_password: str = ""
 
     embedding_local: bool = True
-    embedding_model_name: str = "aleynahukmet/bge-medical-small-en-v1.5"
+    embedding_model_name: str = "BAAI/bge-small-en-v1.5"
     embedding_hf_token: str = ""
     embedding_enabled: bool = True
 
     gemini_api_key: str = ""
+    gemini_model: str = ""
     gemini_enabled: bool = True
 
     cors_origins: list[str] = ["http://localhost:5173"]

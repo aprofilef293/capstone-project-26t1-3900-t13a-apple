@@ -136,6 +136,19 @@ describe('happy path for multi-select', () => {
     // check that each card on the multi-select side panel have a 'colour' field
     cy.contains(/colour:/i).should('be.visible')
 
+    // click on attribute dropdown + click the 'colour' field again
+    cy.contains('h2', 'Path between Nodes')
+      .closest('aside')
+      .within(() => {
+        cy.contains('button', /^colour$/).should('be.visible').click();
+      });
+    cy.contains('[data-slot="dropdown-menu-radio-item"]', /^colour$/)
+      .should('be.visible')
+      .click({ force: true });
+
+    // check that the dropdown goes back to showing 'select attribute'
+    cy.contains('button', 'Select attribute').should('be.visible')
+
     // click any card in side panel
     cy.get("@pickedNodes").then((p) => {
       const picked = p as unknown as PickedNodes;

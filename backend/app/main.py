@@ -102,8 +102,11 @@ def create_app() -> FastAPI:
 
         app.state.gemini = None
         if settings.gemini_enabled and settings.gemini_api_key:
-            app.state.gemini = GeminiTermExtractor(settings.gemini_api_key)
-            logger.info("Gemini query expansion enabled")
+            try:
+                app.state.gemini = GeminiTermExtractor(settings.gemini_api_key, settings.gemini_model)
+                logger.info("Gemini query expansion enabled")
+            except Exception as e:
+                logger.warning("Gemini failed to initialise, query expansion disabled: %s", e)
         else:
             logger.info("Gemini query expansion disabled (set GEMINI_API_KEY to enable)")
 
