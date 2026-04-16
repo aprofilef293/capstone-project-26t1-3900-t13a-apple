@@ -7,7 +7,12 @@ import type { HierarchyNode } from "../../lib/hierarchyUtils";
 import { matchesGraphFilters } from "../../lib/filterUtils";
 
 export function HierarchyView() {
-    const { nodes, edges, searchQuery, graphFilters } = useStore();
+    const {
+        nodes, edges, searchQuery, graphFilters,
+        infoPanelMode,
+        searchResultsExactTitle, searchResultsFuzzyTitle,
+        searchResultsDescription, searchResultsSemantic,
+    } = useStore();
 
     // Pre-filter nodes by graphFilters before building the hierarchy
     const filteredNodes = useMemo(() => {
@@ -21,7 +26,37 @@ export function HierarchyView() {
 
     const deferredSearchQuery = useDeferredValue(searchQuery);
 
+    // When advanced search results are active, collect all result node IDs
+    const searchResultNodeIds = useMemo(() => {
+        if (infoPanelMode !== 'search-results') return null;
+        const ids = new Set<string>([
+            ...searchResultsExactTitle.map(n => n.id),
+            ...searchResultsFuzzyTitle.map(n => n.id),
+            ...searchResultsDescription.map(n => n.id),
+            ...searchResultsSemantic.map(n => n.id),
+        ]);
+        return ids.size > 0 ? ids : null;
+    }, [infoPanelMode, searchResultsExactTitle, searchResultsFuzzyTitle, searchResultsDescription, searchResultsSemantic]);
+
     const hierarchyData = useMemo(() => {
+        // Advanced search results mode: filter hierarchy by result node IDs
+        if (searchResultNodeIds) {
+            const filterByResults = (node: HierarchyNode): HierarchyNode | null => {
+                const matchesResult = searchResultNodeIds.has(node.id);
+                const filteredChildren = node.children
+                    ? node.children.map(filterByResults).filter((c): c is HierarchyNode => c !== null)
+                    : [];
+                if (matchesResult || filteredChildren.length > 0) {
+                    return { ...node, children: filteredChildren };
+                }
+                return null;
+            };
+            return baseHierarchyData
+                .map(filterByResults)
+                .filter((node): node is HierarchyNode => node !== null);
+        }
+
+        // Inline text search (typing in search bar before submitting)
         if (!deferredSearchQuery) return baseHierarchyData;
         const lowerQuery = deferredSearchQuery.toLowerCase();
 
@@ -48,7 +83,7 @@ export function HierarchyView() {
         return baseHierarchyData
             .map(filterNode)
             .filter((node): node is HierarchyNode => node !== null);
-    }, [baseHierarchyData, deferredSearchQuery]);
+    }, [baseHierarchyData, deferredSearchQuery, searchResultNodeIds]);
 
     return (
         <div className="flex h-full w-full bg-background overflow-hidden relative">

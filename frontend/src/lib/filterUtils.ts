@@ -42,12 +42,19 @@ export function matchesGraphFilters(node: GraphNode, filters: GraphFilters): boo
     const labelGroups = getGroups(filters.labelKeywords || []);
     const descGroups = getGroups(filters.descriptionKeywords || []);
 
-    if (!checkMatch(label, labelGroups)) return false;
-
     const descText =
         ((attrs?.definition as string) ?? '') +
         ((attrs?.synonyms as string[]) ?? []).join(' ');
-    if (!checkMatch(descText, descGroups)) return false;
+
+    const isSimpleMode = (filters.descriptionKeywords || []).length === 0;
+    if (isSimpleMode) {
+        // Simple mode: match if name OR description contains the keyword
+        if (!checkMatch(label, labelGroups) && !checkMatch(descText, labelGroups)) return false;
+    } else {
+        // Advanced mode: name must match labelGroups AND description must match descGroups
+        if (!checkMatch(label, labelGroups)) return false;
+        if (!checkMatch(descText, descGroups)) return false;
+    }
 
     return true;
 }
