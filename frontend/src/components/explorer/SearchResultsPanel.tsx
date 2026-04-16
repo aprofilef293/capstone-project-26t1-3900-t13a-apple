@@ -101,7 +101,8 @@ export function SearchResultsPanel() {
                         {searchMode === "keyword" &&
                             <InfoHelpIcon
                                 innerText={<p>
-                                    Search results include exact matches on node labels and descriptions (if available).<br/>
+                                    Search results include exact matches on node labels and descriptions (if available).
+                                    <br/><br/>
                                     Suggested results use fuzzy matching to find potential similar matches.
                                 </p>}
                                 iconSize="w-5 h-5 mt-1.5"
@@ -114,6 +115,8 @@ export function SearchResultsPanel() {
                             <InfoHelpIcon
                                 innerText={<p>
                                     Search results include semantic (meaning-based) matches on node labels and descriptions.
+                                    <br/><br/>
+                                    % indicates a node's degree of relevance to the search query.
                                 </p>}
                                 iconSize="w-5 h-5 mt-1.5"
                                 boxWidth="w-60"
