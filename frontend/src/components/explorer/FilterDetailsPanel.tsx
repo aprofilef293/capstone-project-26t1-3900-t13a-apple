@@ -132,7 +132,7 @@ function TagInput({
                             
                             <button
                                 onClick={(e) => { e.stopPropagation(); onRemove(tag.text); }}
-                                className="p-0.5 rounded-sm hover:bg-black/5 dark:hover:bg-white/5 transition-all ml-0.5"
+                                className="p-0.5 rounded-sm hover:bg-black/5 dark:hover:bg-white/5 transition-all ml-0.5 cursor-pointer"
                             >
                                 <X className="w-2.5 h-2.5" />
                             </button>
@@ -260,7 +260,7 @@ export function GraphFilterPanel() {
                             )}
                             <button
                                 onClick={() => setIsOpen(false)}
-                                className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-sidebar-accent transition-colors"
+                                className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-sidebar-accent transition-colors cursor-pointer"
                             >
                                 <X className="w-3.5 h-3.5" />
                             </button>
@@ -278,10 +278,10 @@ export function GraphFilterPanel() {
                                         <SectionLabel>Name &amp; Description</SectionLabel>
                                         <button
                                             onClick={() => setIsAdvanced(true)}
-                                            className="text-[9px] font-medium text-muted-foreground/80 hover:text-foreground hover:bg-sidebar-accent px-1.5 py-0.5 rounded transition-colors"
+                                            className="text-[9px] font-medium text-muted-foreground/80 hover:text-foreground hover:bg-sidebar-accent px-1.5 py-0.5 rounded transition-colors cursor-pointer"
                                             title="Split into separate name and description filters"
                                         >
-                                            Split by name / description ›
+                                            Split ›
                                         </button>
                                     </div>
                                     <TagInput
