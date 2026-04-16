@@ -122,6 +122,7 @@ describe("tests for searchbar", () => {
 
   it("click 'x' clears the words typed in search bar", () => {
     // render search bar + type 'cancer'
+    mockState.infoPanelMode = "search-results";
     const { container } = render(<ExplorerSearch />);
     const input = screen.getByPlaceholderText("Search for exact words or phrases");
     fireEvent.change(input, { target: { value: "cancer" } });
