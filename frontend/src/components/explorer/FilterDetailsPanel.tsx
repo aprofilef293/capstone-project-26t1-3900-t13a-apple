@@ -10,10 +10,10 @@ function countActiveFilters(filters: {
     labelKeywords: TagKeyword[];
     descriptionKeywords: TagKeyword[];
     minImportance: number;
-}) {
+}, isAdvanced: boolean) {
     let n = 0;
     if (filters.labelKeywords.length > 0) n++;
-    if (filters.descriptionKeywords.length > 0) n++;
+    if (isAdvanced && filters.descriptionKeywords.length > 0) n++;
     if (filters.minImportance > 0) n++;
     return n;
 }
@@ -209,7 +209,7 @@ export function GraphFilterPanel() {
     const [isAdvanced, setIsAdvanced] = useState(false);
     const panelRef = useRef<HTMLDivElement>(null);
 
-    const activeCount = countActiveFilters(graphFilters);
+    const activeCount = countActiveFilters(graphFilters, isAdvanced);
 
     return (
         <div ref={panelRef} className="relative pointer-events-auto">
