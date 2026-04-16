@@ -207,17 +207,6 @@ export function GraphFilterPanel() {
     const [isAdvanced, setIsAdvanced] = useState(false);
     const panelRef = useRef<HTMLDivElement>(null);
 
-    // Close on outside click
-    useEffect(() => {
-        function handleClickOutside(e: MouseEvent) {
-            if (panelRef.current && !panelRef.current.contains(e.target as Node)) {
-                setIsOpen(false);
-            }
-        }
-        document.addEventListener("mousedown", handleClickOutside);
-        return () => document.removeEventListener("mousedown", handleClickOutside);
-    }, []);
-
     const activeCount = countActiveFilters(graphFilters);
 
     return (
