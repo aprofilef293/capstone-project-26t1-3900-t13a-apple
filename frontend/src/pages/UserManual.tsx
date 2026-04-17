@@ -19,6 +19,8 @@ import {
   Filter,
   Type,
   RotateCcw,
+  RefreshCcw,
+  Download,
 } from "lucide-react";
 import { PageHeader } from "../components/layout/PageHeader";
 import type { JSX } from "react/jsx-runtime";
@@ -417,10 +419,10 @@ const sections: ManualSection[] = [
       {
         content: (
           <>
-            When the filter panel is closed, a number appears on the{" "}
+            When the filter panel is closed, a number appears on the
             <span className="mx-1 inline-flex items-center gap-1 rounded border border-sidebar-border bg-sidebar-accent/60 px-1.5 py-0.5 text-[12px] leading-none text-sidebar-foreground/80 align-middle">
               <Filter className="h-3.5 w-3.5 opacity-60" />
-            </span>{" "}
+            </span>
             icon indicating the number of filters currently applied
           </>
         ),
@@ -429,7 +431,7 @@ const sections: ManualSection[] = [
         content: (
           <>
             Click the
-            <span className="mx-1 inline-flex items-center gap-1 rounded border border-sidebar-border bg-sidebar-accent/60 px-1.5 py-0.5 text-[11px] leading-none text-sidebar-foreground/80 align-middle">
+            <span className="mx-1 inline-flex items-center gap-1 rounded border border-sidebar-border bg-sidebar-accent/60 px-1.5 py-0.5 text-[12px] leading-none text-sidebar-foreground/80 align-middle">
               <RotateCcw className="h-3.5 w-3.5 opacity-60" />
             </span>
             icon to clear all filters and reset the graph
@@ -442,10 +444,25 @@ const sections: ManualSection[] = [
     title: "Multi-select Mode",
     icon: Network,
     items: [
-      { content: "Toggle the Multi-Select switch on." },
+      {
+        content: (
+          <>
+            Toggle the
+            <code className="mx-1 rounded border border-sidebar-border bg-sidebar-accent/60 px-1.5 py-0.5 font-mono text-[12px] text-sidebar-foreground/80">
+              Multi-Select
+            </code>
+            switch on.
+          </>
+        ),
+      },
       {
         content:
-          "Click on multiple nodes in the graph to bring up a side panel containing Selected nodes, Nodes along a path between selected nodes (if a path exists), and Neighbours of the selected nodes and in-path nodes",
+          "Click on multiple nodes in the graph to bring up a side panel containing:",
+        subItems: [
+          "Selected nodes",
+          "Nodes along a path between selected nodes (if a path exists)",
+          "Neighbours of the selected nodes and in-path nodes",
+        ],
       },
       {
         content:
@@ -454,8 +471,8 @@ const sections: ManualSection[] = [
       {
         content: (
           <>
-            Clicking on any node in the side panel will give users more
-            information about that node, and clicking the
+            Clicking on any node in the side panel will give more information
+            about that node, and clicking the
             <span className="mx-1 inline-flex items-center gap-1 rounded border border-sidebar-border bg-sidebar-accent/60 px-1.5 py-0.5 text-[12px] leading-none text-sidebar-foreground/80 align-middle">
               <CircleChevronLeft className="h-3.5 w-3.5 opacity-60" />
               <span>BACK</span>
@@ -465,18 +482,59 @@ const sections: ManualSection[] = [
         ),
       },
       {
-        content:
-          "Click Path View button to see only selected nodes and in-path nodes on the graph",
+        content: (
+          <>
+            Click
+            <code className="mx-1 rounded border border-sidebar-border bg-sidebar-accent/60 px-1.5 py-0.5 font-mono text-[12px] text-sidebar-foreground/80">
+              Path View
+            </code>
+            button to see only selected nodes and in-path nodes on the graph
+          </>
+        ),
       },
       {
-        content:
-          "Click on Select attribute to see a dropdown of node attributes. Select an attribute to display it for all nodes in the side panel. Clicking the selected attribute again will deselect it",
+        content: (
+          <>
+            Click on
+            <span className="mx-1 inline-flex items-center gap-1 rounded border border-sidebar-border bg-sidebar-accent/60 pl-2.5 pr-1.5 text-[12px] text-sidebar-foreground/80 align-middle">
+              Select attribute
+              <ChevronDown className="h-3 w-3 opacity-60" />
+            </span>
+            to see a dropdown of node attributes. Select an attribute to display
+            it for all nodes in the side panel. Clicking the selected attribute
+            again will deselect it
+          </>
+        ),
       },
       {
-        content:
-          "Click on Export CSV to download a CSV file containing detailed information on Selected nodes, Nodes along a path between selected nodes, and Neighbours of the selected nodes and in-path nodes",
+        content: (
+          <>
+            Click on
+            <span className="mx-1 inline-flex items-center gap-1 rounded border border-sidebar-border bg-sidebar-accent/60 px-1.5 py-1 text-[12px] leading-none text-sidebar-foreground/80 align-middle">
+              <Download className="h-3.5 w-3.5 opacity-60" />
+              <span>Export CSV</span>
+            </span>
+            to download a CSV file containing detailed information on:
+          </>
+        ),
+        subItems: [
+          "Selected nodes",
+          "Nodes along a path between selected nodes",
+          "Neighbours of the selected nodes and in-path nodes",
+        ],
       },
-      { content: "Click Clear Selection button to reset the graph" },
+      {
+        content: (
+          <>
+            Click the
+            <span className="mx-1 inline-flex items-center gap-1 rounded border border-sidebar-border bg-sidebar-accent/60 px-1.5 py-0.5 text-[12px] leading-none text-sidebar-foreground/80 align-middle">
+              <RefreshCcw className="h-3.5 w-3.5 opacity-60" />
+              <span>Clear Selection</span>
+            </span>
+            button to reset the graph
+          </>
+        ),
+      },
     ],
   },
   {
