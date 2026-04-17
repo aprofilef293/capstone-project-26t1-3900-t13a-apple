@@ -10,37 +10,59 @@ import {
   Search,
   SlidersHorizontal,
   X,
+  CheckCircle,
+  XCircle,
 } from "lucide-react";
 import { PageHeader } from "../components/layout/PageHeader";
+import type { JSX } from "react/jsx-runtime";
+
+type ManualItem = string | JSX.Element;
 
 type ManualSection = {
   title: string;
   icon: LucideIcon;
   note?: string;
-  items: string[];
+  items: ManualItem[];
 };
 
 const sections: ManualSection[] = [
   {
     title: "Quick Start Guide",
     icon: BookOpen,
-    note: "Please make sure to upload a file before trying out other features.",
+    note: "Please make sure to upload a file before trying out other features",
     items: [
-      "Displayed on the Dashboard page and contains an overview of the main features of the web-app.",
-      "Click the dropdown arrow on each feature box to see more information on how to use it.",
-      "Click the button in the feature box to go to the relevant page.",
+      "Displayed on the Dashboard page and contains an overview of the main features of the web-app",
+      "Click the dropdown arrow on each feature box to see more information on how to use it",
+      "Click the button in the feature box to go to the relevant page",
     ],
   },
   {
     title: "File Upload",
     icon: FileUp,
     items: [
-      "Click Select File on Dashboard or Data Manager Page.",
-      "Upload an .obo or .owl file.",
-      "A progress bar will appear during upload.",
-      "Once file upload is done, the import status will update to Complete.",
-      "Uploading a new file will replace the current dataset.",
-      "If the file is invalid, the import status will update to Failed and show an error message.",
+      <>
+        Click <code className="rounded border border-sidebar-border bg-sidebar-accent/60 px-1.5 py-0.5 font-mono text-[11px] text-sidebar-foreground/80">Select File</code> on Dashboard or Data Manager Page
+      </>,
+      <>
+        Upload an <code className="rounded border border-sidebar-border bg-sidebar-accent/60 px-1.5 py-0.5 font-mono text-[11px] text-sidebar-foreground/80">.obo</code> or <code className="rounded border border-sidebar-border bg-sidebar-accent/60 px-1.5 py-0.5 font-mono text-[11px] text-sidebar-foreground/80">.owl</code> file
+      </>,
+      "A progress bar will appear during upload",
+      <>
+        Once file upload is done, the import status will update to
+        <span className="ml-1 inline-flex items-center gap-1.5 text-green-500">
+          <span className="text-xs">Complete</span>
+        <CheckCircle className="w-4 h-4" />
+      </span>
+      </>,
+      "Uploading a new file will replace the current dataset",
+      <>
+        If the file is invalid, the import status will update to
+        <span className="ml-1 mr-1 inline-flex items-center gap-1.5 text-red-500">
+          <span className="text-xs">Failed</span>
+          <XCircle className="w-4 h-4 shrink-0" />
+        </span>
+        and show an error message
+      </>,
     ],
   },
   {
@@ -123,7 +145,10 @@ const sections: ManualSection[] = [
       "Fit to View button: Click to centre and resize the graph to fit the screen.",
       "Importance Slider: Adjust the importance slider to control the level of detail shown in the entire graph: Show all nodes (Level 1), Only show the most important nodes (Level 5).",
       "Light/ Dark mode: Click light or dark mode icons to switch to its corresponding theme.",
-      "“?” Help icons: “?” icons are scattered throughout the web-app (e.g., in the importance slider, filter panel, search results side panel, and export csv button in multi-select side panel) to explain features that may be confusing on first use.",
+       <>
+      <CircleQuestionMark className="inline w-4 h-4 text-blue-500 align-text-bottom mr-1" />
+        icons: Help icons have been scattered throughout the web-app  (e.g., in the importance slider, filter panel, search results side panel, and export csv button in multi-select side panel) to help explain features that may be confusing to understand on first use.
+      </>,
     ],
   },
 ];
@@ -158,8 +183,8 @@ export function UserManual() {
                 )}
 
                 <ol className="mt-3 list-decimal pl-5 space-y-2 text-sm leading-relaxed text-sidebar-foreground/90">
-                  {section.items.map((item) => (
-                    <li key={item}>{item}</li>
+                  {section.items.map((item, index) => (
+                    <li key={section.title + "-" + index}>{item}</li>
                   ))}
                 </ol>
               </section>
