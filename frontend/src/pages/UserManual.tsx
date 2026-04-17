@@ -12,9 +12,12 @@ import {
   X,
   CheckCircle,
   XCircle,
+  ChevronDown,
+  CircleAlert,
 } from "lucide-react";
 import { PageHeader } from "../components/layout/PageHeader";
 import type { JSX } from "react/jsx-runtime";
+import { Link } from "@tanstack/react-router";
 
 type ManualItem = string | JSX.Element;
 
@@ -31,8 +34,17 @@ const sections: ManualSection[] = [
     icon: BookOpen,
     note: "Please make sure to upload a file before trying out other features",
     items: [
-      "Displayed on the Dashboard page and contains an overview of the main features of the web-app",
-      "Click the dropdown arrow on each feature box to see more information on how to use it",
+      <>
+        Displayed on the <Link to="/" className="underline decoration-sidebar-foreground/40 underline-offset-2 hover:text-blue-600 dark:hover:text-blue-400">Dashboard page</Link> and contains an overview of the main features of the web-app,
+      </>,
+      <>
+        Click the
+        <span className="mx-1 inline-flex items-center gap-1 rounded border border-sidebar-border bg-sidebar-accent/60 pl-2.5 pr-1.5 text-[11px] text-sidebar-foreground/80 align-middle">
+          dropdown
+          <ChevronDown className="h-3 w-3 opacity-60" />
+        </span>
+        arrow on each feature box to see more information on how to use it
+      </>,
       "Click the button in the feature box to go to the relevant page",
     ],
   },
@@ -41,7 +53,7 @@ const sections: ManualSection[] = [
     icon: FileUp,
     items: [
       <>
-        Click <code className="rounded border border-sidebar-border bg-sidebar-accent/60 px-1.5 py-0.5 font-mono text-[11px] text-sidebar-foreground/80">Select File</code> on Dashboard or Data Manager Page
+        Click <code className="rounded border border-sidebar-border bg-sidebar-accent/60 px-1.5 py-0.5 font-mono text-[11px] text-sidebar-foreground/80">Select File</code> on <Link to="/" className="underline decoration-sidebar-foreground/40 underline-offset-2 hover:text-blue-600 dark:hover:text-blue-400">Dashboard</Link> or <Link to="/manager" className="underline decoration-sidebar-foreground/40 underline-offset-2 hover:text-blue-600 dark:hover:text-blue-400">Data Manager</Link> Page
       </>,
       <>
         Upload an <code className="rounded border border-sidebar-border bg-sidebar-accent/60 px-1.5 py-0.5 font-mono text-[11px] text-sidebar-foreground/80">.obo</code> or <code className="rounded border border-sidebar-border bg-sidebar-accent/60 px-1.5 py-0.5 font-mono text-[11px] text-sidebar-foreground/80">.owl</code> file
@@ -69,7 +81,9 @@ const sections: ManualSection[] = [
     title: "Exploring Graph",
     icon: GitGraph,
     items: [
-      "View ontology data as a graph.",
+      <>
+        View ontology data as a graph in the <Link to="/explorer" className="underline decoration-sidebar-foreground/40 underline-offset-2 hover:text-blue-600 dark:hover:text-blue-400">Network Graph page</Link> after uploading a file.
+      </>,
       "Click a graph node to open a side panel containing Node attributes, Connections (incoming / outgoing), and Computed attributes.",
       "Click on graph nodes or nodes in the side panel to navigate around the graph.",
       "Connections can be sorted by Name, Size, Importance, Type, and Colour.",
@@ -177,8 +191,9 @@ export function UserManual() {
                 </h2>
 
                 {section.note && (
-                  <p className="mt-2 text-sm text-amber-600 dark:text-amber-400">
-                    Note: {section.note}
+                  <p className="mt-2 inline-flex items-start gap-2 text-sm text-amber-600 dark:text-amber-400">
+                    <CircleAlert className="mt-0.5 h-4 w-4 shrink-0" />
+                    <span>{section.note}</span>
                   </p>
                 )}
 
