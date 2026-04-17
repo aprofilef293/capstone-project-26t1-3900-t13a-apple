@@ -1,7 +1,21 @@
+import type { LucideIcon } from "lucide-react";
+import {
+  BookOpen,
+  CircleQuestionMark,
+  DatabaseSearch,
+  FileUp,
+  GitGraph,
+  ListTree,
+  Network,
+  Search,
+  SlidersHorizontal,
+  X,
+} from "lucide-react";
 import { PageHeader } from "../components/layout/PageHeader";
 
 type ManualSection = {
   title: string;
+  icon: LucideIcon;
   note?: string;
   items: string[];
 };
@@ -9,6 +23,7 @@ type ManualSection = {
 const sections: ManualSection[] = [
   {
     title: "Quick Start Guide",
+    icon: BookOpen,
     note: "Please make sure to upload a file before trying out other features.",
     items: [
       "Displayed on the Dashboard page and contains an overview of the main features of the web-app.",
@@ -18,6 +33,7 @@ const sections: ManualSection[] = [
   },
   {
     title: "File Upload",
+    icon: FileUp,
     items: [
       "Click Select File on Dashboard or Data Manager Page.",
       "Upload an .obo or .owl file.",
@@ -29,6 +45,7 @@ const sections: ManualSection[] = [
   },
   {
     title: "Exploring Graph",
+    icon: GitGraph,
     items: [
       "View ontology data as a graph.",
       "Click a graph node to open a side panel containing Node attributes, Connections (incoming / outgoing), and Computed attributes.",
@@ -39,6 +56,7 @@ const sections: ManualSection[] = [
   },
   {
     title: "Searching: Keyword Search",
+    icon: Search,
     items: [
       "Type a keyword into the search bar.",
       "Suggested nodes appear in a dropdown and the graph updates while typing.",
@@ -50,6 +68,7 @@ const sections: ManualSection[] = [
   },
   {
     title: "Searching: Semantic Search",
+    icon: DatabaseSearch,
     items: [
       "Click the Advanced button next to the search bar.",
       "Type a query and click Enter or the search icon to bring up the results side panel.",
@@ -60,6 +79,7 @@ const sections: ManualSection[] = [
   },
   {
     title: "Filtering",
+    icon: SlidersHorizontal,
     note: "Multiple tags can be combined to filter the graph.",
     items: [
       "Use the Filter Panel to filter the graph based on node name, description, or both.",
@@ -74,6 +94,7 @@ const sections: ManualSection[] = [
   },
   {
     title: "Multi-select Mode",
+    icon: Network,
     items: [
       "Toggle the Multi-Select switch on.",
       "Click on multiple nodes in the graph to bring up a side panel containing Selected nodes, Nodes along a path between selected nodes (if a path exists), and Neighbours of the selected nodes and in-path nodes.",
@@ -86,6 +107,7 @@ const sections: ManualSection[] = [
   },
   {
     title: "Hierarchy Panel",
+    icon: ListTree,
     items: [
       "Click on Hierarchy button to open up the Hierarchy Panel and view the graph in a folder-like structure.",
       "Folders are in alphabetical order and can be expanded to explore related nodes.",
@@ -95,6 +117,7 @@ const sections: ManualSection[] = [
   },
   {
     title: "Extras",
+    icon: CircleQuestionMark,
     items: [
       "Zoom in / out: Click to zoom in or out of the graph.",
       "Fit to View button: Click to centre and resize the graph to fit the screen.",
@@ -115,26 +138,33 @@ export function UserManual() {
 
       <div className="px-6 sm:px-10 py-8 max-w-5xl mx-auto w-full">
         <div className="space-y-6">
-          {sections.map((section) => (
-            <section
-              key={section.title}
-              className="rounded-xl border border-sidebar-border bg-sidebar/50 p-5"
-            >
-              <h2 className="text-xl font-semibold tracking-tight">{section.title}</h2>
+          {sections.map((section) => {
+            const Icon = section.icon;
 
-              {section.note && (
-                <p className="mt-2 text-sm text-amber-600 dark:text-amber-400">
-                  Note: {section.note}
-                </p>
-              )}
+            return (
+              <section
+                key={section.title}
+                className="rounded-xl border border-sidebar-border bg-sidebar/50 p-5"
+              >
+                <h2 className="flex items-center gap-2 text-xl font-semibold tracking-tight">
+                  <Icon className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                  <span>{section.title}</span>
+                </h2>
 
-              <ol className="mt-3 list-decimal pl-5 space-y-2 text-sm leading-relaxed text-sidebar-foreground/90">
-                {section.items.map((item) => (
-                  <li key={item}>{item}</li>
-                ))}
-              </ol>
-            </section>
-          ))}
+                {section.note && (
+                  <p className="mt-2 text-sm text-amber-600 dark:text-amber-400">
+                    Note: {section.note}
+                  </p>
+                )}
+
+                <ol className="mt-3 list-decimal pl-5 space-y-2 text-sm leading-relaxed text-sidebar-foreground/90">
+                  {section.items.map((item) => (
+                    <li key={item}>{item}</li>
+                  ))}
+                </ol>
+              </section>
+            );
+          })}
         </div>
       </div>
     </div>
