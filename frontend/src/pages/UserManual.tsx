@@ -186,7 +186,7 @@ const sections: ManualSection[] = [
         content: (
           <>
             Use the
-            <span className="mx-1 inline-flex items-center gap-1 rounded border border-sidebar-border bg-sidebar-accent/60 px-1.5 py-0.5 text-[12px] leading-none text-sidebar-foreground/80 align-middle">
+            <span className="mx-1 inline-flex items-center gap-1 rounded border border-sidebar-border bg-sidebar-accent/60 px-1.5 py-1 text-[12px] leading-none text-sidebar-foreground/80 align-middle">
               <CircleChevronLeft className="h-3.5 w-3.5 opacity-60" />
               <span>BACK</span>
             </span>
@@ -219,7 +219,7 @@ const sections: ManualSection[] = [
         content: (
           <>
             Clicking
-            <span className="mx-1 inline-flex items-center gap-1 rounded border border-sidebar-border bg-sidebar-accent/60 px-1.5 py-0.5 text-[12px] leading-none text-sidebar-foreground/80 align-middle">
+            <span className="mx-1 inline-flex items-center gap-1 rounded border border-sidebar-border bg-sidebar-accent/60 px-1.5 py-1 text-[12px] leading-none text-sidebar-foreground/80 align-middle">
               <CornerDownLeft className="h-3.5 w-3.5 opacity-60" />
               <span>Enter</span>
             </span>
@@ -244,7 +244,7 @@ const sections: ManualSection[] = [
           <>
             Click on any node in the results side panel to see more information
             about the node, and click the
-            <span className="mx-1 inline-flex items-center gap-1 rounded border border-sidebar-border bg-sidebar-accent/60 px-1.5 py-0.5 text-[12px] leading-none text-sidebar-foreground/80 align-middle">
+            <span className="mx-1 inline-flex items-center gap-1 rounded border border-sidebar-border bg-sidebar-accent/60 px-1.5 py-1 text-[12px] leading-none text-sidebar-foreground/80 align-middle">
               <CircleChevronLeft className="h-3.5 w-3.5 opacity-60" />
               <span>BACK</span>
             </span>
@@ -274,7 +274,7 @@ const sections: ManualSection[] = [
         content: (
           <>
             Click the
-            <code className="mx-1 rounded border border-sidebar-border bg-sidebar-accent/60 px-1.5 py-0.5 font-mono text-[12px] text-sidebar-foreground/80">
+            <code className="mx-1 rounded border border-sidebar-border bg-sidebar-accent/60 px-1.5 py-1 font-mono text-[12px] text-sidebar-foreground/80">
               Advanced
             </code>
             button next to the search bar
@@ -285,7 +285,7 @@ const sections: ManualSection[] = [
         content: (
           <>
             Type a query and click
-            <span className="mx-1 inline-flex items-center gap-1 rounded border border-sidebar-border bg-sidebar-accent/60 px-1.5 py-0.5 text-[12px] leading-none text-sidebar-foreground/80 align-middle">
+            <span className="mx-1 inline-flex items-center gap-1 rounded border border-sidebar-border bg-sidebar-accent/60 px-1.5 py-1 text-[12px] leading-none text-sidebar-foreground/80 align-middle">
               <CornerDownLeft className="h-3.5 w-3.5 opacity-60" />
               <span>Enter</span>
             </span>
@@ -313,7 +313,7 @@ const sections: ManualSection[] = [
           <>
             Click on any node in the results side panel to see more information
             about the node, and click the
-            <span className="mx-1 inline-flex items-center gap-1 rounded border border-sidebar-border bg-sidebar-accent/60 px-1.5 py-0.5 text-[12px] leading-none text-sidebar-foreground/80 align-middle">
+            <span className="mx-1 inline-flex items-center gap-1 rounded border border-sidebar-border bg-sidebar-accent/60 px-1.5 py-1 text-[12px] leading-none text-sidebar-foreground/80 align-middle">
               <CircleChevronLeft className="h-3.5 w-3.5 opacity-60" />
               <span>BACK</span>
             </span>
@@ -348,7 +348,7 @@ const sections: ManualSection[] = [
         content: (
           <>
             Click on the
-            <span className="mx-1 inline-flex items-center gap-1 rounded border border-sidebar-border bg-sidebar-accent/60 px-1.5 py-0.5 text-[12px] leading-none text-sidebar-foreground/80 align-middle">
+            <span className="mx-1 inline-flex items-center gap-1 rounded border border-sidebar-border bg-sidebar-accent/60 px-1.5 py-1 text-[12px] leading-none text-sidebar-foreground/80 align-middle">
               <Filter className="h-3.5 w-3.5 opacity-60" />
               <span>funnel</span>
             </span>
@@ -388,7 +388,7 @@ const sections: ManualSection[] = [
         content: (
           <>
             Type a keyword in the search bar and click
-            <span className="mx-1 inline-flex items-center gap-1 rounded border border-sidebar-border bg-sidebar-accent/60 px-1.5 py-0.5 text-[12px] leading-none text-sidebar-foreground/80 align-middle">
+            <span className="mx-1 inline-flex items-center gap-1 rounded border border-sidebar-border bg-sidebar-accent/60 px-1.5 py-1 text-[12px] leading-none text-sidebar-foreground/80 align-middle">
               <CornerDownLeft className="h-3.5 w-3.5 opacity-60" />
               <span>Enter</span>
             </span>
@@ -473,7 +473,7 @@ const sections: ManualSection[] = [
           <>
             Clicking on any node in the side panel will give more information
             about that node, and clicking the
-            <span className="mx-1 inline-flex items-center gap-1 rounded border border-sidebar-border bg-sidebar-accent/60 px-1.5 py-0.5 text-[12px] leading-none text-sidebar-foreground/80 align-middle">
+            <span className="mx-1 inline-flex items-center gap-1 rounded border border-sidebar-border bg-sidebar-accent/60 px-1.5 py-1 text-[12px] leading-none text-sidebar-foreground/80 align-middle">
               <CircleChevronLeft className="h-3.5 w-3.5 opacity-60" />
               <span>BACK</span>
             </span>
@@ -527,7 +527,7 @@ const sections: ManualSection[] = [
         content: (
           <>
             Click the
-            <span className="mx-1 inline-flex items-center gap-1 rounded border border-sidebar-border bg-sidebar-accent/60 px-1.5 py-0.5 text-[12px] leading-none text-sidebar-foreground/80 align-middle">
+            <span className="mx-1 inline-flex items-center gap-1 rounded border border-sidebar-border bg-sidebar-accent/60 px-1.5 py-1 text-[12px] leading-none text-sidebar-foreground/80 align-middle">
               <RefreshCcw className="h-3.5 w-3.5 opacity-60" />
               <span>Clear Selection</span>
             </span>
@@ -551,7 +551,12 @@ const sections: ManualSection[] = [
       },
       {
         content:
-          "Clicking on a folder opens a side panel containing Node attributes, Connections (incoming / outgoing), and Computed attributes",
+          "Clicking on a folder opens a side panel containing:",
+          subItems: [
+            "Node attributes",
+            "Connections (incoming / outgoing)",
+            "Computed attributes"
+          ]
       },
       {
         content:
