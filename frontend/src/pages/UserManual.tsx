@@ -18,6 +18,7 @@ import {
   CornerDownLeft,
   Filter,
   Type,
+  RotateCcw,
 } from "lucide-react";
 import { PageHeader } from "../components/layout/PageHeader";
 import type { JSX } from "react/jsx-runtime";
@@ -414,12 +415,26 @@ const sections: ManualSection[] = [
         subItems: ["Show all nodes", "Only show the most important nodes"],
       },
       {
-        content:
-          "When the filter panel is closed, a number appears on the funnel icon indicating the number of filters currently applied",
+        content: (
+          <>
+            When the filter panel is closed, a number appears on the{" "}
+            <span className="mx-1 inline-flex items-center gap-1 rounded border border-sidebar-border bg-sidebar-accent/60 px-1.5 py-0.5 text-[12px] leading-none text-sidebar-foreground/80 align-middle">
+              <Filter className="h-3.5 w-3.5 opacity-60" />
+            </span>{" "}
+            icon indicating the number of filters currently applied
+          </>
+        ),
       },
       {
-        content:
-          "Click the Reset icon to clear all filters and reset the graph",
+        content: (
+          <>
+            Click the
+            <span className="mx-1 inline-flex items-center gap-1 rounded border border-sidebar-border bg-sidebar-accent/60 px-1.5 py-0.5 text-[11px] leading-none text-sidebar-foreground/80 align-middle">
+              <RotateCcw className="h-3.5 w-3.5 opacity-60" />
+            </span>
+            icon to clear all filters and reset the graph
+          </>
+        ),
       },
     ],
   },
