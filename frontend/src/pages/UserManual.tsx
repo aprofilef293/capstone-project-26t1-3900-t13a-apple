@@ -15,6 +15,7 @@ import {
   ChevronDown,
   CircleAlert,
   CircleChevronLeft,
+  CornerDownLeft,
 } from "lucide-react";
 import { PageHeader } from "../components/layout/PageHeader";
 import type { JSX } from "react/jsx-runtime";
@@ -193,18 +194,44 @@ const sections: ManualSection[] = [
     title: "Searching: Keyword Search",
     icon: Search,
     items: [
-      { content: "Type a keyword into the search bar" },
+      {
+        content: (
+          <>
+            Type a keyword into the
+            <span className="mx-1 inline-flex items-center gap-1 rounded-lg border border-sidebar-border bg-sidebar/95 px-2.5 py-1 text-[11px] leading-none text-sidebar-foreground/70 shadow-sm">
+              <Search className="h-3 w-3 opacity-60" />
+              <span>search bar</span>
+            </span>
+          </>
+        ),
+      },
       {
         content:
           "Suggested nodes appear in a dropdown and the graph updates while typing",
       },
       {
-        content:
-          "Clicking Enter or the search icon will bring up a side panel containing the full list of results",
+        content: (
+          <>
+            Clicking
+            <span className="mx-1 inline-flex items-center gap-1 rounded border border-sidebar-border bg-sidebar-accent/60 px-1.5 py-0.5 text-[11px] leading-none text-sidebar-foreground/80 align-middle">
+              <CornerDownLeft className="h-3.5 w-3.5 opacity-60" />
+              <span>Enter</span>
+            </span>
+            or the
+            <span className="mx-1 inline-flex items-center gap-1 rounded-lg border border-sidebar-border bg-sidebar/95 px-2.5 py-1 text-[11px] leading-none text-sidebar-foreground/70 shadow-sm">
+              <Search className="h-3 w-3 opacity-60" />
+            </span>
+            icon will bring up a side panel containing the full list of results
+          </>
+        ),
       },
       {
-        content:
-          "These results are grouped into three categories: Most relevant (Contains exact node name matches), Related (Contains matches in description or synonym field of the node), Suggested (Contains results from fuzzy search)",
+        content: "These results are grouped into three categories:",
+        subItems: [
+          "Most relevant (Contains exact node name matches)",
+          "Related (Contains matches in description or synonym field of the node)",
+          "Suggested (Contains results from fuzzy search)",
+        ],
       },
       {
         content: (
@@ -219,8 +246,16 @@ const sections: ManualSection[] = [
         ),
       },
       {
-        content:
-          "Click X button in the search bar to clear the search term and reset the graph",
+        content: (
+          <>
+            Click the
+            <span className="mx-1 inline-flex items-center gap-1 rounded-md border border-sidebar-border bg-sidebar-accent/60 px-1.5 py-1 text-[11px] leading-none text-sidebar-foreground/80 align-middle">
+              <X className="h-3.5 w-3 opacity-60" />
+            </span>
+            button in the search bar to clear the search term and reset the
+            graph
+          </>
+        ),
       },
     ],
   },
@@ -307,7 +342,8 @@ const sections: ManualSection[] = [
       {
         content: (
           <>
-            Clicking on any node in the side panel will give users more information about that node, and clicking the
+            Clicking on any node in the side panel will give users more
+            information about that node, and clicking the
             <span className="inline-flex items-center gap-1 rounded border border-transparent px-1.5 py-0.5 text-[12px] leading-none text-sidebar-foreground/50 align-middle">
               <CircleChevronLeft className="h-3.5 w-3.5" /> <span>BACK</span>
             </span>
