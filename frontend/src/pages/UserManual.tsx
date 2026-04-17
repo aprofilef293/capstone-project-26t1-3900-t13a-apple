@@ -41,13 +41,13 @@ const sections: ManualSection[] = [
       {
         content: (
           <>
-            Displayed on the{" "}
+            Displayed on the
             <Link
               to="/"
-              className="underline decoration-sidebar-foreground/40 underline-offset-2 hover:text-blue-600 dark:hover:text-blue-400"
+              className="mx-1 underline decoration-sidebar-foreground/40 underline-offset-2 hover:text-blue-600 dark:hover:text-blue-400"
             >
               Dashboard page
-            </Link>{" "}
+            </Link>
             and contains an overview of the main features of the web-app
           </>
         ),
@@ -77,24 +77,24 @@ const sections: ManualSection[] = [
       {
         content: (
           <>
-            Click{" "}
-            <code className="rounded border border-sidebar-border bg-sidebar-accent/60 px-1.5 py-0.5 font-mono text-[11px] text-sidebar-foreground/80">
+            Click
+            <code className="mx-1 rounded border border-sidebar-border bg-sidebar-accent/60 px-1.5 py-0.5 font-mono text-[11px] text-sidebar-foreground/80">
               Select File
-            </code>{" "}
-            on{" "}
+            </code>
+            on
             <Link
               to="/"
-              className="underline decoration-sidebar-foreground/40 underline-offset-2 hover:text-blue-600 dark:hover:text-blue-400"
+              className="mx-1 underline decoration-sidebar-foreground/40 underline-offset-2 hover:text-blue-600 dark:hover:text-blue-400"
             >
               Dashboard
-            </Link>{" "}
-            or{" "}
+            </Link>
+            or
             <Link
               to="/manager"
-              className="underline decoration-sidebar-foreground/40 underline-offset-2 hover:text-blue-600 dark:hover:text-blue-400"
+              className="mx-1 underline decoration-sidebar-foreground/40 underline-offset-2 hover:text-blue-600 dark:hover:text-blue-400"
             >
               Data Manager
-            </Link>{" "}
+            </Link>
             Page
           </>
         ),
@@ -102,14 +102,14 @@ const sections: ManualSection[] = [
       {
         content: (
           <>
-            Upload an{" "}
-            <code className="rounded border border-sidebar-border bg-sidebar-accent/60 px-1.5 py-0.5 font-mono text-[11px] text-sidebar-foreground/80">
+            Upload an
+            <code className="mx-1 rounded border border-sidebar-border bg-sidebar-accent/60 px-1.5 py-0.5 font-mono text-[11px] text-sidebar-foreground/80">
               .obo
-            </code>{" "}
-            or{" "}
-            <code className="rounded border border-sidebar-border bg-sidebar-accent/60 px-1.5 py-0.5 font-mono text-[11px] text-sidebar-foreground/80">
+            </code>
+            or
+            <code className="mx-1 rounded border border-sidebar-border bg-sidebar-accent/60 px-1.5 py-0.5 font-mono text-[11px] text-sidebar-foreground/80">
               .owl
-            </code>{" "}
+            </code>
             file
           </>
         ),
@@ -148,13 +148,13 @@ const sections: ManualSection[] = [
       {
         content: (
           <>
-            View ontology data as a graph in the{" "}
+            View ontology data as a graph in the
             <Link
               to="/explorer"
               className="underline decoration-sidebar-foreground/40 underline-offset-2 hover:text-blue-600 dark:hover:text-blue-400"
             >
               Network Graph page
-            </Link>{" "}
+            </Link>
             after uploading a file
           </>
         ),
