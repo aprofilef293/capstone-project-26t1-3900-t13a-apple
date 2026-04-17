@@ -181,8 +181,9 @@ const sections: ManualSection[] = [
         content: (
           <>
             Use the
-            <span className="inline-flex items-center gap-1 rounded border border-transparent px-1.5 py-0.5 text-[12px] leading-none text-sidebar-foreground/50 align-middle">
-              <CircleChevronLeft className="h-3.5 w-3.5" /> <span>BACK</span>
+            <span className="mx-1 inline-flex items-center gap-1 rounded border border-sidebar-border bg-sidebar-accent/60 px-1.5 py-0.5 text-[11px] leading-none text-sidebar-foreground/80 align-middle">
+              <CircleChevronLeft className="h-3.5 w-3.5 opacity-60" />
+              <span>BACK</span>
             </span>
             button to return to previous nodes
           </>
@@ -238,8 +239,9 @@ const sections: ManualSection[] = [
           <>
             Click on any node in the results side panel to see more information
             about the node, and click the
-            <span className="inline-flex items-center gap-1 rounded border border-transparent px-1.5 py-0.5 text-[12px] leading-none text-sidebar-foreground/50 align-middle">
-              <CircleChevronLeft className="h-3.5 w-3.5" /> <span>BACK</span>
+            <span className="mx-1 inline-flex items-center gap-1 rounded border border-sidebar-border bg-sidebar-accent/60 px-1.5 py-0.5 text-[11px] leading-none text-sidebar-foreground/80 align-middle">
+              <CircleChevronLeft className="h-3.5 w-3.5 opacity-60" />
+              <span>BACK</span>
             </span>
             button to return to the results side panel
           </>
@@ -263,30 +265,68 @@ const sections: ManualSection[] = [
     title: "Searching: Semantic Search",
     icon: DatabaseSearch,
     items: [
-      { content: "Click the Advanced button next to the search bar" },
       {
-        content:
-          "Type a query and click Enter or the search icon to bring up the results side panel",
+        content: (
+          <>
+            Click the
+            <code className="mx-1 rounded border border-sidebar-border bg-sidebar-accent/60 px-1.5 py-0.5 font-mono text-[11px] text-sidebar-foreground/80">
+              Advanced
+            </code>
+            button next to the search bar
+          </>
+        ),
       },
       {
-        content:
-          "Each result in the side panel contains a similarity score (%) representing how similar the result is to the search query",
+        content: (
+          <>
+            Type a query and click
+            <span className="mx-1 inline-flex items-center gap-1 rounded border border-sidebar-border bg-sidebar-accent/60 px-1.5 py-0.5 text-[11px] leading-none text-sidebar-foreground/80 align-middle">
+              <CornerDownLeft className="h-3.5 w-3.5 opacity-60" />
+              <span>Enter</span>
+            </span>
+            or the
+            <span className="mx-1 inline-flex items-center gap-1 rounded-lg border border-sidebar-border bg-sidebar/95 px-2.5 py-1 text-[11px] leading-none text-sidebar-foreground/70 shadow-sm">
+              <Search className="h-3 w-3 opacity-60" />
+            </span>
+            icon to bring up the results side panel
+          </>
+        ),
+      },
+      {
+        content: (
+          <>
+            Each result in the side panel contains a similarity score
+            <code className="mx-1 rounded border border-sidebar-border bg-sidebar-accent/60 px-1.5 py-0.5 font-mono text-[11px] text-sidebar-foreground/80">
+              %
+            </code>
+            representing how similar the result is to the search query
+          </>
+        ),
       },
       {
         content: (
           <>
             Click on any node in the results side panel to see more information
             about the node, and click the
-            <span className="inline-flex items-center gap-1 rounded border border-transparent px-1.5 py-0.5 text-[12px] leading-none text-sidebar-foreground/50 align-middle">
-              <CircleChevronLeft className="h-3.5 w-3.5" /> <span>BACK</span>
+            <span className="mx-1 inline-flex items-center gap-1 rounded border border-sidebar-border bg-sidebar-accent/60 px-1.5 py-0.5 text-[11px] leading-none text-sidebar-foreground/80 align-middle">
+              <CircleChevronLeft className="h-3.5 w-3.5 opacity-60" />
+              <span>BACK</span>
             </span>
             button to return to the results side panel
           </>
         ),
       },
       {
-        content:
-          "Click X button in the search bar to clear the search term and reset the graph",
+        content: (
+          <>
+            Click
+            <span className="mx-1 inline-flex items-center gap-1 rounded-md border border-sidebar-border bg-sidebar-accent/60 px-1.5 py-1 text-[11px] leading-none text-sidebar-foreground/80 align-middle">
+              <X className="h-3.5 w-3 opacity-60" />
+            </span>
+            button in the search bar to clear the search term and reset the
+            graph
+          </>
+        ),
       },
     ],
   },
@@ -344,8 +384,9 @@ const sections: ManualSection[] = [
           <>
             Clicking on any node in the side panel will give users more
             information about that node, and clicking the
-            <span className="inline-flex items-center gap-1 rounded border border-transparent px-1.5 py-0.5 text-[12px] leading-none text-sidebar-foreground/50 align-middle">
-              <CircleChevronLeft className="h-3.5 w-3.5" /> <span>BACK</span>
+            <span className="mx-1 inline-flex items-center gap-1 rounded border border-sidebar-border bg-sidebar-accent/60 px-1.5 py-0.5 text-[11px] leading-none text-sidebar-foreground/80 align-middle">
+              <CircleChevronLeft className="h-3.5 w-3.5 opacity-60" />
+              <span>BACK</span>
             </span>
             button will take users back to the multi-select side panel
           </>
