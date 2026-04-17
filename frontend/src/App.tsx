@@ -4,6 +4,7 @@ import { RootLayout } from './components/layout/RootLayout';
 import { Dashboard } from './pages/Dashboard';
 import { DataManager } from './pages/DataManager';
 import { GraphExplorer } from './pages/GraphExplorer';
+import { UserManual } from "./pages/UserManual";
 import { Settings } from './pages/Settings';
 import { ThemeProvider } from './components/theme-provider';
 
@@ -34,13 +35,19 @@ const explorerRoute = createRoute({
   component: GraphExplorer,
 })
 
+const manualRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/manual",
+  component: UserManual,
+});
+
 const settingsRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/settings',
   component: Settings,
 })
 
-const routeTree = rootRoute.addChildren([indexRoute, managerRoute, explorerRoute, settingsRoute])
+const routeTree = rootRoute.addChildren([indexRoute, managerRoute, explorerRoute, settingsRoute, manualRoute])
 const router = createRouter({ routeTree })
 
 // Register the router instance for type safety
