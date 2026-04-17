@@ -151,7 +151,7 @@ export function QuickstartFeatureCard({
     >
       <button
         onClick={() => setOpen((o) => !o)}
-        className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-sidebar-accent/20 rounded-lg transition-colors"
+        className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-sidebar-accent/20 rounded-lg transition-colors cursor-pointer"
         aria-expanded={open}
       >
         <div className="shrink-0 rounded-md bg-sidebar-accent/50 p-1.5">

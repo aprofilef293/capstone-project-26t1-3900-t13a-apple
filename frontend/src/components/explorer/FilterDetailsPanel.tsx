@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { Filter, X, RotateCcw, Check, Asterisk, Ban, ChevronDown } from "lucide-react";
+import { Filter, X, RotateCcw, Check, Asterisk, Ban, ChevronDown, ChevronRight, ChevronLeft } from "lucide-react";
 import { useStore, DEFAULT_FILTERS } from "../../store/useStore";
 import type { TagKeyword, TagMode } from "../../store/useStore";
 import { cn } from "../../lib/utils";
@@ -10,10 +10,10 @@ function countActiveFilters(filters: {
     labelKeywords: TagKeyword[];
     descriptionKeywords: TagKeyword[];
     minImportance: number;
-}) {
+}, isAdvanced: boolean) {
     let n = 0;
     if (filters.labelKeywords.length > 0) n++;
-    if (filters.descriptionKeywords.length > 0) n++;
+    if (isAdvanced && filters.descriptionKeywords.length > 0) n++;
     if (filters.minImportance > 0) n++;
     return n;
 }
@@ -21,7 +21,7 @@ function countActiveFilters(filters: {
 
 function SectionLabel({ children }: { children: React.ReactNode }) {
     return (
-        <div className="text-[9px] font-semibold uppercase tracking-widest text-muted-foreground mb-1.5">
+        <div className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground mb-1.5">
             {children}
         </div>
     );
@@ -84,21 +84,21 @@ function TagInput({
                 return {
                     bg: "bg-purple-500/15 text-purple-700 dark:text-purple-400 border-purple-500/30",
                     halo: "shadow-[0_0_8px_rgba(168,85,247,0.25)]",
-                    icon: <Asterisk className="w-2.5 h-2.5" />,
+                    icon: <Asterisk className="w-3 h-3" />,
                     label: "Only Must"
                 };
             case 'exclude':
                 return {
                     bg: "bg-red-500/15 text-red-700 dark:text-red-400 border-red-500/30",
                     halo: "shadow-[0_0_8px_rgba(239,68,68,0.25)]",
-                    icon: <Ban className="w-2.5 h-2.5" />,
+                    icon: <Ban className="w-3 h-3" />,
                     label: "Exclude"
                 };
             default:
                 return {
                     bg: "bg-blue-500/15 text-blue-700 dark:text-blue-400 border-blue-500/30",
                     halo: "shadow-[0_0_8px_rgba(59,130,246,0.25)]",
-                    icon: <Check className="w-2.5 h-2.5" />,
+                    icon: <Check className="w-3 h-3" />,
                     label: "Include"
                 };
         }
@@ -115,26 +115,28 @@ function TagInput({
                     <div key={tag.text} className="relative">
                         <span
                             className={cn(
-                                "inline-flex items-center gap-1.5 pl-1.5 pr-1 py-1 border rounded-md text-[10px] font-medium transition-all animate-in zoom-in-95 duration-150 select-none",
+                                "inline-flex items-center gap-1.5 pl-1.5 pr-1 py-1 border rounded-md text-[12px] font-medium transition-all animate-in zoom-in-95 duration-150 select-none",
                                 styles.bg,
                                 styles.halo
                             )}
                         >
                             <div 
-                                className="flex items-center gap-0.5 hover:opacity-70 cursor-pointer pr-1 border-r border-current/20"
+                                className="pr-1 border-r border-current/20"
                                 onClick={(e) => { e.stopPropagation(); setActiveMenu(activeMenu === tag.text ? null : tag.text); }}
                             >
-                                {styles.icon}
-                                <ChevronDown className="w-2.5 h-2.5" />
+                                <div className="flex items-center gap-0.5 cursor-pointer hover:text-black dark:hover:text-white transition-all">
+                                    {styles.icon}
+                                    <ChevronDown className="w-3 h-3" />
+                                </div>
                             </div>
                             
                             {tag.text}
                             
                             <button
                                 onClick={(e) => { e.stopPropagation(); onRemove(tag.text); }}
-                                className="p-0.5 rounded-sm hover:bg-black/5 dark:hover:bg-white/5 transition-all ml-0.5"
+                                className="p-0.5 rounded-sm hover:bg-black/5 dark:hover:bg-white/5 hover:text-black dark:hover:text-white transition-all ml-0.5 cursor-pointer"
                             >
-                                <X className="w-2.5 h-2.5" />
+                                <X className="w-3 h-3" />
                             </button>
                         </span>
 
@@ -176,7 +178,7 @@ function TagInput({
                 onBlur={handleBlur}
                 placeholder={tags.length === 0 ? placeholder : "Add..."}
                 className={cn(
-                    "flex-1 bg-transparent border-none outline-none text-xs text-sidebar-foreground placeholder:text-sidebar-foreground/40 min-w-[60px] py-1",
+                    "flex-1 bg-transparent border-none outline-none text-xs text-sidebar-foreground placeholder:text-sidebar-foreground/40 min-w-[60px] py-1 ml-1",
                     tags.length > 0 ? "placeholder:text-sidebar-foreground/20" : ""
                 )}
             />
@@ -208,18 +210,7 @@ export function GraphFilterPanel() {
     const [isAdvanced, setIsAdvanced] = useState(false);
     const panelRef = useRef<HTMLDivElement>(null);
 
-    // Close on outside click
-    useEffect(() => {
-        function handleClickOutside(e: MouseEvent) {
-            if (panelRef.current && !panelRef.current.contains(e.target as Node)) {
-                setIsOpen(false);
-            }
-        }
-        document.addEventListener("mousedown", handleClickOutside);
-        return () => document.removeEventListener("mousedown", handleClickOutside);
-    }, []);
-
-    const activeCount = countActiveFilters(graphFilters);
+    const activeCount = countActiveFilters(graphFilters, isAdvanced);
 
     return (
         <div ref={panelRef} className="relative pointer-events-auto">
@@ -260,11 +251,11 @@ export function GraphFilterPanel() {
                             <span className="text-xs font-semibold text-sidebar-foreground">Graph Filter Conditions</span>
                             <InfoHelpIcon innerText={KeywordInfo()} boxWidth="w-80" side="bottom" align="start" />
                         </div>
-                        <div className="flex items-center gap-1.5">
+                        <div className="flex items-center gap-1">
                             {activeCount > 0 && (
                                 <button
                                     onClick={resetGraphFilters}
-                                    className="flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-medium text-muted-foreground hover:text-foreground hover:bg-sidebar-accent transition-colors"
+                                    className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-sidebar-accent transition-colors cursor-pointer"
                                     title="Reset all filters"
                                 >
                                     <RotateCcw className="w-3 h-3" />
@@ -272,7 +263,7 @@ export function GraphFilterPanel() {
                             )}
                             <button
                                 onClick={() => setIsOpen(false)}
-                                className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-sidebar-accent transition-colors"
+                                className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-sidebar-accent transition-colors cursor-pointer"
                             >
                                 <X className="w-3.5 h-3.5" />
                             </button>
@@ -290,10 +281,10 @@ export function GraphFilterPanel() {
                                         <SectionLabel>Name &amp; Description</SectionLabel>
                                         <button
                                             onClick={() => setIsAdvanced(true)}
-                                            className="text-[9px] font-medium text-muted-foreground/80 hover:text-foreground hover:bg-sidebar-accent px-1.5 py-0.5 rounded transition-colors"
+                                            className="flex items-center text-[11px] font-medium text-muted-foreground/80 hover:text-foreground hover:bg-sidebar-accent px-1.5 py-0.5 mb-1 rounded transition-colors cursor-pointer"
                                             title="Split into separate name and description filters"
                                         >
-                                            Split by name / description ›
+                                            Split <ChevronRight className="w-3 h-3 mt-0.5" />
                                         </button>
                                     </div>
                                     <TagInput
@@ -319,7 +310,7 @@ export function GraphFilterPanel() {
                                                 descriptionKeywords: graphFilters.descriptionKeywords.map(update),
                                             });
                                         }}
-                                        placeholder="e.g. cancer, allergy…"
+                                        placeholder="Filter by keywords"
                                     />
                                 </div>
                             ) : (
@@ -337,10 +328,10 @@ export function GraphFilterPanel() {
                                                     setGraphFilters({ labelKeywords: merged, descriptionKeywords: merged });
                                                     setIsAdvanced(false);
                                                 }}
-                                                className="text-[9px] font-medium text-muted-foreground/80 hover:text-foreground hover:bg-sidebar-accent px-1.5 py-0.5 rounded transition-colors"
+                                                className="flex items-center text-[11px] font-medium text-muted-foreground/80 hover:text-foreground hover:bg-sidebar-accent px-1.5 py-0.5 mb-1 rounded transition-colors cursor-pointer"
                                                 title="Combine name and description into one filter"
                                             >
-                                                ‹ Combine
+                                                <ChevronLeft className="w-3 h-3 mt-0.5" /> Combine
                                             </button>
                                         </div>
                                         <TagInput
@@ -355,7 +346,7 @@ export function GraphFilterPanel() {
                                                         : t
                                                 )
                                             })}
-                                            placeholder="e.g. cancer, allergy…"
+                                            placeholder="Filter name by keywords"
                                         />
                                     </div>
                                     <div>
@@ -372,21 +363,21 @@ export function GraphFilterPanel() {
                                                         : t
                                                 )
                                             })}
-                                            placeholder="e.g. chronic, viral…"
+                                            placeholder="Filter description by keywords"
                                         />
                                     </div>
                                 </>
                             )}
 
                             {/* Minimal Mode Legend */}
-                            <div className="flex flex-wrap gap-x-3 gap-y-1.5 px-0.5">
-                                <div className="flex items-center gap-1 text-[9px] text-blue-500/80">
+                            <div className="flex flex-wrap flex-col gap-x-3 gap-y-1.5 px-0.5 text-[11.5px]">
+                                <div className="flex items-center gap-1 text-blue-500/80">
                                     <Check className="w-2.5 h-2.5" /> <span>Include (OR)</span>
                                 </div>
-                                <div className="flex items-center gap-1 text-[9px] text-purple-500/80">
+                                <div className="flex items-center gap-1 text-purple-500/80">
                                     <Asterisk className="w-2.5 h-2.5" /> <span>Mandatory (AND)</span>
                                 </div>
-                                <div className="flex items-center gap-1 text-[9px] text-red-500/80">
+                                <div className="flex items-center gap-1 text-red-500/80">
                                     <Ban className="w-2.5 h-2.5" /> <span>Exclude (NOT)</span>
                                 </div>
                             </div>
@@ -402,7 +393,7 @@ export function GraphFilterPanel() {
                                     <SectionLabel>Min. importance</SectionLabel>
                                     <InfoHelpIcon innerText={<p>Slide right to hide less-connected nodes and focus on the core structure.</p>} boxWidth="w-65" side="bottom" align="start" />
                                 </div>
-                                <span className="text-[10px] font-mono text-sidebar-foreground/70 tabular-nums">
+                                <span className="text-[11px] font-mono text-sidebar-foreground/70 tabular-nums">
                                     {graphFilters.minImportance > 0
                                         ? `≥ ${Math.round(graphFilters.minImportance * 100)}%`
                                         : "All"}
@@ -418,7 +409,7 @@ export function GraphFilterPanel() {
                                 onChange={(e) => setGraphFilters({ minImportance: Number(e.target.value) })}
                                 className="w-full h-1.5 bg-border rounded-full appearance-none cursor-pointer focus:outline-none [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3.5 [&::-webkit-slider-thumb]:h-3.5 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-foreground [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-background [&::-webkit-slider-thumb]:shadow-sm hover:[&::-webkit-slider-thumb]:scale-125 transition-all"
                             />
-                            <div className="flex justify-between text-[9px] text-muted-foreground mt-1.5">
+                            <div className="flex justify-between text-[11px] text-muted-foreground mt-1.5">
                                 <span>All nodes</span>
                                 <span>Core nodes only</span>
                             </div>

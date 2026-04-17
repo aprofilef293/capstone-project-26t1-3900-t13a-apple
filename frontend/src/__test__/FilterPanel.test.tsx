@@ -67,24 +67,12 @@ describe("tests for filter panel", () => {
     expect(screen.queryByText("Graph Filter Conditions")).not.toBeInTheDocument();
   });
 
-  it("filter panel closes by tapping outside the screen", () => {
-    render(<GraphFilterPanel />);
-
-    // open the panel
-    fireEvent.click(screen.getByTitle("Graph filters"));
-    expect(screen.getByText("Graph Filter Conditions")).toBeInTheDocument();
-
-    // click somewhere outside the panel
-    fireEvent.mouseDown(document.body);
-    expect(screen.queryByText("Graph Filter Conditions")).not.toBeInTheDocument();
-  });
-
   it("correctly adds search terms (name and description field together)", () => {
       const { rerender } = render(<GraphFilterPanel />);
       fireEvent.click(screen.getByTitle("Graph filters"));
 
       // type 'cancer' into the search bar + click enter
-      const input = screen.getByPlaceholderText("e.g. cancer, allergy…");
+      const input = screen.getByPlaceholderText("Filter by keywords");
       fireEvent.change(input, { target: { value: "cancer" } });
       fireEvent.keyDown(input, { key: "Enter" });
 
@@ -116,7 +104,8 @@ describe("tests for filter panel", () => {
 
     // split the single search bar into 2 separate ones for name and description
     fireEvent.click(screen.getByTitle("Split into separate name and description filters"));
-    const [nameInput, descInput] = screen.getAllByPlaceholderText(/e\.g\./);
+    const nameInput = screen.getByPlaceholderText("Filter name by keywords");
+    const descInput = screen.getByPlaceholderText("Filter description by keywords");
 
     // add 'allergy' into name field + click enter + check we have 'allergy' tag visible
     fireEvent.change(nameInput, { target: { value: "allergy" } });
