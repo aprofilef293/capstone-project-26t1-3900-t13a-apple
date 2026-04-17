@@ -63,7 +63,7 @@ const sections: ManualSection[] = [
         content: (
           <>
             Click the
-            <span className="mx-1 inline-flex items-center gap-1 rounded border border-sidebar-border bg-sidebar-accent/60 pl-2.5 pr-1.5 text-[12px] text-sidebar-foreground/80 align-middle">
+            <span className="mx-1 inline-flex items-center gap-1 rounded border border-sidebar-border bg-sidebar-accent/60 pl-2.5 pr-1.5 py-0.5 text-[12px] text-sidebar-foreground/80 align-middle">
               dropdown
               <ChevronDown className="h-3 w-3 opacity-60" />
             </span>
@@ -496,7 +496,7 @@ const sections: ManualSection[] = [
         content: (
           <>
             Click on
-            <span className="mx-1 inline-flex items-center gap-1 rounded border border-sidebar-border bg-sidebar-accent/60 pl-2.5 pr-1.5 text-[12px] text-sidebar-foreground/80 align-middle">
+            <span className="mx-1 inline-flex items-center gap-1 rounded border border-sidebar-border bg-sidebar-accent/60 pl-2.5 pr-1.5 py-0.5 text-[12px] text-sidebar-foreground/80 align-middle">
               Select attribute
               <ChevronDown className="h-3 w-3 opacity-60" />
             </span>
@@ -542,25 +542,40 @@ const sections: ManualSection[] = [
     icon: ListTree,
     items: [
       {
-        content:
-          "Click on Hierarchy button to open up the Hierarchy Panel and view the graph in a folder-like structure",
+        content: (
+          <>
+            Click on
+            <code className="mx-1 rounded border border-sidebar-border bg-sidebar-accent/60 px-1.5 py-0.5 font-mono text-[12px] text-sidebar-foreground/80">
+              Hierarchy
+            </code>
+            button to open up the Hierarchy Panel and view the graph in a
+            folder-like structure
+          </>
+        ),
       },
       {
         content:
           "Folders are in alphabetical order and can be expanded to explore related nodes",
       },
       {
-        content:
-          "Clicking on a folder opens a side panel containing:",
-          subItems: [
-            "Node attributes",
-            "Connections (incoming / outgoing)",
-            "Computed attributes"
-          ]
+        content: "Clicking on a folder opens a side panel containing:",
+        subItems: [
+          "Node attributes",
+          "Connections (incoming / outgoing)",
+          "Computed attributes",
+        ],
       },
       {
-        content:
-          "Click on the Graph button to hide the Hierarchy Panel and return to the graph",
+        content: (
+          <>
+            Click on the
+            <span className="mx-1 inline-flex items-center gap-1 rounded border border-sidebar-border bg-sidebar-accent/60 px-1.5 py-1 text-[12px] leading-none text-sidebar-foreground/80 align-middle">
+              <GitGraph className="h-3.5 w-3.5 opacity-60" />
+              <span>Graph</span>
+            </span>
+            button to hide the Hierarchy Panel and return to the graph
+          </>
+        ),
       },
     ],
   },
