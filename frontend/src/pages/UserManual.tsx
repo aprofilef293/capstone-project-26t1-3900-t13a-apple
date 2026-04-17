@@ -21,6 +21,11 @@ import {
   RotateCcw,
   RefreshCcw,
   Download,
+  ZoomOut,
+  Maximize,
+  ZoomIn,
+  Sun,
+  Moon,
 } from "lucide-react";
 import { PageHeader } from "../components/layout/PageHeader";
 import type { JSX } from "react/jsx-runtime";
@@ -583,18 +588,58 @@ const sections: ManualSection[] = [
     title: "Extras",
     icon: CircleQuestionMark,
     items: [
-      { content: "Zoom in / out: Click to zoom in or out of the graph" },
       {
-        content:
-          "Fit to View button: Click to centre and resize the graph to fit the screen",
+        content: (
+          <>
+            <span className="mx-1 inline-flex items-center gap-1 rounded border border-sidebar-border bg-sidebar-accent/60 px-1.5 py-1 text-[12px] leading-none text-sidebar-foreground/80 align-middle">
+              <ZoomIn className="h-3.5 w-3.5 opacity-60" />
+              <span>Zoom in</span>
+              <span>/</span>
+              <ZoomOut className="h-3.5 w-3.5 opacity-60" />
+              <span>Zoom out</span>
+            </span>
+            : Click to zoom in or out of the graph
+          </>
+        ),
+      },
+      {
+        content: (
+          <>
+            <span className="mx-1 inline-flex items-center gap-1 rounded border border-sidebar-border bg-sidebar-accent/60 px-1.5 py-1 text-[12px] leading-none text-sidebar-foreground/80 align-middle">
+              <Maximize className="h-3.5 w-3.5 opacity-60" />
+              <span>Fit to view button:</span>
+            </span>
+            : Click to centre and resize the graph to fit the screen
+          </>
+        ),
       },
       {
         content:
-          "Importance Slider: Adjust the importance slider to control the level of detail shown in the entire graph: Show all nodes (Level 1), Only show the most important nodes (Level 5)",
+          "Importance Slider: Adjust the importance slider to control the level of detail shown in the entire graph:",
+        subItems: [
+          "Show all nodes (Level 1)",
+          "Only show the most important nodes (Level 5)",
+        ],
       },
       {
-        content:
-          "Light/ Dark mode: Click light or dark mode icons to switch to its corresponding theme",
+        content: (
+          <>
+            <span className="mx-1 inline-flex items-center gap-1 whitespace-nowrap rounded border border-sidebar-border bg-sidebar-accent/60 px-1.5 py-1 text-[12px] leading-none text-sidebar-foreground/80 align-middle">
+              <Sun className="h-3.5 w-3.5 opacity-60" />
+              <span>Light mode</span>
+              <span>/</span>
+              <Moon className="h-3.5 w-3.5 opacity-60" />
+              <span>Dark mode</span>
+            </span>
+            <span className="whitespace-nowrap">
+              : Click
+              <Sun className="inline h-3.5 w-3.5 align-[-0.125em] opacity-60" />
+              or
+              <Moon className="inline h-3.5 w-3.5 align-[-0.125em] opacity-60" />
+              icons to switch to its corresponding theme
+            </span>
+          </>
+        ),
       },
       {
         content: (
