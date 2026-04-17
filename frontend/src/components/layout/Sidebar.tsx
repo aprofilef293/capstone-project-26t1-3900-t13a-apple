@@ -1,4 +1,4 @@
-import { Activity, GitMerge, Settings, Plus, ChevronLeft, ChevronRight, HardDrive } from "lucide-react";
+import { Activity, GitMerge, Settings, Plus, ChevronLeft, ChevronRight, HardDrive, BookOpen } from "lucide-react";
 import { Link, useLocation } from "@tanstack/react-router";
 import Logo from "../../assets/Logo.svg";
 import { Button } from "../ui/button";
@@ -11,6 +11,7 @@ const navigation = [
     { name: "Dashboard", href: "/", icon: Activity },
     { name: "Data Manager", href: "/manager", icon: HardDrive },
     { name: "Network Graph", href: "/explorer", icon: GitMerge },
+    { name: "User Manual", href: "/manual", icon: BookOpen },
     { name: "Settings", href: "/settings", icon: Settings },
 ];
 
