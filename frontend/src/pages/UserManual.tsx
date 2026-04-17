@@ -16,6 +16,8 @@ import {
   CircleAlert,
   CircleChevronLeft,
   CornerDownLeft,
+  Filter,
+  Type,
 } from "lucide-react";
 import { PageHeader } from "../components/layout/PageHeader";
 import type { JSX } from "react/jsx-runtime";
@@ -58,7 +60,7 @@ const sections: ManualSection[] = [
         content: (
           <>
             Click the
-            <span className="mx-1 inline-flex items-center gap-1 rounded border border-sidebar-border bg-sidebar-accent/60 pl-2.5 pr-1.5 text-[11px] text-sidebar-foreground/80 align-middle">
+            <span className="mx-1 inline-flex items-center gap-1 rounded border border-sidebar-border bg-sidebar-accent/60 pl-2.5 pr-1.5 text-[12px] text-sidebar-foreground/80 align-middle">
               dropdown
               <ChevronDown className="h-3 w-3 opacity-60" />
             </span>
@@ -80,7 +82,7 @@ const sections: ManualSection[] = [
         content: (
           <>
             Click
-            <code className="mx-1 rounded border border-sidebar-border bg-sidebar-accent/60 px-1.5 py-0.5 font-mono text-[11px] text-sidebar-foreground/80">
+            <code className="mx-1 rounded border border-sidebar-border bg-sidebar-accent/60 px-1.5 py-0.5 font-mono text-[12px] text-sidebar-foreground/80">
               Select File
             </code>
             on
@@ -105,11 +107,11 @@ const sections: ManualSection[] = [
         content: (
           <>
             Upload an
-            <code className="mx-1 rounded border border-sidebar-border bg-sidebar-accent/60 px-1.5 py-0.5 font-mono text-[11px] text-sidebar-foreground/80">
+            <code className="mx-1 rounded border border-sidebar-border bg-sidebar-accent/60 px-1.5 py-0.5 font-mono text-[12px] text-sidebar-foreground/80">
               .obo
             </code>
             or
-            <code className="mx-1 rounded border border-sidebar-border bg-sidebar-accent/60 px-1.5 py-0.5 font-mono text-[11px] text-sidebar-foreground/80">
+            <code className="mx-1 rounded border border-sidebar-border bg-sidebar-accent/60 px-1.5 py-0.5 font-mono text-[12px] text-sidebar-foreground/80">
               .owl
             </code>
             file
@@ -181,7 +183,7 @@ const sections: ManualSection[] = [
         content: (
           <>
             Use the
-            <span className="mx-1 inline-flex items-center gap-1 rounded border border-sidebar-border bg-sidebar-accent/60 px-1.5 py-0.5 text-[11px] leading-none text-sidebar-foreground/80 align-middle">
+            <span className="mx-1 inline-flex items-center gap-1 rounded border border-sidebar-border bg-sidebar-accent/60 px-1.5 py-0.5 text-[12px] leading-none text-sidebar-foreground/80 align-middle">
               <CircleChevronLeft className="h-3.5 w-3.5 opacity-60" />
               <span>BACK</span>
             </span>
@@ -199,7 +201,7 @@ const sections: ManualSection[] = [
         content: (
           <>
             Type a keyword into the
-            <span className="mx-1 inline-flex items-center gap-1 rounded-lg border border-sidebar-border bg-sidebar/95 px-2.5 py-1 text-[11px] leading-none text-sidebar-foreground/70 shadow-sm">
+            <span className="mx-1 inline-flex items-center gap-1 rounded-lg border border-sidebar-border bg-sidebar/95 px-2.5 py-1 text-[12px] leading-none text-sidebar-foreground/70 shadow-sm">
               <Search className="h-3 w-3 opacity-60" />
               <span>search bar</span>
             </span>
@@ -214,12 +216,12 @@ const sections: ManualSection[] = [
         content: (
           <>
             Clicking
-            <span className="mx-1 inline-flex items-center gap-1 rounded border border-sidebar-border bg-sidebar-accent/60 px-1.5 py-0.5 text-[11px] leading-none text-sidebar-foreground/80 align-middle">
+            <span className="mx-1 inline-flex items-center gap-1 rounded border border-sidebar-border bg-sidebar-accent/60 px-1.5 py-0.5 text-[12px] leading-none text-sidebar-foreground/80 align-middle">
               <CornerDownLeft className="h-3.5 w-3.5 opacity-60" />
               <span>Enter</span>
             </span>
             or the
-            <span className="mx-1 inline-flex items-center gap-1 rounded-lg border border-sidebar-border bg-sidebar/95 px-2.5 py-1 text-[11px] leading-none text-sidebar-foreground/70 shadow-sm">
+            <span className="mx-1 inline-flex items-center gap-1 rounded-lg border border-sidebar-border bg-sidebar/95 px-2.5 py-1 text-[12px] leading-none text-sidebar-foreground/70 shadow-sm">
               <Search className="h-3 w-3 opacity-60" />
             </span>
             icon will bring up a side panel containing the full list of results
@@ -239,7 +241,7 @@ const sections: ManualSection[] = [
           <>
             Click on any node in the results side panel to see more information
             about the node, and click the
-            <span className="mx-1 inline-flex items-center gap-1 rounded border border-sidebar-border bg-sidebar-accent/60 px-1.5 py-0.5 text-[11px] leading-none text-sidebar-foreground/80 align-middle">
+            <span className="mx-1 inline-flex items-center gap-1 rounded border border-sidebar-border bg-sidebar-accent/60 px-1.5 py-0.5 text-[12px] leading-none text-sidebar-foreground/80 align-middle">
               <CircleChevronLeft className="h-3.5 w-3.5 opacity-60" />
               <span>BACK</span>
             </span>
@@ -251,7 +253,7 @@ const sections: ManualSection[] = [
         content: (
           <>
             Click the
-            <span className="mx-1 inline-flex items-center gap-1 rounded-md border border-sidebar-border bg-sidebar-accent/60 px-1.5 py-1 text-[11px] leading-none text-sidebar-foreground/80 align-middle">
+            <span className="mx-1 inline-flex items-center gap-1 rounded-md border border-sidebar-border bg-sidebar-accent/60 px-1.5 py-1 text-[12px] leading-none text-sidebar-foreground/80 align-middle">
               <X className="h-3.5 w-3 opacity-60" />
             </span>
             button in the search bar to clear the search term and reset the
@@ -269,7 +271,7 @@ const sections: ManualSection[] = [
         content: (
           <>
             Click the
-            <code className="mx-1 rounded border border-sidebar-border bg-sidebar-accent/60 px-1.5 py-0.5 font-mono text-[11px] text-sidebar-foreground/80">
+            <code className="mx-1 rounded border border-sidebar-border bg-sidebar-accent/60 px-1.5 py-0.5 font-mono text-[12px] text-sidebar-foreground/80">
               Advanced
             </code>
             button next to the search bar
@@ -280,12 +282,12 @@ const sections: ManualSection[] = [
         content: (
           <>
             Type a query and click
-            <span className="mx-1 inline-flex items-center gap-1 rounded border border-sidebar-border bg-sidebar-accent/60 px-1.5 py-0.5 text-[11px] leading-none text-sidebar-foreground/80 align-middle">
+            <span className="mx-1 inline-flex items-center gap-1 rounded border border-sidebar-border bg-sidebar-accent/60 px-1.5 py-0.5 text-[12px] leading-none text-sidebar-foreground/80 align-middle">
               <CornerDownLeft className="h-3.5 w-3.5 opacity-60" />
               <span>Enter</span>
             </span>
             or the
-            <span className="mx-1 inline-flex items-center gap-1 rounded-lg border border-sidebar-border bg-sidebar/95 px-2.5 py-1 text-[11px] leading-none text-sidebar-foreground/70 shadow-sm">
+            <span className="mx-1 inline-flex items-center gap-1 rounded-lg border border-sidebar-border bg-sidebar/95 px-2.5 py-1 text-[12px] leading-none text-sidebar-foreground/70 shadow-sm">
               <Search className="h-3 w-3 opacity-60" />
             </span>
             icon to bring up the results side panel
@@ -296,7 +298,7 @@ const sections: ManualSection[] = [
         content: (
           <>
             Each result in the side panel contains a similarity score
-            <code className="mx-1 rounded border border-sidebar-border bg-sidebar-accent/60 px-1.5 py-0.5 font-mono text-[11px] text-sidebar-foreground/80">
+            <code className="mx-1 rounded border border-sidebar-border bg-sidebar-accent/60 px-1.5 py-0.5 font-mono text-[12px] text-sidebar-foreground/80">
               %
             </code>
             representing how similar the result is to the search query
@@ -308,7 +310,7 @@ const sections: ManualSection[] = [
           <>
             Click on any node in the results side panel to see more information
             about the node, and click the
-            <span className="mx-1 inline-flex items-center gap-1 rounded border border-sidebar-border bg-sidebar-accent/60 px-1.5 py-0.5 text-[11px] leading-none text-sidebar-foreground/80 align-middle">
+            <span className="mx-1 inline-flex items-center gap-1 rounded border border-sidebar-border bg-sidebar-accent/60 px-1.5 py-0.5 text-[12px] leading-none text-sidebar-foreground/80 align-middle">
               <CircleChevronLeft className="h-3.5 w-3.5 opacity-60" />
               <span>BACK</span>
             </span>
@@ -320,7 +322,7 @@ const sections: ManualSection[] = [
         content: (
           <>
             Click
-            <span className="mx-1 inline-flex items-center gap-1 rounded-md border border-sidebar-border bg-sidebar-accent/60 px-1.5 py-1 text-[11px] leading-none text-sidebar-foreground/80 align-middle">
+            <span className="mx-1 inline-flex items-center gap-1 rounded-md border border-sidebar-border bg-sidebar-accent/60 px-1.5 py-1 text-[12px] leading-none text-sidebar-foreground/80 align-middle">
               <X className="h-3.5 w-3 opacity-60" />
             </span>
             button in the search bar to clear the search term and reset the
@@ -339,22 +341,77 @@ const sections: ManualSection[] = [
         content:
           "Use the Filter Panel to filter the graph based on node name, description, or both",
       },
-      { content: "Click on the funnel icon to open the Filter Panel" },
       {
-        content:
-          "The Split button can be used to separate the search into two fields: Filter by node name, Filter by node description",
+        content: (
+          <>
+            Click on the
+            <span className="mx-1 inline-flex items-center gap-1 rounded border border-sidebar-border bg-sidebar-accent/60 px-1.5 py-0.5 text-[12px] leading-none text-sidebar-foreground/80 align-middle">
+              <Filter className="h-3.5 w-3.5 opacity-60" />
+              <span>funnel</span>
+            </span>
+            icon to open the Filter Panel
+          </>
+        ),
+      },
+      {
+        content: (
+          <>
+            The
+            <code className="mx-1 rounded border border-sidebar-border bg-sidebar-accent/60 px-1.5 py-0.5 font-mono text-[12px] text-sidebar-foreground/80">
+              Split
+            </code>
+            button can be used to separate the search into two fields:
+          </>
+        ),
+        subItems: ["Filter by node name", "Filter by node description"],
+      },
+      {
+        content: (
+          <>
+            The
+            <code className="mx-1 rounded border border-sidebar-border bg-sidebar-accent/60 px-1.5 py-0.5 font-mono text-[12px] text-sidebar-foreground/80">
+              Split
+            </code>
+            button changes to
+            <code className="mx-1 rounded border border-sidebar-border bg-sidebar-accent/60 px-1.5 py-0.5 font-mono text-[12px] text-sidebar-foreground/80">
+              Combine
+            </code>
+            once clicked so users can merge the two search bars back into a
+            single search bar"
+          </>
+        ),
+      },
+      {
+        content: (
+          <>
+            Type a keyword in the search bar and click
+            <span className="mx-1 inline-flex items-center gap-1 rounded border border-sidebar-border bg-sidebar-accent/60 px-1.5 py-0.5 text-[12px] leading-none text-sidebar-foreground/80 align-middle">
+              <CornerDownLeft className="h-3.5 w-3.5 opacity-60" />
+              <span>Enter</span>
+            </span>
+            to create a tag and update the graph
+          </>
+        ),
       },
       {
         content:
-          "Type a keyword in the search bar and click Enter to create a tag. The graph will also update upon clicking Enter",
+          "Click the dropdown on individual tags to change its boolean condition:",
+        subItems: [
+          <span className="inline-flex items-center rounded border border-blue-500/30 bg-blue-500/15 px-2 py-0.5 text-[12px] text-blue-700 dark:text-blue-400">
+            Blue → OR
+          </span>,
+          <span className="inline-flex items-center rounded border border-purple-500/30 bg-purple-500/15 px-2 py-0.5 text-[12px] text-purple-700 dark:text-purple-400">
+            Purple → AND
+          </span>,
+          <span className="inline-flex items-center rounded border border-red-500/30 bg-red-500/15 px-2 py-0.5 text-[12px] text-red-700 dark:text-red-400">
+            Red → NOT
+          </span>,
+        ],
       },
       {
         content:
-          "Click the dropdown on individual tags to change its boolean condition: Blue → OR, Purple → AND, Red → NOT",
-      },
-      {
-        content:
-          "Adjust the importance slider to control the level of detail shown in the graph: Show all nodes, Only show the most important nodes",
+          "Adjust the importance slider to control the level of detail shown in the graph:",
+        subItems: ["Show all nodes", "Only show the most important nodes"],
       },
       {
         content:
@@ -384,7 +441,7 @@ const sections: ManualSection[] = [
           <>
             Clicking on any node in the side panel will give users more
             information about that node, and clicking the
-            <span className="mx-1 inline-flex items-center gap-1 rounded border border-sidebar-border bg-sidebar-accent/60 px-1.5 py-0.5 text-[11px] leading-none text-sidebar-foreground/80 align-middle">
+            <span className="mx-1 inline-flex items-center gap-1 rounded border border-sidebar-border bg-sidebar-accent/60 px-1.5 py-0.5 text-[12px] leading-none text-sidebar-foreground/80 align-middle">
               <CircleChevronLeft className="h-3.5 w-3.5 opacity-60" />
               <span>BACK</span>
             </span>
