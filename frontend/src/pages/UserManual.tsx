@@ -14,6 +14,7 @@ import {
   XCircle,
   ChevronDown,
   CircleAlert,
+  CircleChevronLeft,
 } from "lucide-react";
 import { PageHeader } from "../components/layout/PageHeader";
 import type { JSX } from "react/jsx-runtime";
@@ -151,7 +152,7 @@ const sections: ManualSection[] = [
             View ontology data as a graph in the
             <Link
               to="/explorer"
-              className="underline decoration-sidebar-foreground/40 underline-offset-2 hover:text-blue-600 dark:hover:text-blue-400"
+              className="mx-1 underline decoration-sidebar-foreground/40 underline-offset-2 hover:text-blue-600 dark:hover:text-blue-400"
             >
               Network Graph page
             </Link>
@@ -160,18 +161,32 @@ const sections: ManualSection[] = [
         ),
       },
       {
-        content:
-          "Click a graph node to open a side panel containing Node attributes, Connections (incoming / outgoing), and Computed attributes",
+        content: "Click a graph node to open a side panel containing:",
+        subItems: [
+          "Node attributes",
+          "Connections (incoming / outgoing)",
+          "Computed attributes",
+        ],
       },
       {
         content:
           "Click on graph nodes or nodes in the side panel to navigate around the graph",
       },
       {
-        content:
-          "Connections can be sorted by Name, Size, Importance, Type, and Colour",
+        content: "Connections can be sorted by:",
+        subItems: ["Name", "Size", "Importance", "Type", "Colour"],
       },
-      { content: "Use the Back button to return to previous nodes" },
+      {
+        content: (
+          <>
+            Use the
+            <span className="inline-flex items-center gap-1 rounded border border-transparent px-1.5 py-0.5 text-[12px] leading-none text-sidebar-foreground/50 align-middle">
+              <CircleChevronLeft className="h-3.5 w-3.5" /> <span>BACK</span>
+            </span>
+            button to return to previous nodes
+          </>
+        ),
+      },
     ],
   },
   {
@@ -334,7 +349,8 @@ const sections: ManualSection[] = [
             icons: Help icons have been scattered throughout the web-app (e.g.,
             in the importance slider, filter panel, search results side panel,
             and export csv button in multi-select side panel) to help explain
-            features that may be confusing to understand on first use. Hovering over these icons will show more information about the feature.
+            features that may be confusing to understand on first use. Hovering
+            over these icons will show more information about the feature.
           </>
         ),
       },
