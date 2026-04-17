@@ -17,7 +17,6 @@ import {
   CircleChevronLeft,
   CornerDownLeft,
   Filter,
-  Type,
   RotateCcw,
   RefreshCcw,
   Download,
@@ -28,7 +27,6 @@ import {
   Moon,
 } from "lucide-react";
 import { PageHeader } from "../components/layout/PageHeader";
-import type { JSX } from "react/jsx-runtime";
 import { Link } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 
