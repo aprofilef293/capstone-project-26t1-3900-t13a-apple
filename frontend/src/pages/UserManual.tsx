@@ -207,8 +207,16 @@ const sections: ManualSection[] = [
           "These results are grouped into three categories: Most relevant (Contains exact node name matches), Related (Contains matches in description or synonym field of the node), Suggested (Contains results from fuzzy search)",
       },
       {
-        content:
-          "Click on any node in the results side panel to see more information about the node, and click the Back button to return to the results side panel",
+        content: (
+          <>
+            Click on any node in the results side panel to see more information
+            about the node, and click the
+            <span className="inline-flex items-center gap-1 rounded border border-transparent px-1.5 py-0.5 text-[12px] leading-none text-sidebar-foreground/50 align-middle">
+              <CircleChevronLeft className="h-3.5 w-3.5" /> <span>BACK</span>
+            </span>
+            button to return to the results side panel
+          </>
+        ),
       },
       {
         content:
@@ -230,8 +238,16 @@ const sections: ManualSection[] = [
           "Each result in the side panel contains a similarity score (%) representing how similar the result is to the search query",
       },
       {
-        content:
-          "Click on any node in the results side panel to see more information about the node, and click the Back button to return to the results side panel",
+        content: (
+          <>
+            Click on any node in the results side panel to see more information
+            about the node, and click the
+            <span className="inline-flex items-center gap-1 rounded border border-transparent px-1.5 py-0.5 text-[12px] leading-none text-sidebar-foreground/50 align-middle">
+              <CircleChevronLeft className="h-3.5 w-3.5" /> <span>BACK</span>
+            </span>
+            button to return to the results side panel
+          </>
+        ),
       },
       {
         content:
@@ -287,6 +303,17 @@ const sections: ManualSection[] = [
       {
         content:
           "If paths exist between selected nodes, the graph will update to highlight these paths. If no path exists between selected nodes, a message will be shown on the side panel indicating this",
+      },
+      {
+        content: (
+          <>
+            Clicking on any node in the side panel will give users more information about that node, and clicking the
+            <span className="inline-flex items-center gap-1 rounded border border-transparent px-1.5 py-0.5 text-[12px] leading-none text-sidebar-foreground/50 align-middle">
+              <CircleChevronLeft className="h-3.5 w-3.5" /> <span>BACK</span>
+            </span>
+            button will take users back to the multi-select side panel
+          </>
+        ),
       },
       {
         content:
