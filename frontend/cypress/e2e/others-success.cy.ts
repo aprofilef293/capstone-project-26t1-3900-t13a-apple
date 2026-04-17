@@ -1,20 +1,16 @@
 describe("additional small ui feature checks", () => {
   beforeEach(() => {
-    cy.visit('http://localhost:5173')
+    cy.visit("http://localhost:5173");
   });
 
   it("toggle between light and dark mode", () => {
     // click btn to switch to light mode
-    cy.contains("span", "Toggle theme")
-        .parent("button")
-        .click();
+    cy.contains("span", "Toggle theme").parent("button").click();
 
-    cy.get("html").should("not.have.class", "dark"); 
+    cy.get("html").should("not.have.class", "dark");
 
     // click btn to swtch back to dark mode
-    cy.contains("span", "Toggle theme")
-        .parent("button")
-        .click();
+    cy.contains("span", "Toggle theme").parent("button").click();
 
     cy.get("html").should("have.class", "dark");
   });
@@ -22,12 +18,20 @@ describe("additional small ui feature checks", () => {
   it("left side bar collapse and expand", () => {
     cy.contains("OBO Explorer").should("be.visible");
 
-    // collapse left sidebar button 
+    // collapse left sidebar button
     cy.get("button svg.lucide-chevron-left").closest("button").click();
     cy.contains("OBO Explorer").should("not.exist");
 
     // expand right sidebar button
     cy.get("button svg.lucide-chevron-right").closest("button").click();
     cy.contains("OBO Explorer").should("be.visible");
+  });
+
+  it("user manual page opens", () => {
+    cy.contains("a", "User Manual").click();
+
+    cy.url().should("include", "/manual");
+    cy.contains("h1, h2, [role='heading']", "User Manual").should("be.visible");
+    cy.contains("Steps on how to use the OBO Explorer.").should("be.visible");
   });
 });
