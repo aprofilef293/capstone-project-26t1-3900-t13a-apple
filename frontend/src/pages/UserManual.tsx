@@ -633,9 +633,9 @@ const sections: ManualSection[] = [
             </span>
             <span className="whitespace-nowrap">
               : Click
-              <Sun className="inline h-3.5 w-3.5 align-[-0.125em] opacity-60" />
+              <Sun className="mx-1 inline h-3.5 w-3.5 align-[-0.125em] opacity-60" />
               or
-              <Moon className="inline h-3.5 w-3.5 align-[-0.125em] opacity-60" />
+              <Moon className="mx-1 inline h-3.5 w-3.5 align-[-0.125em] opacity-60" />
               icons to switch to its corresponding theme
             </span>
           </>
