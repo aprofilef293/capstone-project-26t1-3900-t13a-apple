@@ -1,13 +1,13 @@
 # Ontology Explorer
 
-## 1. Abstract
+### 1. Abstract
 
 > Ontology Explorer is an interactive web based application for visualizing and storing implementation science data using ontology in the Open Biomedical Ontologies (OBO) and Ontology Web Language (OWL) format. Implementation science studies generate complex and interconnected data, such as implementation scenarios, barriers, facilitators, strategies, settings, and outcomes. Systematically extracting and structuring these data can improve understanding of how and why implementation strategies succeed or fail. However, this extraction process is time consuming, and the resulting data are often not preserved in formats that support reuse or secondary analysis. This project shows all of the terms in the ontology in a two dimensional space, where the edges between terms reflect their relationships. Therefore, our application aims to improve the interactivity of implementation science data and to demonstrate how ontology data formats can support interactive data visualisation and reuse.
 
 ## Table of Contents
 
 - [Ontology Explorer](#ontology-explorer)
-  - [1. Abstract](#1-abstract)
+    - [1. Abstract](#1-abstract)
   - [Table of Contents](#table-of-contents)
   - [2. Introduction](#2-introduction)
   - [3. Installation Manual](#3-installation-manual)
@@ -27,11 +27,7 @@
 
 ## 2. Introduction
 
-We intentionally structured this project as separate backend and frontend projects. This separation is reflected throughout our design process including independent Docker builds and documentation.
-
-- See [backend README](backend/README.md) for more info.
-- See [frontend README](frontend/README.md) for more info.
-
+We intentionally structured this project as separate backend and frontend projects. This separation is reflected throughout our design process including independent Docker builds and documentation. See [backend README](backend/README.md) and [frontend README](frontend/README.md) for more info.
 
 ## 3. Installation Manual
 
@@ -39,11 +35,11 @@ We intentionally structured this project as separate backend and frontend projec
 
 #### 3.1.1 Prerequisites
 
-Must have Docker and Docker Compose installed. A HuggingFace account and API token, see section 3.5.
+Docker and Docker Compose must be installed. The application runs fully locally by default. A HuggingFace account and API token are only needed if you want to use the remote HuggingFace Inference API instead of local embeddings [Section 3.5](#35-huggingface-inference-providers). A Gemini API key is also optional, for query expansion [Section 3.6](#36-gemini-query-expansion).
 
 #### 3.1.2 Windows Environment
 
-Install WSL 2 if not already installed. Once installed, run `wsl` in Command Prompt. In the WSL, follow the steps outlined in Section 3.1.3.
+Install WSL 2 if not already installed. Once installed, run `wsl` in Command Prompt. In the WSL, follow the steps in [Section 3.1.3](#313-linux-and-macos-environment).
 
 #### 3.1.3 Linux and MacOS Environment
 
@@ -52,19 +48,16 @@ Install WSL 2 if not already installed. Once installed, run `wsl` in Command Pro
 This will build and start three services, Memgraph, backend and frontend. Wait until all services are running, until you see the log output of all three containers before using the application. There are two build options: a production build and a development build that support hot reloading. To run the Docker container from project root, follow these steps:
 
 ```bash
-# 1. Open a terminal and change directory to project root.
-cd capstone
-
-# 2. Copy the environment file in the root directory and configure it. See Section 3.3 for required variables.
+# 1. In the project root, copy the environment file in the backend directory and configure it. See Section 3.3 for required variables.
 cd backend
 cp .env.example .env
 cd ..
 
-# 3. Build and start the containers.
+# 2. Build and start the containers.
 docker compose up --build                       # Production
-docker compose -f docker-compose.dev.yml up     # Development
+docker compose -f docker-compose.dev.yml up --build    # Development
 
-# 4. When finished, remove the containers.
+# 3. When finished, remove the containers.
 docker compose down
 docker compose down -v                          # Or to remove the volumes
 ```
@@ -74,15 +67,15 @@ docker compose down -v                          # Or to remove the volumes
 To run frontend and backend as separate containers, it's similar to the steps previously. Open two terminals, and follow these commands:
 
 ```bash
-# Terminal 1: Backend
-cd capstone/backend
+# Terminal 1: Backend, In project root
+cd backend
 cp .env.example .env
 docker compose up --build
 # Or for development
 docker compose -f docker-compose.dev.yml up --build
 
-# Terminal 2: Frontend
-cd capstone/frontend
+# Terminal 2: Frontend, In project root
+cd frontend
 docker compose up --build
 # Or for development
 docker compose -f docker-compose.dev.yml up --build
