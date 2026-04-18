@@ -22,7 +22,8 @@ API runs at `http://localhost:8000`. Interactive docs at `http://localhost:8000/
 ### 1.1 Docker (Recommended)
 
 ```bash
-cd capstone/backend
+# In Root
+cd backend
 cp .env.example .env
 # Edit .env with your configuration (see Section 4)
 
@@ -36,7 +37,8 @@ docker compose down -v                               # Teardown
 Requires Python >=3.12, Poetry, and a running Memgraph instance.
 
 ```bash
-cd capstone/backend
+# In root
+cd backend
 cp .env.example .env
 
 make install   # Install dependencies
@@ -100,8 +102,8 @@ On failure, an error event is sent instead: `{error: "...", error_code: <status>
 | `GEMINI_MODEL` | No | `gemini-2.5-flash` | Gemini model ID used for query expansion. |
 | `GEMINI_ENABLED` | No | `true` | Set to `false` to disable Gemini query expansion even when a key is set. |
 | `MEMGRAPH_URI` | No | `bolt://localhost:7687` | Bolt protocol URI for the Memgraph database. |
-| `MEMGRAPH_USER` | No | (empty) | Memgraph authentication username. Set to `memgraph` in `.env.example`. |
-| `MEMGRAPH_PASSWORD` | No | (empty) | Memgraph authentication password. Set to `memgraph` in `.env.example`. |
+| `MEMGRAPH_USER` | No | `memgraph` | Memgraph authentication username. |
+| `MEMGRAPH_PASSWORD` | No | `memgraph` | Memgraph authentication password. |
 | `CORS_ORIGINS` | No | `["http://localhost:5173"]` | Allowed CORS origins JSON array. |
 | `DEBUG` | No | `false` | Enable debug mode. |
 | `UPLOAD_MAX_SIZE_MB` | No | `250` | Maximum ontology file upload size in MB. |
