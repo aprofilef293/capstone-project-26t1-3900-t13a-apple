@@ -62,6 +62,42 @@ export async function exportMultiShortestPathsCsv(
     return { blob, filename };
 }
 
+// ── Settings / health ────────────────────────────────────────────────────────
+
+export interface HealthStatus {
+    database: boolean;
+    query_engine: boolean;
+}
+
+export interface ApiKeyStatus {
+    huggingface_configured: boolean;
+    gemini_configured: boolean;
+}
+
+export async function fetchHealthStatus(): Promise<HealthStatus> {
+    const response = await fetch('/api/health');
+    if (!response.ok) throw new Error(`Health check failed: ${response.statusText}`);
+    return response.json();
+}
+
+export async function fetchApiKeyStatus(): Promise<ApiKeyStatus> {
+    const response = await fetch('/api/settings/api-keys');
+    if (!response.ok) throw new Error(`Failed to fetch API key status: ${response.statusText}`);
+    return response.json();
+}
+
+export async function updateApiKeys(payload: {
+    huggingface_token?: string | null;
+    gemini_api_key?: string | null;
+}): Promise<void> {
+    const response = await fetch('/api/settings/api-keys', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+    });
+    if (!response.ok) throw new Error(`Failed to update API keys: ${response.statusText}`);
+}
+
 // Can use to get upload/processing progress from backend
 export function listenToSSE(
     endpoint: string,

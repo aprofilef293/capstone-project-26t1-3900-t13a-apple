@@ -725,7 +725,7 @@ async def embedding_search(
             node.attributes["searchScore"] = round(score, 4)
             node.attributes["matchFields"] = [best_field]
             if expanded_terms:
-                node.attributes["expandedTerms"] = expanded_terms
+                node.attributes["geminiExpandedTerms"] = expanded_terms
 
     # Return nodes sorted by score descending (matched nodes first, then neighbors)
     graph.nodes.sort(key=lambda n: n.attributes.get("searchScore", -1), reverse=True)
@@ -733,7 +733,7 @@ async def embedding_search(
     logger.info(
         "GET /semantic-search q=%r%s completed in %.3fs (%d matches)",
         q,
-        f" expanded={expanded_terms}" if expanded_terms else "",
+        f" gemini_expanded={expanded_terms}" if expanded_terms else "",
         time.perf_counter() - t0,
         len(top_ids),
     )
