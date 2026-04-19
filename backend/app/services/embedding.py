@@ -457,20 +457,20 @@ class EmbeddingService:
         # comments) only surface when nothing better exists.
         field_names = list(FIELD_WEIGHTS.keys())
         best_weighted_score = np.full(n, -np.inf, dtype=np.float32)
-        best_raw_score      = np.full(n, -np.inf, dtype=np.float32)
-        best_field_idx      = np.full(n, -1,      dtype=np.int8)
+        best_raw_score = np.full(n, -np.inf, dtype=np.float32)
+        best_field_idx = np.full(n, -1, dtype=np.int8)
 
         for fi, (field, weight) in enumerate(FIELD_WEIGHTS.items()):
             if field not in self._field_embeddings:
                 continue
             mask = self._field_masks[field]
             # Dot product = cosine similarity because all vectors are L2-normalised
-            raw_scores      = (self._field_embeddings[field] @ query_vec.T).ravel()
+            raw_scores = (self._field_embeddings[field] @ query_vec.T).ravel()
             weighted_scores = raw_scores * weight
             better = mask & (weighted_scores > best_weighted_score)
             best_weighted_score = np.where(better, weighted_scores, best_weighted_score)
-            best_raw_score      = np.where(better, raw_scores,      best_raw_score)
-            best_field_idx      = np.where(better, fi,              best_field_idx)
+            best_raw_score = np.where(better, raw_scores, best_raw_score)
+            best_field_idx = np.where(better, fi, best_field_idx)
 
         # Rank by weighted score but expose raw cosine so thresholds are comparable across fields.
         final_scores = np.maximum(best_raw_score, 0.0)

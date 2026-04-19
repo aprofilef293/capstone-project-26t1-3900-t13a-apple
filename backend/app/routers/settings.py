@@ -28,6 +28,7 @@ router = APIRouter()
 # Health
 # ---------------------------------------------------------------------------
 
+
 @router.get("/health", summary="Liveness probe for all backend services")
 async def health(request: Request) -> dict:
     """Return the live status of the graph database and the query / embedding engine.
@@ -60,6 +61,7 @@ async def health(request: Request) -> dict:
 # API-key status
 # ---------------------------------------------------------------------------
 
+
 @router.get(
     "/settings/api-keys",
     summary="Return whether each API key is configured — never returns the raw values",
@@ -80,6 +82,7 @@ async def get_api_key_status(request: Request) -> dict:
 # ---------------------------------------------------------------------------
 # API-key update
 # ---------------------------------------------------------------------------
+
 
 class ApiKeysPayload(BaseModel):
     """Body for ``POST /api/settings/api-keys``.
@@ -147,9 +150,7 @@ async def update_api_keys(payload: ApiKeysPayload, request: Request) -> None:
                     _reinit_hf_embedding(request.app),
                     name="reinit-hf-embedding",
                 )
-                logger.info(
-                    "HuggingFace token updated — reinitialising embedding service in background"
-                )
+                logger.info("HuggingFace token updated — reinitialising embedding service in background")
 
     key_cache.save(settings)
 
@@ -157,6 +158,7 @@ async def update_api_keys(payload: ApiKeysPayload, request: Request) -> None:
 # ---------------------------------------------------------------------------
 # Internal helper — HuggingFace embedding reinitialisation
 # ---------------------------------------------------------------------------
+
 
 async def _reinit_hf_embedding(app) -> None:  # type: ignore[type-arg]
     """Background task: rebuild the HuggingFace embedding service after a token change.
@@ -190,9 +192,7 @@ async def _reinit_hf_embedding(app) -> None:  # type: ignore[type-arg]
             await new_svc.build_index([r["id"] for r in records], [dict(r) for r in records])
 
         app.state.embedding_service = new_svc
-        logger.info(
-            "HuggingFace embedding service reinitialised (%d terms indexed)", len(records)
-        )
+        logger.info("HuggingFace embedding service reinitialised (%d terms indexed)", len(records))
     except Exception as exc:
         logger.warning("HuggingFace embedding reinitialisation failed: %s", exc)
         # Leave the existing (possibly stale-token) service in place rather than
