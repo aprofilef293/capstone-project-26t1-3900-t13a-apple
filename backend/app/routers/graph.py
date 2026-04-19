@@ -687,14 +687,16 @@ async def embedding_search(
         _safe_expand(),
     )
 
-    # If Gemini expanded, search the centroid too and merge the higher score per term
+    # If Gemini expanded, search each term individually and merge the best score per node
     if expanded_terms:
-        gemini_query = ", ".join(expanded_terms)
-        gemini_results = await embedding_svc.search(gemini_query, top_k=limit)
+        per_term_results = await asyncio.gather(
+            *[embedding_svc.search(term, top_k=limit) for term in expanded_terms]
+        )
         score_map = {tid: (score, field) for tid, score, field in results}
-        for tid, score, field in gemini_results:
-            if tid not in score_map or score > score_map[tid][0]:
-                score_map[tid] = (score, field)
+        for term_results in per_term_results:
+            for tid, score, field in term_results:
+                if tid not in score_map or score > score_map[tid][0]:
+                    score_map[tid] = (score, field)
         results = [(tid, score, field) for tid, (score, field) in score_map.items()]
         results.sort(key=lambda x: x[1], reverse=True)
         results = results[:limit]

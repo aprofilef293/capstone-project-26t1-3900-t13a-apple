@@ -1,10 +1,8 @@
 """Gemini-based query expansion for semantic search.
 
-Converts natural-language medical queries into formal MeSH terms and
-clinical descriptors via the Google Gemini LLM.  Expanded terms are
-averaged into a semantic centroid by the embedding service, improving
-recall for sentence-style searches.  Results are cached in a bounded
-LRU cache; API failures fall back gracefully to direct search.
+Converts search queries into ontology-compatible terms via the Google Gemini LLM.
+Expanded terms are searched individually and merged by best score, improving recall.
+Results are cached in a bounded LRU cache; API failures fall back to direct search.
 """
 
 from __future__ import annotations
@@ -14,6 +12,7 @@ import collections
 import logging
 
 from google import genai
+from google.genai import types
 
 logger = logging.getLogger(__name__)
 
@@ -21,113 +20,33 @@ _MAX_CACHE_SIZE = 256
 _EXPAND_TIMEOUT = 15.0
 _DEFAULT_MODEL = "gemini-2.5-flash"
 _PROMPT = (
-    "Transform the following medical query into a comma-separated list of MeSH terms and clinical "
-    "descriptors for the bge-medical-small-en-v1.5 embedding model. Use formal NLM/PubMed nomenclature. "
-    'Return only the comma-separated list.\n\n"{query}"'
+    "You are helping search a biomedical/scientific ontology database (OBO or OWL format). "
+    "Given the query below, produce a comma-separated list of ontology-compatible search terms:\n"
+    "  1. The most precise ontology terms matching the query concept\n"
+    "  2. Synonyms and alternate phrasings used in ontology definitions\n"
+    "  3. Broader parent concepts and narrower child concepts\n"
+    "  4. Related processes, functions, components, or mechanisms\n"
+    "  5. Acronyms and abbreviations commonly used in the domain\n"
+    "Use concise noun phrases as they would appear in ontology term names and definitions. "
+    "Return ONLY the comma-separated list, no explanation.\n\n"
+    'Query: "{query}"'
 )
-
-# Words that indicate a natural-language query rather than bare keywords.
-# Used to decide whether to send the query to Gemini for expansion.
-_QUESTION_WORDS = {
-    "what",
-    "how",
-    "why",
-    "who",
-    "where",
-    "when",
-    "which",
-    "is",
-    "are",
-    "does",
-    "do",
-    "can",
-    "could",
-    "would",
-    "should",
-    "tell",
-    "explain",
-    "describe",
-    "find",
-    "show",
-}
-_FUNCTION_WORDS = {
-    "the",
-    "a",
-    "an",
-    "of",
-    "in",
-    "for",
-    "between",
-    "about",
-    "with",
-    "from",
-    "through",
-    "during",
-    "into",
-    "onto",
-    "and",
-    "or",
-    "but",
-    "that",
-    "this",
-    "these",
-    "those",
-}
-_MEDICAL_INTENT_WORDS = {
-    "treatment",
-    "therapy",
-    "diagnosis",
-    "symptoms",
-    "causes",
-    "prognosis",
-    "prevention",
-    "pathology",
-    "etiology",
-    "complication",
-    "complications",
-    "management",
-    "mechanism",
-    "risk",
-    "factors",
-    "side",
-    "effects",
-    "screening",
-    "biomarker",
-    "biomarkers",
-    "indicator",
-    "indicators",
-    "outcome",
-    "outcomes",
-}
 
 
 def _parse_terms(text: str) -> list[str]:
-    """Split a comma-separated Gemini response into cleaned terms.
-
-    Strips leading/trailing whitespace and surrounding quotes from each
-    term.  Empty segments are discarded.
-
-    Args:
-        text: Raw comma-separated string returned by the Gemini model.
-
-    Returns:
-        A list of cleaned term strings, possibly empty.
-    """
     return [t.strip().strip("\"'") for t in text.split(",") if t.strip()]
 
 
 class GeminiTermExtractor:
-    """Expands natural-language queries into ontology-style terms via Gemini.
+    """Expands search queries into ontology-style terms via Gemini.
 
-    Sends the query to the Gemini LLM with a prompt that requests MeSH
-    terms and clinical descriptors.  Successful expansions are stored in
-    a bounded LRU cache (up to ``_MAX_CACHE_SIZE`` entries) to avoid
-    redundant API calls.  Transient failures are **not** cached so the
-    same query can be retried on the next request.
+    Every non-empty query is sent to Gemini when a client is configured.
+    Successful expansions are stored in a bounded LRU cache to avoid
+    redundant API calls. Transient failures are not cached.
 
     Args:
-        api_key: Google AI Studio API key.  Pass an empty string to
-            create a no-op extractor (``expand`` always returns ``None``).
+        api_key: Google AI Studio API key. Pass an empty string to create
+            a no-op extractor (``expand`` always returns ``None``).
         model: Gemini model ID (default ``gemini-2.5-flash``).
     """
 
@@ -137,37 +56,23 @@ class GeminiTermExtractor:
         self._cache: collections.OrderedDict[str, list[str]] = collections.OrderedDict()
 
     async def expand(self, query: str) -> list[str] | None:
-        """Expand a search query into a list of formal medical terms.
+        """Expand a search query into a list of ontology-compatible terms.
 
-        The query is sent to Gemini only when it looks like a sentence
-        (no commas and more than two words).  Queries that already
-        contain comma-separated terms or are very short are returned as
-        ``None`` so the caller can fall back to a direct search.
+        Sends every non-empty query to Gemini when the client is configured.
+        Returns ``None`` if the client is not set, the query is empty, the
+        API call fails, or the response is unusable (e.g. safety-filtered).
 
         Args:
             query: The raw user search string.
 
         Returns:
-            A list of expanded term strings on success, or ``None`` if
-            expansion was skipped, the API call failed, or the response
-            was unusable (e.g. safety-filtered).
+            A list of expanded term strings on success, or ``None`` on failure.
         """
-        if not self._client or "," in query:
+        if not self._client:
             return None
 
-        q_lower = query.lower().strip()
-        words = q_lower.split()
-        if not words:
-            return None
-
-        word_set = set(words)
-        is_natural_language = (
-            q_lower.endswith("?")
-            or words[0] in _QUESTION_WORDS
-            or bool(word_set & _FUNCTION_WORDS)
-            or bool(word_set & _MEDICAL_INTENT_WORDS)
-        )
-        if not is_natural_language:
+        query = query.strip()
+        if not query:
             return None
 
         if query in self._cache:
@@ -180,6 +85,7 @@ class GeminiTermExtractor:
                     self._client.models.generate_content,
                     model=self._model,
                     contents=_PROMPT.format(query=query),
+                    config=types.GenerateContentConfig(temperature=0.0, max_output_tokens=256),
                 ),
                 timeout=_EXPAND_TIMEOUT,
             )
@@ -191,7 +97,7 @@ class GeminiTermExtractor:
             return None
 
         # response.text raises if the safety filter blocked the response or
-        # there are no candidates.  Handle separately so it's not confused
+        # there are no candidates. Handle separately so it's not confused
         # with an API/network error above.
         try:
             text = response.text
