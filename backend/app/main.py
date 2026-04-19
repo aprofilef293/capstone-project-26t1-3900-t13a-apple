@@ -14,6 +14,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.gzip import GZipMiddleware
 
 from app.config import Settings
+from app import key_cache
 from app.routers import file_upload, graph
 from app.routers import settings as settings_router
 from app.services.embedding import (
@@ -64,6 +65,7 @@ def create_app() -> FastAPI:
         GZip middleware, and all API routers mounted.
     """
     settings = Settings()
+    key_cache.load(settings)
 
     @asynccontextmanager
     async def lifespan(app: FastAPI):
