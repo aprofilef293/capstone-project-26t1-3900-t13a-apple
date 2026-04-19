@@ -22,7 +22,7 @@ export function ExplorerToolbar({
     onViewModeChange: (mode: "graph" | "hierarchy") => void;
 }) {
     const { nodes, edges, viewLevel, searchQuery, selectedNodeId, graphFilters } = useStore();
-    const { isMultiSelect, setIsMultiSelect, infoPanelMode, setInfoPanelMode } = useStore();
+    const { isMultiSelect, setIsMultiSelect, infoPanelMode, setInfoPanelMode, selectedNodeIds } = useStore();
 
     const deferredSearchQuery = useDeferredValue(searchQuery);
 
@@ -135,7 +135,7 @@ export function ExplorerToolbar({
             </div>
 
             {/* Metrics Badge */}
-            {infoPanelMode === "closed" && (
+            {(infoPanelMode === "closed" || (infoPanelMode === "multi-select" && selectedNodeIds.length == 0)) && (
                 <div className="bg-sidebar/95 shrink-0 backdrop-blur-sm border border-sidebar-border rounded-lg px-2.5 py-1.5 shadow-sm text-[10px] sm:text-xs font-medium flex flex-col items-end gap-0.5 text-muted-foreground pointer-events-auto leading-tight">
                     <span><strong className="text-foreground">{visibleNodeCount.toLocaleString()}</strong> Nodes</span>
                     <span><strong className="text-foreground">{visibleEdgeCount.toLocaleString()}</strong> Connections</span>

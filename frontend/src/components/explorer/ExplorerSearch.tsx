@@ -17,6 +17,7 @@ export function ExplorerSearch({ viewMode = "graph" }: { viewMode?: "graph" | "h
         setSearchQuery,
         setViewLevel,
         nodes,
+        selectedNodeIds,
         setSelectedNodeId,
         setSearchResultsExactTitle,
         setSearchResultsFuzzyTitle,
@@ -199,7 +200,7 @@ export function ExplorerSearch({ viewMode = "graph" }: { viewMode?: "graph" | "h
                             clearSearchScope();
                             setIsOpen(false);
                             setViewLevel(1);
-                            setInfoPanelMode('closed');
+                            if (infoPanelMode === "search-results") setInfoPanelMode('closed');
                         }}
                         variant="ghost"
                         size="sm"
@@ -237,7 +238,7 @@ export function ExplorerSearch({ viewMode = "graph" }: { viewMode?: "graph" | "h
                                     : "text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent"
                             )}
                         >
-                            <Icon /> {infoPanelMode === "closed" && label}
+                            <Icon /> {(infoPanelMode === "closed" || (infoPanelMode === "multi-select" && selectedNodeIds.length == 0)) && label}
                         </Button>
                     ))}
                 </div>

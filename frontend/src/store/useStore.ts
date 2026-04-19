@@ -496,7 +496,12 @@ export const useStore = create<ExplorerState>((set) => ({
         try {
             const stored = localStorage.getItem('infoPanelMode');
             if (stored === 'search-results') {
-                // search results don't persist after reload, so closing results panel
+                // handling scenario where user has multiselect and search turned on, then refreshes
+                // (search doesn't persist, so multiselect panel should start open)
+                if (localStorage.getItem('isMultiSelect') === 'true') {
+                    return 'multi-select';
+                }
+                // otherwise search results don't persist after reload, so closing results panel
                 useStore.getState().setInfoPanelMode('closed');
                 return 'closed';
             };
@@ -526,10 +531,9 @@ export const useStore = create<ExplorerState>((set) => ({
             }
         }
         // keeping isMultiSelect aligned with infoPanelMode (should always match)
-        // useStore.getState().setIsMultiSelect(mode === 'multi-select');
         if (mode === "multi-select") {
             useStore.getState().setIsMultiSelect(true);
-        } else if (mode === "node-info") {
+        } else if (mode !== "search-results") {
             useStore.getState().setIsMultiSelect(false);
         }
     },
