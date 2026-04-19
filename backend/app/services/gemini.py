@@ -210,3 +210,21 @@ class GeminiTermExtractor:
         if len(self._cache) > _MAX_CACHE_SIZE:
             self._cache.popitem(last=False)
         return terms
+
+    async def ping(self, timeout: float = 5.0) -> bool:
+        """Return True if the Gemini API key is set and the API is reachable.
+
+        Makes a minimal models.list() call — no token consumption — to verify
+        that the key is valid and the network path is open.
+        """
+        if not self._client:
+            return False
+        try:
+            await asyncio.wait_for(
+                asyncio.to_thread(lambda: next(iter(self._client.models.list()), None)),
+                timeout=timeout,
+            )
+            return True
+        except Exception as exc:
+            logger.debug("Gemini ping failed: %s", exc)
+            return False

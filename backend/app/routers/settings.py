@@ -18,6 +18,8 @@ import logging
 from fastapi import APIRouter, Request
 from pydantic import BaseModel
 
+from app import key_cache
+
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
@@ -46,10 +48,10 @@ async def health(request: Request) -> dict:
         logger.warning("Health check – database ping failed: %s", exc)
 
     try:
-        emb = request.app.state.embedding_service
-        engine_ok = emb is not None and emb.is_ready
+        gemini = request.app.state.gemini
+        engine_ok = gemini is not None and await gemini.ping()
     except Exception as exc:
-        logger.warning("Health check – embedding service check failed: %s", exc)
+        logger.warning("Health check – Gemini connectivity check failed: %s", exc)
 
     return {"database": db_ok, "query_engine": engine_ok}
 
@@ -148,6 +150,8 @@ async def update_api_keys(payload: ApiKeysPayload, request: Request) -> None:
                 logger.info(
                     "HuggingFace token updated — reinitialising embedding service in background"
                 )
+
+    key_cache.save(settings)
 
 
 # ---------------------------------------------------------------------------

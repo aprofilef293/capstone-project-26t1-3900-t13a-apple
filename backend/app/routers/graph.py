@@ -652,7 +652,7 @@ async def embedding_search(
         description=("Free-text search query. Separate multiple terms with commas "),
     ),
     limit: int = Query(20, ge=1, le=100, description="Max results (1-100)."),
-    threshold: float = Query(0.5, ge=0.0, le=1.0, description="Minimum similarity score (0-1)."),
+    threshold: float = Query(0.35, ge=0.0, le=1.0, description="Minimum similarity score (0-1)."),
 ):
     """Semantic search powered by dense vector embeddings.
 
