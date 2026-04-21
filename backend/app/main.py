@@ -13,8 +13,8 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.gzip import GZipMiddleware
 
-from app.config import Settings
 from app import key_cache
+from app.config import Settings
 from app.routers import file_upload, graph
 from app.routers import settings as settings_router
 from app.services.embedding import (
