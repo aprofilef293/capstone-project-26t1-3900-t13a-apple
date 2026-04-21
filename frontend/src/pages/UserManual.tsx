@@ -56,9 +56,9 @@ const sections: ManualSection[] = [
               to="/"
               className="mx-1 underline decoration-sidebar-foreground/40 underline-offset-2 hover:text-blue-600 dark:hover:text-blue-400"
             >
-              Dashboard page
+              Dashboard
             </Link>
-            and contains an overview of the main features of the web-app
+            page and contains an overview of the main features of the web-app
           </>
         ),
       },
@@ -105,7 +105,7 @@ const sections: ManualSection[] = [
             >
               Data Manager
             </Link>
-            Page
+            page
           </>
         ),
       },
@@ -163,9 +163,9 @@ const sections: ManualSection[] = [
               to="/explorer"
               className="mx-1 underline decoration-sidebar-foreground/40 underline-offset-2 hover:text-blue-600 dark:hover:text-blue-400"
             >
-              Network Graph page
+              Network Graph
             </Link>
-            after uploading a file
+            page after uploading a file
           </>
         ),
       },
@@ -383,7 +383,7 @@ const sections: ManualSection[] = [
               Combine
             </code>
             once clicked so users can merge the two search bars back into a
-            single search bar"
+            single search bar
           </>
         ),
       },
