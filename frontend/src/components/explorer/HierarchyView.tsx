@@ -8,16 +8,19 @@ import { matchesGraphFilters } from "../../lib/filterUtils";
 
 export function HierarchyView() {
     const {
-        nodes, edges, searchQuery, graphFilters,
+        nodes, edges, searchQuery, graphFilters, viewLevel,
         infoPanelMode,
         searchResultsExactTitle, searchResultsFuzzyTitle,
         searchResultsDescription, searchResultsSemantic,
     } = useStore();
 
-    // Pre-filter nodes by graphFilters before building the hierarchy
+    // Pre-filter nodes by graphFilters AND viewLevel before building the hierarchy
     const filteredNodes = useMemo(() => {
-        return nodes.filter(n => matchesGraphFilters(n, graphFilters));
-    }, [nodes, graphFilters]);
+        return nodes.filter(n => {
+            const level = ((n.attributes as Record<string, unknown>)?.viewLevel as number) ?? 1;
+            return level >= viewLevel && matchesGraphFilters(n, graphFilters);
+        });
+    }, [nodes, graphFilters, viewLevel]);
 
     // Dynamically build the hierarchy tree from the flat graph data
     const baseHierarchyData = useMemo(() => {

@@ -19,6 +19,12 @@ const mockState = {
   ],
   searchQuery: "",
   graphFilters: {},
+  viewLevel: 1,
+  infoPanelMode: "default",
+  searchResultsExactTitle: [],
+  searchResultsFuzzyTitle: [],
+  searchResultsDescription: [],
+  searchResultsSemantic: [],
   selectedNodeId: null,
   setSelectedNodeId: setSelectedNodeIdMock,
 };
