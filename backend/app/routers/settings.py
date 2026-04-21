@@ -80,6 +80,44 @@ async def get_api_key_status(request: Request) -> dict:
 
 
 # ---------------------------------------------------------------------------
+# API-key validation
+# ---------------------------------------------------------------------------
+@router.get(
+    "/settings/api-keys/validate",
+    summary="Live-test each configured API key and return per-key validity",
+)
+async def validate_api_keys(request: Request) -> dict:
+    """Actively probe each configured key against its external API.
+
+    Returns:
+        ``{"huggingface_valid": bool|null, "gemini_valid": bool|null}``
+    """
+    import httpx
+
+    settings = request.app.state.settings
+    hf_valid: bool | None = None
+    gemini_valid: bool | None = None
+
+    if settings.embedding_hf_token:
+        try:
+            async with httpx.AsyncClient(timeout=5.0) as client:
+                resp = await client.get(
+                    "https://huggingface.co/api/whoami-v2",
+                    headers={"Authorization": f"Bearer {settings.embedding_hf_token}"},
+                )
+                hf_valid = resp.status_code == 200
+        except Exception as exc:
+            hf_valid = False
+            logger.warning("HuggingFace token validation failed: %s", exc)
+
+    gemini = request.app.state.gemini
+    if gemini is not None:
+        gemini_valid = await gemini.ping()
+
+    return {"huggingface_valid": hf_valid, "gemini_valid": gemini_valid}
+
+
+# ---------------------------------------------------------------------------
 # API-key update
 # ---------------------------------------------------------------------------
 
@@ -99,27 +137,18 @@ class ApiKeysPayload(BaseModel):
 
 @router.post(
     "/settings/api-keys",
-    status_code=204,
     summary="Update API keys at runtime — hot-swaps dependent services immediately",
 )
-async def update_api_keys(payload: ApiKeysPayload, request: Request) -> None:
-    """Store new API key values in the live settings object and reinitialise
-    any services that depend on them.
-
-    *Gemini* is reinitialised synchronously — it is a lightweight client init.
-
-    *HuggingFace remote embeddings* are reinitialised in a background task
-    because rebuilding the vector index can take tens of seconds.  The 204
-    response is returned immediately; the service remains available (using the
-    old model/token) until the background task completes.
-
-    Args:
-        payload: JSON body with optional ``huggingface_token`` and/or
-            ``gemini_api_key`` fields.
-        request: FastAPI request carrying ``app.state``.
+async def update_api_keys(payload: ApiKeysPayload, request: Request) -> dict:
+    """Store new API key values in the live settings object
     """
+    import httpx
+
     app_state = request.app.state
     settings = app_state.settings
+
+    gemini_valid: bool | None = None
+    hf_valid: bool | None = None
 
     # ── Gemini ───────────────────────────────────────────────────────────────
     if payload.gemini_api_key is not None:
@@ -130,9 +159,12 @@ async def update_api_keys(payload: ApiKeysPayload, request: Request) -> None:
                 try:
                     from app.services.gemini import GeminiTermExtractor
 
-                    app_state.gemini = GeminiTermExtractor(new_key, settings.gemini_model)
-                    logger.info("Gemini reinitialised with new API key")
+                    extractor = GeminiTermExtractor(new_key, settings.gemini_model)
+                    app_state.gemini = extractor
+                    gemini_valid = await extractor.ping()
+                    logger.info("Gemini reinitialised with new API key (valid=%s)", gemini_valid)
                 except Exception as exc:
+                    gemini_valid = False
                     logger.warning("Gemini failed to reinitialise: %s", exc)
             else:
                 app_state.gemini = None
@@ -143,6 +175,18 @@ async def update_api_keys(payload: ApiKeysPayload, request: Request) -> None:
         new_token = payload.huggingface_token.strip()
         if new_token != settings.embedding_hf_token:
             settings.embedding_hf_token = new_token
+            if new_token:
+                try:
+                    async with httpx.AsyncClient(timeout=5.0) as client:
+                        resp = await client.get(
+                            "https://huggingface.co/api/whoami-v2",
+                            headers={"Authorization": f"Bearer {new_token}"},
+                        )
+                        hf_valid = resp.status_code == 200
+                except Exception as exc:
+                    hf_valid = False
+                    logger.warning("HuggingFace token validation failed: %s", exc)
+                logger.info("HuggingFace token updated (valid=%s)", hf_valid)
             # Only reinitialise if the app is configured for remote inference;
             # local sentence-transformers mode ignores the token entirely.
             if not settings.embedding_local and settings.embedding_enabled:
@@ -150,9 +194,9 @@ async def update_api_keys(payload: ApiKeysPayload, request: Request) -> None:
                     _reinit_hf_embedding(request.app),
                     name="reinit-hf-embedding",
                 )
-                logger.info("HuggingFace token updated — reinitialising embedding service in background")
 
     key_cache.save(settings)
+    return {"huggingface_valid": hf_valid, "gemini_valid": gemini_valid}
 
 
 # ---------------------------------------------------------------------------

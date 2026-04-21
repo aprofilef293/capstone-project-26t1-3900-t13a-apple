@@ -86,16 +86,28 @@ export async function fetchApiKeyStatus(): Promise<ApiKeyStatus> {
     return response.json();
 }
 
+export interface ApiKeyValidation {
+    huggingface_valid: boolean | null;
+    gemini_valid: boolean | null;
+}
+
+export async function validateApiKeys(): Promise<ApiKeyValidation> {
+    const response = await fetch('/api/settings/api-keys/validate');
+    if (!response.ok) throw new Error(`Failed to validate API keys: ${response.statusText}`);
+    return response.json();
+}
+
 export async function updateApiKeys(payload: {
     huggingface_token?: string | null;
     gemini_api_key?: string | null;
-}): Promise<void> {
+}): Promise<ApiKeyValidation> {
     const response = await fetch('/api/settings/api-keys', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
     });
     if (!response.ok) throw new Error(`Failed to update API keys: ${response.statusText}`);
+    return response.json();
 }
 
 // Can use to get upload/processing progress from backend

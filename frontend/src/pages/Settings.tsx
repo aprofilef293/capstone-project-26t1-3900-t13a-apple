@@ -5,33 +5,49 @@ import {
     fetchHealthStatus,
     fetchApiKeyStatus,
     updateApiKeys,
+    validateApiKeys,
     type HealthStatus,
     type ApiKeyStatus,
+    type ApiKeyValidation,
 } from "../lib/api";
 
-type SaveState = "idle" | "saving" | "saved" | "error";
+type SaveState = "idle" | "saving" | "error";
+
+const persistedValid = { hf: false, gemini: false };
+
+// ── Sub-components ────────────────────────────────────────────────────────────
 
 function StatusBadge({ ok }: { ok: boolean }) {
     return (
-        <span className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border ${
-            ok
-                ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/20"
-                : "bg-red-500/10 text-red-500 border-red-500/20"
-        }`}>
+        <span className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border ${ok
+            ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/20"
+            : "bg-red-500/10 text-red-500 border-red-500/20"
+            }`}>
             <span className={`w-1.5 h-1.5 rounded-full ${ok ? "bg-emerald-500" : "bg-red-500"}`} />
             {ok ? "Online" : "Offline"}
         </span>
     );
 }
 
-function KeyBadge({ configured }: { configured: boolean }) {
+function KeyStatusBadge({ valid, hasInput }: { valid: boolean | null; hasInput: boolean }) {
+    if (hasInput) return (
+        <span className="text-xs font-medium px-2.5 py-1 rounded-full border bg-sidebar-foreground/5 text-sidebar-foreground/40 border-sidebar-border">
+            Unsaved
+        </span>
+    );
+    if (valid === true) return (
+        <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border bg-emerald-500/10 text-emerald-500 border-emerald-500/20">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />Valid
+        </span>
+    );
+    if (valid === false) return (
+        <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border bg-red-500/10 text-red-500 border-red-500/20">
+            <span className="w-1.5 h-1.5 rounded-full bg-red-500" />Invalid
+        </span>
+    );
     return (
-        <span className={`text-xs font-medium px-2.5 py-1 rounded-full border ${
-            configured
-                ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/20"
-                : "bg-sidebar-foreground/5 text-sidebar-foreground/40 border-sidebar-border"
-        }`}>
-            {configured ? "Configured" : "Not set"}
+        <span className="text-xs font-medium px-2.5 py-1 rounded-full border bg-sidebar-foreground/5 text-sidebar-foreground/40 border-sidebar-border">
+            Not set
         </span>
     );
 }
@@ -41,12 +57,13 @@ interface ApiKeyRowProps {
     description: string;
     placeholder: string;
     configured: boolean;
+    valid: boolean | null;
     value: string;
     onChange: (v: string) => void;
     onClear: () => void;
 }
 
-function ApiKeyRow({ label, description, placeholder, configured, value, onChange, onClear }: ApiKeyRowProps) {
+function ApiKeyRow({ label, description, placeholder, configured, valid, value, onChange, onClear }: ApiKeyRowProps) {
     return (
         <div className="flex flex-col gap-3 py-5 border-b border-sidebar-border last:border-0">
             <div className="flex items-start justify-between gap-4">
@@ -54,7 +71,7 @@ function ApiKeyRow({ label, description, placeholder, configured, value, onChang
                     <span className="text-sm font-medium text-sidebar-foreground">{label}</span>
                     <span className="text-xs text-sidebar-foreground/50">{description}</span>
                 </div>
-                <KeyBadge configured={configured} />
+                <KeyStatusBadge valid={valid} hasInput={value.length > 0} />
             </div>
             <div className="flex items-center gap-2">
                 <input
@@ -80,6 +97,8 @@ function ApiKeyRow({ label, description, placeholder, configured, value, onChang
     );
 }
 
+// ── Main page ─────────────────────────────────────────────────────────────────
+
 export function Settings() {
     const [health, setHealth] = useState<HealthStatus | null>(null);
     const [keyStatus, setKeyStatus] = useState<ApiKeyStatus | null>(null);
@@ -89,6 +108,12 @@ export function Settings() {
     const [geminiInput, setGeminiInput] = useState("");
     const [saveState, setSaveState] = useState<SaveState>("idle");
     const [saveError, setSaveError] = useState("");
+
+    // Only valid=true persists navigation
+    const [validation, setValidation] = useState<ApiKeyValidation>(() => ({
+        huggingface_valid: persistedValid.hf ? true : null,
+        gemini_valid: persistedValid.gemini ? true : null,
+    }));
 
     const refreshStatus = useCallback(async () => {
         setHealthLoading(true);
@@ -103,7 +128,18 @@ export function Settings() {
         }
     }, []);
 
-    useEffect(() => { refreshStatus(); }, [refreshStatus]);
+    // On every load check configured keys and update badges
+    useEffect(() => {
+        refreshStatus();
+        validateApiKeys().then(result => {
+            if (result.huggingface_valid === false) persistedValid.hf = false;
+            if (result.gemini_valid === false) persistedValid.gemini = false;
+            setValidation(prev => ({
+                huggingface_valid: result.huggingface_valid !== null ? result.huggingface_valid : prev.huggingface_valid,
+                gemini_valid: result.gemini_valid !== null ? result.gemini_valid : prev.gemini_valid,
+            }));
+        }).catch(() => { });
+    }, [refreshStatus]);
 
     async function handleSave() {
         if (!hfInput && !geminiInput) return;
@@ -111,18 +147,22 @@ export function Settings() {
         setSaveError("");
         try {
             const payload: { huggingface_token?: string; gemini_api_key?: string } = {};
-            if (hfInput)     payload.huggingface_token = hfInput;
-            if (geminiInput) payload.gemini_api_key    = geminiInput;
+            if (hfInput) payload.huggingface_token = hfInput;
+            if (geminiInput) payload.gemini_api_key = geminiInput;
 
-            await updateApiKeys(payload);
+            const result = await updateApiKeys(payload);
 
+            if (result.huggingface_valid !== null) persistedValid.hf = result.huggingface_valid === true;
+            if (result.gemini_valid !== null) persistedValid.gemini = result.gemini_valid === true;
+
+            setValidation(prev => ({
+                huggingface_valid: result.huggingface_valid !== null ? result.huggingface_valid : prev.huggingface_valid,
+                gemini_valid: result.gemini_valid !== null ? result.gemini_valid : prev.gemini_valid,
+            }));
             setHfInput("");
             setGeminiInput("");
-            const k = await fetchApiKeyStatus();
-            setKeyStatus(k);
-
-            setSaveState("saved");
-            setTimeout(() => setSaveState("idle"), 2500);
+            await refreshStatus();
+            setSaveState("idle");
         } catch (err) {
             setSaveError(err instanceof Error ? err.message : "Save failed");
             setSaveState("error");
@@ -131,20 +171,23 @@ export function Settings() {
 
     async function handleClear(key: "hf" | "gemini") {
         try {
-            await updateApiKeys(key === "hf"
-                ? { huggingface_token: "" }
-                : { gemini_api_key: "" }
-            );
-            const k = await fetchApiKeyStatus();
-            setKeyStatus(k);
-        } catch { /* leave badge as-is on failure */ }
+            await updateApiKeys(key === "hf" ? { huggingface_token: "" } : { gemini_api_key: "" });
+            if (key === "hf") {
+                persistedValid.hf = false;
+                setValidation(prev => ({ ...prev, huggingface_valid: null }));
+            } else {
+                persistedValid.gemini = false;
+                setValidation(prev => ({ ...prev, gemini_valid: null }));
+            }
+            await refreshStatus();
+        } catch { }
     }
 
     const canSave = (hfInput.trim().length > 0 || geminiInput.trim().length > 0) && saveState !== "saving";
 
     const systemItems = [
-        { id: 1, name: "Graph Database", ok: health?.database      ?? false, icon: Database },
-        { id: 2, name: "Query Engine",   ok: health?.query_engine  ?? false, icon: Server   },
+        { id: 1, name: "Graph Database", ok: health?.database ?? false, icon: Database },
+        { id: 2, name: "LLM Query Service", ok: health?.query_engine ?? false, icon: Server },
     ];
 
     return (
@@ -177,9 +220,8 @@ export function Settings() {
                         {systemItems.map((item, i) => (
                             <div
                                 key={item.id}
-                                className={`flex items-center justify-between px-5 py-4 ${
-                                    i < systemItems.length - 1 ? "border-b border-sidebar-border" : ""
-                                }`}
+                                className={`flex items-center justify-between px-5 py-4 ${i < systemItems.length - 1 ? "border-b border-sidebar-border" : ""
+                                    }`}
                             >
                                 <div className="flex items-center gap-3">
                                     <div className="w-7 h-7 rounded-md bg-sidebar-accent flex items-center justify-center shrink-0">
@@ -203,7 +245,7 @@ export function Settings() {
                         <h2 className="text-base font-semibold tracking-tight">API Keys</h2>
                     </div>
                     <p className="text-xs text-sidebar-foreground/50 mb-5">
-                        Keys are stored securely on the server and persist across restarts. They are never returned to the browser — enter a new value to overwrite.
+                        Keys are stored on the server and persist across restarts. They are never returned or saved to the browser — enter a new value to overwrite.
                     </p>
 
                     <div className="rounded-xl border border-sidebar-border px-5">
@@ -212,6 +254,7 @@ export function Settings() {
                             description="Required for remote HuggingFace inference embeddings."
                             placeholder="hf_…"
                             configured={keyStatus?.huggingface_configured ?? false}
+                            valid={validation.huggingface_valid}
                             value={hfInput}
                             onChange={setHfInput}
                             onClear={() => handleClear("hf")}
@@ -221,6 +264,7 @@ export function Settings() {
                             description="Enables Gemini-powered query expansion for richer search results."
                             placeholder="AIza…"
                             configured={keyStatus?.gemini_configured ?? false}
+                            valid={validation.gemini_valid}
                             value={geminiInput}
                             onChange={setGeminiInput}
                             onClear={() => handleClear("gemini")}
@@ -237,11 +281,8 @@ export function Settings() {
                                 ? <RefreshCw className="w-3.5 h-3.5 animate-spin" />
                                 : <Save className="w-3.5 h-3.5" />
                             }
-                            {saveState === "saving" ? "Saving…" : "Save"}
+                            {saveState === "saving" ? "Saving & validating…" : "Save"}
                         </button>
-                        {saveState === "saved" && (
-                            <span className="text-xs text-emerald-500">Saved successfully.</span>
-                        )}
                         {saveState === "error" && (
                             <span className="text-xs text-red-500">{saveError}</span>
                         )}
