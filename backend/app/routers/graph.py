@@ -652,7 +652,7 @@ async def embedding_search(
         description=("Free-text search query. Separate multiple terms with commas "),
     ),
     limit: int = Query(20, ge=1, le=100, description="Max results (1-100)."),
-    threshold: float = Query(0.5, ge=0.0, le=1.0, description="Minimum similarity score (0-1)."),
+    threshold: float = Query(0.35, ge=0.0, le=1.0, description="Minimum similarity score (0-1)."),
 ):
     """Semantic search powered by dense vector embeddings.
 
@@ -687,14 +687,14 @@ async def embedding_search(
         _safe_expand(),
     )
 
-    # If Gemini expanded, search the centroid too and merge the higher score per term
+    # If Gemini expanded, search each term individually and merge the best score per node
     if expanded_terms:
-        gemini_query = ", ".join(expanded_terms)
-        gemini_results = await embedding_svc.search(gemini_query, top_k=limit)
+        per_term_results = await asyncio.gather(*[embedding_svc.search(term, top_k=limit) for term in expanded_terms])
         score_map = {tid: (score, field) for tid, score, field in results}
-        for tid, score, field in gemini_results:
-            if tid not in score_map or score > score_map[tid][0]:
-                score_map[tid] = (score, field)
+        for term_results in per_term_results:
+            for tid, score, field in term_results:
+                if tid not in score_map or score > score_map[tid][0]:
+                    score_map[tid] = (score, field)
         results = [(tid, score, field) for tid, (score, field) in score_map.items()]
         results.sort(key=lambda x: x[1], reverse=True)
         results = results[:limit]
@@ -725,7 +725,7 @@ async def embedding_search(
             node.attributes["searchScore"] = round(score, 4)
             node.attributes["matchFields"] = [best_field]
             if expanded_terms:
-                node.attributes["expandedTerms"] = expanded_terms
+                node.attributes["geminiExpandedTerms"] = expanded_terms
 
     # Return nodes sorted by score descending (matched nodes first, then neighbors)
     graph.nodes.sort(key=lambda n: n.attributes.get("searchScore", -1), reverse=True)
@@ -733,7 +733,7 @@ async def embedding_search(
     logger.info(
         "GET /semantic-search q=%r%s completed in %.3fs (%d matches)",
         q,
-        f" expanded={expanded_terms}" if expanded_terms else "",
+        f" gemini_expanded={expanded_terms}" if expanded_terms else "",
         time.perf_counter() - t0,
         len(top_ids),
     )
