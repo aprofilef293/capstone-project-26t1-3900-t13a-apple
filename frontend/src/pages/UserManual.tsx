@@ -29,7 +29,6 @@ import {
   Database,
   Save,
   Key,
-  Server,
 } from "lucide-react";
 import { PageHeader } from "../components/layout/PageHeader";
 import { Link } from "@tanstack/react-router";
@@ -614,16 +613,7 @@ const sections: ManualSection[] = [
             section will check the status of the following services:
           </>
         ),
-        subItems: [
-          <span className="inline-flex items-center gap-1">
-            <Database className="h-3.5 w-3.5 opacity-60" />
-            <span>Graph Database</span>
-          </span>,
-          <span className="inline-flex items-center gap-1">
-            <Server className="h-3.5 w-3.5 opacity-60" />
-            <span>LLM Query Service</span>
-          </span>,
-        ],
+        subItems: ["Graph Database", "LLM Query Service"],
       },
       {
         content: (
@@ -649,9 +639,7 @@ const sections: ManualSection[] = [
             section allows users to enter tokens for:
           </>
         ),
-        subItems: [
-          "Hugging Face", "Gemini API Key"
-        ],
+        subItems: ["Hugging Face", "Gemini API Key"],
       },
       {
         content: (
