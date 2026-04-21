@@ -25,6 +25,11 @@ import {
   ZoomIn,
   Sun,
   Moon,
+  Settings,
+  Database,
+  Save,
+  Key,
+  Server,
 } from "lucide-react";
 import { PageHeader } from "../components/layout/PageHeader";
 import { Link } from "@tanstack/react-router";
@@ -577,6 +582,97 @@ const sections: ManualSection[] = [
               <span>Graph</span>
             </span>
             button to hide the Hierarchy Panel and return to the graph
+          </>
+        ),
+      },
+    ],
+  },
+  {
+    title: "Settings Page",
+    icon: Settings,
+    items: [
+      {
+        content: (
+          <>
+            Click on the
+            <span className="mx-1 inline-flex items-center gap-1 rounded-lg border border-sidebar-border bg-sidebar/95 px-2.5 py-1 text-[12px] leading-none text-sidebar-foreground/70 shadow-sm">
+              <Settings className="h-3 w-3 opacity-60" />
+              <span>Settings</span>
+            </span>
+            tab in the left sidebar to open the page
+          </>
+        ),
+      },
+      {
+        content: (
+          <>
+            The
+            <span className="mx-1 inline-flex items-center gap-1 rounded-lg border border-sidebar-border bg-sidebar/95 px-2.5 py-1 text-[12px] leading-none text-sidebar-foreground/70 shadow-sm">
+              <Database className="h-3 w-3 opacity-60" />
+              <span>System Status</span>
+            </span>
+            section will check the status of the following services:
+          </>
+        ),
+        subItems: [
+          <span className="inline-flex items-center gap-1">
+            <Database className="h-3.5 w-3.5 opacity-60" />
+            <span>Graph Database</span>
+          </span>,
+          <span className="inline-flex items-center gap-1">
+            <Server className="h-3.5 w-3.5 opacity-60" />
+            <span>LLM Query Service</span>
+          </span>,
+        ],
+      },
+      {
+        content: (
+          <>
+            Click the
+            <span className="mx-1 inline-flex items-center gap-1 rounded border border-sidebar-border bg-sidebar-accent/60 px-1.5 py-1 text-[12px] leading-none text-sidebar-foreground/80 align-middle">
+              <RefreshCcw className="h-3.5 w-3.5 opacity-60" />
+              <span>Refresh</span>
+            </span>
+            button to re-check the status of the services above and update their
+            status online or offline
+          </>
+        ),
+      },
+      {
+        content: (
+          <>
+            The
+            <span className="mx-1 inline-flex items-center gap-1 rounded-lg border border-sidebar-border bg-sidebar/95 px-2.5 py-1 text-[12px] leading-none text-sidebar-foreground/70 shadow-sm">
+              <Key className="h-3 w-3 opacity-60" />
+              <span>API Keys</span>
+            </span>
+            section allows users to enter tokens for:
+          </>
+        ),
+        subItems: [
+          "Hugging Face", "Gemini API Key"
+        ],
+      },
+      {
+        content: (
+          <>
+            Click
+            <span className="mx-1 inline-flex items-center gap-1 rounded border border-sidebar-border bg-sidebar-accent/60 px-1.5 py-1 text-[12px] leading-none text-sidebar-foreground/80 align-middle">
+              <Save className="h-3.5 w-3.5 opacity-60" />
+              <span>Save</span>
+            </span>
+            to validate and use the entered tokens
+          </>
+        ),
+      },
+      {
+        content: (
+          <>
+            Click the
+            <span className="mx-1 inline-flex items-center gap-1 rounded-md border border-sidebar-border bg-sidebar-accent/60 px-1.5 py-1 text-[12px] leading-none text-sidebar-foreground/80 align-middle">
+              <X className="h-3.5 w-3 opacity-60" />
+            </span>
+            button next to a key to remove it
           </>
         ),
       },
