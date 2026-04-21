@@ -15,6 +15,7 @@ from __future__ import annotations
 import asyncio
 import logging
 
+import httpx
 from fastapi import APIRouter, Request
 from pydantic import BaseModel
 
@@ -92,8 +93,6 @@ async def validate_api_keys(request: Request) -> dict:
     Returns:
         ``{"huggingface_valid": bool|null, "gemini_valid": bool|null}``
     """
-    import httpx
-
     settings = request.app.state.settings
     hf_valid: bool | None = None
     gemini_valid: bool | None = None
@@ -142,8 +141,6 @@ class ApiKeysPayload(BaseModel):
 async def update_api_keys(payload: ApiKeysPayload, request: Request) -> dict:
     """Store new API key values in the live settings object
     """
-    import httpx
-
     app_state = request.app.state
     settings = app_state.settings
 
@@ -153,47 +150,56 @@ async def update_api_keys(payload: ApiKeysPayload, request: Request) -> dict:
     # ── Gemini ───────────────────────────────────────────────────────────────
     if payload.gemini_api_key is not None:
         new_key = payload.gemini_api_key.strip()
-        if new_key != settings.gemini_api_key:
-            settings.gemini_api_key = new_key
-            if new_key:
+        if new_key:
+            key_changed = new_key != settings.gemini_api_key
+            if key_changed:
+                settings.gemini_api_key = new_key
                 try:
                     from app.services.gemini import GeminiTermExtractor
-
                     extractor = GeminiTermExtractor(new_key, settings.gemini_model)
                     app_state.gemini = extractor
-                    gemini_valid = await extractor.ping()
-                    logger.info("Gemini reinitialised with new API key (valid=%s)", gemini_valid)
+                    logger.info("Gemini reinitialised with new API key")
                 except Exception as exc:
                     gemini_valid = False
                     logger.warning("Gemini failed to reinitialise: %s", exc)
-            else:
-                app_state.gemini = None
-                logger.info("Gemini API key cleared — query expansion disabled")
+            if gemini_valid is None and app_state.gemini is not None:
+                try:
+                    gemini_valid = await app_state.gemini.ping()
+                except Exception as exc:
+                    gemini_valid = False
+                    logger.warning("Gemini ping failed: %s", exc)
+            logger.info("Gemini key updated=%s valid=%s", key_changed, gemini_valid)
+        else:
+            settings.gemini_api_key = ""
+            app_state.gemini = None
+            logger.info("Gemini API key cleared — query expansion disabled")
 
     # ── HuggingFace ──────────────────────────────────────────────────────────
     if payload.huggingface_token is not None:
         new_token = payload.huggingface_token.strip()
-        if new_token != settings.embedding_hf_token:
-            settings.embedding_hf_token = new_token
-            if new_token:
-                try:
-                    async with httpx.AsyncClient(timeout=5.0) as client:
-                        resp = await client.get(
-                            "https://huggingface.co/api/whoami-v2",
-                            headers={"Authorization": f"Bearer {new_token}"},
-                        )
-                        hf_valid = resp.status_code == 200
-                except Exception as exc:
-                    hf_valid = False
-                    logger.warning("HuggingFace token validation failed: %s", exc)
+        if new_token:
+            # Always validate the submitted token
+            try:
+                async with httpx.AsyncClient(timeout=5.0) as client:
+                    resp = await client.get(
+                        "https://huggingface.co/api/whoami-v2",
+                        headers={"Authorization": f"Bearer {new_token}"},
+                    )
+                    hf_valid = resp.status_code == 200
+            except Exception as exc:
+                hf_valid = False
+                logger.warning("HuggingFace token validation failed: %s", exc)
+
+            if new_token != settings.embedding_hf_token:
+                settings.embedding_hf_token = new_token
                 logger.info("HuggingFace token updated (valid=%s)", hf_valid)
-            # Only reinitialise if the app is configured for remote inference;
-            # local sentence-transformers mode ignores the token entirely.
-            if not settings.embedding_local and settings.embedding_enabled:
-                asyncio.create_task(
-                    _reinit_hf_embedding(request.app),
-                    name="reinit-hf-embedding",
-                )
+                if not settings.embedding_local and settings.embedding_enabled:
+                    asyncio.create_task(
+                        _reinit_hf_embedding(request.app),
+                        name="reinit-hf-embedding",
+                    )
+        else:
+            settings.embedding_hf_token = ""
 
     key_cache.save(settings)
     return {"huggingface_valid": hf_valid, "gemini_valid": gemini_valid}

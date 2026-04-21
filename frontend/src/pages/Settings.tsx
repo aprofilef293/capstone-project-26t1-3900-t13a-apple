@@ -29,10 +29,15 @@ function StatusBadge({ ok }: { ok: boolean }) {
     );
 }
 
-function KeyStatusBadge({ valid, hasInput }: { valid: boolean | null; hasInput: boolean }) {
+function KeyStatusBadge({ valid, hasInput, loading }: { valid: boolean | null; hasInput: boolean; loading: boolean }) {
     if (hasInput) return (
         <span className="text-xs font-medium px-2.5 py-1 rounded-full border bg-sidebar-foreground/5 text-sidebar-foreground/40 border-sidebar-border">
             Unsaved
+        </span>
+    );
+    if (loading) return (
+        <span className="text-xs font-medium px-2.5 py-1 rounded-full border bg-sidebar-foreground/5 text-sidebar-foreground/40 border-sidebar-border">
+            Checking…
         </span>
     );
     if (valid === true) return (
@@ -58,12 +63,13 @@ interface ApiKeyRowProps {
     placeholder: string;
     configured: boolean;
     valid: boolean | null;
+    loading: boolean;
     value: string;
     onChange: (v: string) => void;
     onClear: () => void;
 }
 
-function ApiKeyRow({ label, description, placeholder, configured, valid, value, onChange, onClear }: ApiKeyRowProps) {
+function ApiKeyRow({ label, description, placeholder, configured, valid, loading, value, onChange, onClear }: ApiKeyRowProps) {
     return (
         <div className="flex flex-col gap-3 py-5 border-b border-sidebar-border last:border-0">
             <div className="flex items-start justify-between gap-4">
@@ -71,7 +77,7 @@ function ApiKeyRow({ label, description, placeholder, configured, valid, value, 
                     <span className="text-sm font-medium text-sidebar-foreground">{label}</span>
                     <span className="text-xs text-sidebar-foreground/50">{description}</span>
                 </div>
-                <KeyStatusBadge valid={valid} hasInput={value.length > 0} />
+                <KeyStatusBadge valid={valid} hasInput={value.length > 0} loading={loading} />
             </div>
             <div className="flex items-center gap-2">
                 <input
@@ -108,6 +114,7 @@ export function Settings() {
     const [geminiInput, setGeminiInput] = useState("");
     const [saveState, setSaveState] = useState<SaveState>("idle");
     const [saveError, setSaveError] = useState("");
+    const [validationLoading, setValidationLoading] = useState(true);
 
     // Only valid=true persists navigation
     const [validation, setValidation] = useState<ApiKeyValidation>(() => ({
@@ -132,13 +139,11 @@ export function Settings() {
     useEffect(() => {
         refreshStatus();
         validateApiKeys().then(result => {
-            if (result.huggingface_valid === false) persistedValid.hf = false;
-            if (result.gemini_valid === false) persistedValid.gemini = false;
             setValidation(prev => ({
-                huggingface_valid: result.huggingface_valid !== null ? result.huggingface_valid : prev.huggingface_valid,
-                gemini_valid: result.gemini_valid !== null ? result.gemini_valid : prev.gemini_valid,
+                huggingface_valid: result.huggingface_valid === true ? true : prev.huggingface_valid,
+                gemini_valid: result.gemini_valid === true ? true : prev.gemini_valid,
             }));
-        }).catch(() => { });
+        }).catch(() => { }).finally(() => setValidationLoading(false));
     }, [refreshStatus]);
 
     async function handleSave() {
@@ -255,6 +260,7 @@ export function Settings() {
                             placeholder="hf_…"
                             configured={keyStatus?.huggingface_configured ?? false}
                             valid={validation.huggingface_valid}
+                            loading={validationLoading && (keyStatus?.huggingface_configured ?? false)}
                             value={hfInput}
                             onChange={setHfInput}
                             onClear={() => handleClear("hf")}
@@ -265,6 +271,7 @@ export function Settings() {
                             placeholder="AIza…"
                             configured={keyStatus?.gemini_configured ?? false}
                             valid={validation.gemini_valid}
+                            loading={validationLoading && (keyStatus?.gemini_configured ?? false)}
                             value={geminiInput}
                             onChange={setGeminiInput}
                             onClear={() => handleClear("gemini")}
