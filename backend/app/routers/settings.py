@@ -139,8 +139,7 @@ class ApiKeysPayload(BaseModel):
     summary="Update API keys at runtime — hot-swaps dependent services immediately",
 )
 async def update_api_keys(payload: ApiKeysPayload, request: Request) -> dict:
-    """Store new API key values in the live settings object
-    """
+    """Store new API key values in the live settings object"""
     app_state = request.app.state
     settings = app_state.settings
 
@@ -156,6 +155,7 @@ async def update_api_keys(payload: ApiKeysPayload, request: Request) -> dict:
                 settings.gemini_api_key = new_key
                 try:
                     from app.services.gemini import GeminiTermExtractor
+
                     extractor = GeminiTermExtractor(new_key, settings.gemini_model)
                     app_state.gemini = extractor
                     logger.info("Gemini reinitialised with new API key")
