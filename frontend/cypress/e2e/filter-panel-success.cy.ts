@@ -1,3 +1,7 @@
+/*  Integration tests for graph filter panel
+ *  Main Contributors: Lucy
+ */
+
 describe('happy path for filter panel', () => {
   beforeEach(() => {
     cy.intercept('POST', '/api/ontology/upload').as('uploadOntology')

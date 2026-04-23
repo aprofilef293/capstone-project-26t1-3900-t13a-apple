@@ -1,3 +1,7 @@
+/*  Integration tests for node multiselect and selected nodes panel
+ *  Main Contributors: Lucy
+ */
+
 export {};
 
 type PickedNodes = {
