@@ -1,12 +1,15 @@
 import { Activity, Database, Server } from "lucide-react";
 import { PageHeader } from "../components/layout/PageHeader";
 
+/*  Settings page.
+ *  Main Contributors: Joseph
+ */
+
 const systemStatus = [
     { id: 1, name: "Graph Database Online", status: "online", colour: "bg-emerald-500", icon: Database },
     { id: 2, name: "Query Engine Ready", status: "online", colour: "bg-emerald-500", icon: Server }
 ];
 
-{/* Need to clean up code div mess and make functional later but works for visualisation */ }
 export function Settings() {
     return (
         <div className="flex-1 flex flex-col h-full bg-sidebar text-sidebar-foreground overflow-y-auto">
