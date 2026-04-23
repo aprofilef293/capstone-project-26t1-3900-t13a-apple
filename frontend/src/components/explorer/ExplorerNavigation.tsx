@@ -8,6 +8,11 @@ import { useStore } from "../../store/useStore";
 import { GraphFilterPanel } from "./FilterDetailsPanel";
 import { matchesGraphFilters } from "../../lib/filterUtils";
 
+/*  Main toolbar of graph interaction features, including graph view toggle, multiselect, filter, and searchbar.
+ *  Location: Network Graph page
+ *  Main Contributors: Joseph, Jessica
+ */
+
 const VIEW_MODES: { mode: "graph" | "hierarchy"; label: string; icon: LucideIcon }[] = [
     { mode: "graph", label: "Graph", icon: Network },
     { mode: "hierarchy", label: "Hierarchy", icon: ListTree },

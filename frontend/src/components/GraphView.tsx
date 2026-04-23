@@ -9,6 +9,11 @@ import { adjustColorBrightness, desaturateColor } from "../lib/utils";
 import { getGroups, checkMatch, hasActiveGraphFilters, matchesGraphFilters } from "../lib/filterUtils";
 import { MultiDirectedGraph } from "graphology";
 
+/*  Actual graph, containing nodes generated from imported file.
+ *  Location: Network Graph page
+ *  Main Contributors: Joseph, Lucy
+ */
+
 /** UI Configuration */
 const GRAPH_CONFIG = {
     SELECTED_SCALE: 1.25,

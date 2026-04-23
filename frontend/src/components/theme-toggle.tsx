@@ -2,6 +2,11 @@ import { Moon, Sun } from "lucide-react"
 import { useTheme } from "./theme-provider"
 import { Button } from "./ui/button"
 
+/*  Button to toggle between light/dark mode.
+ *  Location: Left sidebar
+ *  Main Contributors: Joseph
+ */
+
 export function ThemeToggle() {
     const { theme, setTheme } = useTheme()
 

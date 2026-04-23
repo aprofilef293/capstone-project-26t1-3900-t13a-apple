@@ -5,6 +5,10 @@ import type { TagKeyword, TagMode } from "../../store/useStore";
 import { cn } from "../../lib/utils";
 import { InfoHelpIcon } from "../InfoHelpIcon";
 
+/*  Graph Filter Conditions panel, to allow user to filter graph using boolean queries.
+ *  Location: Network Graph page (in toolbar)
+ *  Main Contributors: Joseph, Jessica
+ */
 
 function countActiveFilters(filters: {
     labelKeywords: TagKeyword[];
