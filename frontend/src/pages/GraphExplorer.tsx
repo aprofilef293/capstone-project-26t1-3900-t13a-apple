@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { ZoomIn, ZoomOut, Maximize } from "lucide-react";
+import { ZoomIn, ZoomOut, Maximize, Upload } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { ExplorerToolbar } from "../components/explorer/ExplorerNavigation";
 import { NodeDetailsPanel } from "../components/explorer/NodeDetailsPanel";
@@ -83,6 +83,20 @@ export function GraphExplorer() {
                         <div className="absolute inset-0 z-0">
                             {viewMode === 'graph' ? <GraphView ref={graphViewRef} /> : <HierarchyView />}
                         </div>
+
+                        {viewMode === 'graph' && !isInitialGraphLoading && nodes.length === 0 && (
+                            <div className="absolute inset-0 z-10 flex items-center justify-center pointer-events-none">
+                                <div className="flex flex-col items-center gap-3">
+                                    <div className="p-3 rounded-xl bg-sidebar-accent">
+                                        <Upload className="w-7 h-7 text-sidebar-foreground/50" />
+                                    </div>
+                                    <div className="text-center">
+                                        <p className="text-sm font-medium text-sidebar-foreground/50 mb-1">No data uploaded</p>
+                                        <p className="text-xs text-sidebar-foreground/35">Please upload a file in the Data Manager page</p>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
 
                         {/* clicking node loading spinner */}
                         {isNodeSelecting && viewMode === 'graph' && (
