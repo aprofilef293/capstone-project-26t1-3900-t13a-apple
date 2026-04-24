@@ -1,4 +1,7 @@
-"""OBO file parsing: terms, relations, synonyms, comments, and obsolete flags."""
+"""OBO file parsing: terms, relations, synonyms, comments, and obsolete flags.
+
+:author: aprofilef293
+"""
 
 import tempfile
 

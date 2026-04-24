@@ -4,6 +4,8 @@ Computes PageRank-based node sizing, Louvain community detection with
 color assignment, visibility tiers for level-of-detail rendering, and
 t-FDP force-directed layout with overlap resolution. Results are cached
 to disk to avoid recomputation on repeated uploads of the same ontology.
+
+:author: Josephh21, Milktea0408, aprofilef293
 """
 
 import colorsys
@@ -76,10 +78,6 @@ class OntologyGraphPreprocessor:
         self.orbit_padding = orbit_padding
         self.gap = gap  # minimum pixels between node surfaces
         self.overlap_multiplier = overlap_multiplier
-
-    # ------------------------------------------------------------------
-    # Helpers
-    # ------------------------------------------------------------------
 
     @staticmethod
     def _generate_distinct_colours(n: int) -> list[str]:

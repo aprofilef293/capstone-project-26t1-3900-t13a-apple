@@ -1,4 +1,7 @@
-"""FastAPI router for querying, searching, and exporting ontology graph data from Memgraph."""
+"""FastAPI router for querying, searching, and exporting ontology graph data from Memgraph.
+
+:author: aprofilef293, Josephh21, Milktea0408
+"""
 
 import asyncio
 import csv

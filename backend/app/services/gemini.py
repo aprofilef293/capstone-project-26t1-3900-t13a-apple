@@ -3,6 +3,8 @@
 Converts search queries into ontology-compatible terms via the Google Gemini LLM.
 Expanded terms are searched individually and merged by best score, improving recall.
 Results are cached in a bounded LRU cache; API failures fall back to direct search.
+
+:author: Josephh21, aprofilef293
 """
 
 from __future__ import annotations

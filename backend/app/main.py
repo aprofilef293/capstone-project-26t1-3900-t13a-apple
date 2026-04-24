@@ -4,6 +4,8 @@ Wires up CORS, GZip compression, API routers, and the optional
 ``EmbeddingService`` used for semantic search.  The single entry point
 is :func:`create_app`, which returns a fully configured ``FastAPI``
 instance ready to be served by Uvicorn.
+
+:author: aprofilef293, Josephh21
 """
 
 import logging
@@ -113,7 +115,6 @@ def create_app() -> FastAPI:
         else:
             logger.info("Gemini query expansion disabled (set GEMINI_API_KEY to enable)")
 
-        # --- startup complete / shutdown begins ---
         yield
         app.state.memgraph.close()
 

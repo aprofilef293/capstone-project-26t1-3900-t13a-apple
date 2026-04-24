@@ -3,6 +3,8 @@
 Focus: the validate-before-commit logic in ``update_api_keys`` — a key or
 token that fails its validation probe must not displace the running service
 nor get persisted to the cache.
+
+:author: aprofilef293
 """
 
 from __future__ import annotations

@@ -1,4 +1,7 @@
-"""File upload helpers: term ingestion, relation ingestion, and batch splitting."""
+"""File upload helpers: term ingestion, relation ingestion, and batch splitting.
+
+:author: aprofilef293
+"""
 
 from unittest.mock import MagicMock
 

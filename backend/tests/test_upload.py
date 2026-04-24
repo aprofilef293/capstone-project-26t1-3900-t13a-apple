@@ -1,4 +1,7 @@
-"""Ontology upload pipeline — requires a running Memgraph on localhost:7687."""
+"""Ontology upload pipeline — requires a running Memgraph on localhost:7687.
+
+:author: aprofilef293
+"""
 
 import io
 import json
