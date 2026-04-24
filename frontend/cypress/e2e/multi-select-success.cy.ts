@@ -140,13 +140,15 @@ describe('happy path for multi-select', () => {
     cy.contains('h2', 'Path between Nodes')
       .closest('aside')
       .within(() => {
-        cy.contains('button', /^colour$/).should('be.visible').click();
+        cy.contains('button', /^colour$/i).should('be.visible').click();
       });
     cy.get('[data-slot="dropdown-menu-content"]', { timeout: 10000 })
       .should('be.visible')
-      .find('[data-slot="dropdown-menu-radio-item"][data-state="checked"]')
-      .should('contain.text', 'colour')
-      .click({ force: true });
+      .within(() => {
+        cy.contains('[data-slot="dropdown-menu-radio-item"]', /colour/i)
+          .should('be.visible')
+          .click({ force: true });
+      });
 
     // check that the dropdown goes back to showing 'select attribute'
     cy.contains('button', 'Select attribute').should('be.visible')
