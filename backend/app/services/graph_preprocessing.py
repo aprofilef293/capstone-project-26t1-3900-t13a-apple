@@ -5,7 +5,7 @@ color assignment, visibility tiers for level-of-detail rendering, and
 t-FDP force-directed layout with overlap resolution. Results are cached
 to disk to avoid recomputation on repeated uploads of the same ontology.
 
-:author: Josephh21, Milktea0408, aprofilef293
+:author: Josephh21, aprofilef293
 """
 
 import colorsys
