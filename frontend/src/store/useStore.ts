@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import testData from '../data/test_data.json';
 import * as api from '../lib/api';
 import { MultiDirectedGraph } from 'graphology';
+import { matchesGraphFilters } from '../lib/filterUtils';
 
 export interface GraphNode {
     id: string;
@@ -257,9 +258,11 @@ export const useStore = create<ExplorerState>((set) => ({
                 if (a.attributes.searchScore) return -1;
                 return 0;
             })
-            useStore.getState().setSearchResultsSemantic(sortedNodes);
+            const { graphFilters } = useStore.getState();
+            const filteredNodes = sortedNodes.filter((n: GraphNode) => matchesGraphFilters(n, graphFilters));
+            useStore.getState().setSearchResultsSemantic(filteredNodes);
             set({ searchResultsLoading: false });
-            return sortedNodes;
+            return filteredNodes;
         } catch (error) {
             set({ searchResultsLoading: false });
             console.error("Error fetching semantic search results:", error);

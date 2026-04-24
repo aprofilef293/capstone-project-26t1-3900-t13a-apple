@@ -117,17 +117,18 @@ function computeVisible(args: ComputeArgs): Set<string> {
             || (searchMode === "semantic" && (infoPanelMode === "closed" || semanticResultIds.has(id)));
 
         const level = (attrs?.viewLevel as number) ?? 1;
-        const matchesLabel = checkMatch(label, labelGroups);
-        const matchesDesc = checkMatch(
+        const descText =
             ((attrs?.definition as string) ?? '') +
-            ((attrs?.synonyms as string[]) ?? []).join(' '),
-            descGroups,
-        );
+            ((attrs?.synonyms as string[]) ?? []).join(' ');
+        const isSimpleKeywordMode = (graphFilters.descriptionKeywords || []).length === 0;
+        const matchesKeywords = isSimpleKeywordMode
+            ? checkMatch(label + ' ' + descText, labelGroups)
+            : checkMatch(label, labelGroups) && checkMatch(descText, descGroups);
         const rank = (attrs?.percentile_rank as number) ?? 0;
         const matchesImportance = rank >= graphFilters.minImportance;
         const matchesColor = !graphFilters.excludedColors.has(node.color);
 
-        let isVisible = matchesSearch && level >= viewLevel && matchesLabel && matchesDesc && matchesImportance && matchesColor;
+        let isVisible = matchesSearch && level >= viewLevel && matchesKeywords && matchesImportance && matchesColor;
 
         if (selectedNodeId && isolation) {
             isVisible = isVisible && (
