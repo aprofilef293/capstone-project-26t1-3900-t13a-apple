@@ -1,4 +1,7 @@
-"""Pydantic models for the Graphology JSON serialization format used by the graph API."""
+"""Pydantic models for the Graphology JSON serialization format used by the graph API.
+
+:author: aprofilef293
+"""
 
 from pydantic import BaseModel, Field
 

@@ -1,4 +1,7 @@
-"""MemgraphService: init, auth, read/write execution, and connectivity checks."""
+"""MemgraphService: init, auth, read/write execution, and connectivity checks.
+
+:author: aprofilef293
+"""
 
 from unittest.mock import MagicMock, patch
 

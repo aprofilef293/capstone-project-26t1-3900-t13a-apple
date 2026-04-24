@@ -1,4 +1,7 @@
-"""Tests for the Gemini query expansion service."""
+"""Tests for the Gemini query expansion service.
+
+:author: aprofilef293
+"""
 
 from __future__ import annotations
 

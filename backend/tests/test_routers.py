@@ -1,4 +1,7 @@
-"""Graph router helpers and endpoint behaviour with mocked Memgraph."""
+"""Graph router helpers and endpoint behaviour with mocked Memgraph.
+
+:author: aprofilef293
+"""
 
 
 class TestNodeFromRecord:

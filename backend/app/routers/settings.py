@@ -8,6 +8,8 @@ Exposes:
 The POST endpoint hot-swaps the relevant service instances so changes take effect
 immediately without restarting the process.  Fields set to ``None`` in the request
 body are left unchanged; an empty string ``""`` clears the key.
+
+:author: Josephh21, aprofilef293
 """
 
 from __future__ import annotations
