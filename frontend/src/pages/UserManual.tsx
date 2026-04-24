@@ -26,9 +26,7 @@ import {
   Sun,
   Moon,
   Settings,
-  Database,
   Save,
-  Key,
 } from "lucide-react";
 import { PageHeader } from "../components/layout/PageHeader";
 import { Link } from "@tanstack/react-router";
