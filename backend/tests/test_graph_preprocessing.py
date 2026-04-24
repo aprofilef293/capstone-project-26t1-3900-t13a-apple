@@ -1,4 +1,7 @@
-"""Graph preprocessing: colour generation, overlap resolution, layout, and caching."""
+"""Graph preprocessing: colour generation, overlap resolution, layout, and caching.
+
+:author: aprofilef293
+"""
 
 from __future__ import annotations
 

@@ -4,6 +4,8 @@ Wires up CORS, GZip compression, API routers, and the optional
 ``EmbeddingService`` used for semantic search.  The single entry point
 is :func:`create_app`, which returns a fully configured ``FastAPI``
 instance ready to be served by Uvicorn.
+
+:author: aprofilef293, Josephh21
 """
 
 import logging
@@ -13,8 +15,10 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.gzip import GZipMiddleware
 
+from app import key_cache
 from app.config import Settings
 from app.routers import file_upload, graph
+from app.routers import settings as settings_router
 from app.services.embedding import (
     EmbeddingService,
     HuggingFaceEmbeddingModel,
@@ -63,6 +67,7 @@ def create_app() -> FastAPI:
         GZip middleware, and all API routers mounted.
     """
     settings = Settings()
+    key_cache.load(settings)
 
     @asynccontextmanager
     async def lifespan(app: FastAPI):
@@ -110,7 +115,6 @@ def create_app() -> FastAPI:
         else:
             logger.info("Gemini query expansion disabled (set GEMINI_API_KEY to enable)")
 
-        # --- startup complete / shutdown begins ---
         yield
         app.state.memgraph.close()
 
@@ -135,6 +139,7 @@ def create_app() -> FastAPI:
     )
     app.include_router(graph.router, prefix="/api/graph", tags=["graph"])
     app.include_router(file_upload.router, prefix="/api/ontology", tags=["upload"])
+    app.include_router(settings_router.router, prefix="/api", tags=["settings"])
 
     return app
 

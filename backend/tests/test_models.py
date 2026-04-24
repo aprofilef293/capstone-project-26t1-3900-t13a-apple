@@ -1,4 +1,7 @@
-"""Pydantic models: OntologyTerm, OntologyRelation, GraphData, and serialization."""
+"""Pydantic models: OntologyTerm, OntologyRelation, GraphData, and serialization.
+
+:author: aprofilef293
+"""
 
 import pytest
 from pydantic import ValidationError

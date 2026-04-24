@@ -27,6 +27,7 @@ services:
       - embedding-cache:/app/.embedding_cache
       - preprocessing-cache:/app/.preprocessing_cache
       - model-cache:/app/.model_cache
+      - runtime-config:/app/.runtime_config
 
   frontend:
     build:
@@ -43,3 +44,4 @@ volumes:
   embedding-cache:
   preprocessing-cache:
   model-cache:
+  runtime-config:

@@ -3,6 +3,9 @@ import testData from '../data/test_data.json';
 import * as api from '../lib/api';
 import { MultiDirectedGraph } from 'graphology';
 
+// boolean constant to control whether to use test_data.json as fallback when graph fetching fails
+const ENABLE_TEST_DATA_FALLBACK = false;
+
 export interface GraphNode {
     id: string;
     label: string;
@@ -43,8 +46,8 @@ export const DEFAULT_FILTERS: GraphFilters = {
 };
 
 type CypressWindow = Window & {
-  Cypress?: unknown;
-  __STORE__?: typeof useStore;
+    Cypress?: unknown;
+    __STORE__?: typeof useStore;
 };
 
 export interface ActivityItem {
@@ -318,13 +321,22 @@ export const useStore = create<ExplorerState>((set) => ({
                 graph: createGraph(nodes, edges)
             });
         } catch (error) {
-            console.error("Error fetching graph data, falling back to test_data.json:", error);
-            const { nodes, edges } = mapTestData();
-            set({
-                nodes,
-                edges,
-                graph: createGraph(nodes, edges)
-            });
+            if (ENABLE_TEST_DATA_FALLBACK) {
+                console.error("Error fetching graph data, using test_data.json fallback:", error);
+                const { nodes, edges } = mapTestData();
+                set({
+                    nodes,
+                    edges,
+                    graph: createGraph(nodes, edges)
+                });
+            } else {
+                console.error("Error fetching graph data and fallback is disabled:", error);
+                set({
+                    nodes: [],
+                    edges: [],
+                    graph: createGraph([], [])
+                });
+            }
         } finally {
             if (isInitial) {
                 set({ isInitialGraphLoading: false });
@@ -447,7 +459,7 @@ export const useStore = create<ExplorerState>((set) => ({
     completeImport: () => set({ importStatus: 'complete', importProgress: 100 }),
     failImport: (error) => set({ importStatus: 'error', importError: error }),
     searchError: null,
-    setSearchError: (error) => set({searchError: error}),
+    setSearchError: (error) => set({ searchError: error }),
     // loading spinner
     isNodeSelecting: false,
     setIsNodeSelecting: (val) => set({ isNodeSelecting: val }),
@@ -477,7 +489,7 @@ export const useStore = create<ExplorerState>((set) => ({
         localStorage.setItem('selectedNodeIds', JSON.stringify(newIds));
         useStore.getState().setSelectedNodeIds(newIds);
         // Re-open the multi-select panel if nodes are selected and panel is not node-info (e.g. after a page refresh)
-        if (newIds.length > 0 && (useStore.getState().infoPanelMode === 'closed' || useStore.getState().infoPanelMode === 'search-results' )) {
+        if (newIds.length > 0 && (useStore.getState().infoPanelMode === 'closed' || useStore.getState().infoPanelMode === 'search-results')) {
             useStore.getState().setInfoPanelMode('multi-select');
         }
         // Close panel if all nodes deselected
@@ -576,10 +588,10 @@ export const useStore = create<ExplorerState>((set) => ({
 
 // for testing with cypress - to click on node(s) in network graph page
 export function exposeStoreForCypress() {
-  if (typeof window === "undefined") return;
+    if (typeof window === "undefined") return;
 
-  const win = window as CypressWindow;
-  if (!win.Cypress) return;
+    const win = window as CypressWindow;
+    if (!win.Cypress) return;
 
-  win.__STORE__ = useStore;
+    win.__STORE__ = useStore;
 }

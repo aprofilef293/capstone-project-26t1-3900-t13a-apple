@@ -1,4 +1,7 @@
-"""Pydantic models for ontology data parsed from OBO/OWL files."""
+"""Pydantic models for ontology data parsed from OBO/OWL files.
+
+:author: aprofilef293
+"""
 
 from pydantic import BaseModel
 

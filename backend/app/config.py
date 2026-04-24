@@ -4,6 +4,8 @@ Uses ``pydantic-settings`` to declare every tuneable value in a single
 ``Settings`` class.  All values can be overridden via environment
 variables (case-insensitive) or through a ``.env`` file placed at the
 project root.
+
+:author: aprofilef293, Josephh21
 """
 
 from pydantic_settings import BaseSettings
@@ -72,6 +74,8 @@ class Settings(BaseSettings):
     gemini_api_key: str = ""
     gemini_model: str = ""
     gemini_enabled: bool = True
+
+    key_cache_path: str = "/app/.runtime_config/keys.json"
 
     cors_origins: list[str] = ["http://localhost:5173"]
     debug: bool = False

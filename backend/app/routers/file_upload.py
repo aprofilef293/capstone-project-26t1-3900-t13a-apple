@@ -4,6 +4,8 @@ This module exposes endpoints that accept ``.obo`` and ``.owl`` ontology files,
 parse them into terms and relations, run graph-preprocessing steps, and
 persist the result into a Memgraph database.  Upload progress is streamed to
 the client via Server-Sent Events (SSE).
+
+:author: aprofilef293
 """
 
 import asyncio
