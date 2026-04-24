@@ -1,4 +1,4 @@
-import { useEffect, useCallback, useMemo, useRef, forwardRef, useImperativeHandle, useDeferredValue } from "react";
+import { useEffect, useCallback, useMemo, useRef, forwardRef, useImperativeHandle } from "react";
 import { SigmaContainer, useSigma, useRegisterEvents, useCamera } from "@react-sigma/core";
 import "@react-sigma/core/lib/style.css";
 import { useStore, DEFAULT_FILTERS } from "../store/useStore";
@@ -6,7 +6,8 @@ import { useTheme } from "./theme-provider";
 import { NodeBorderProgram } from "@sigma/node-border";
 import { EdgeLineProgram, NodePointProgram } from "sigma/rendering";
 import { adjustColorBrightness, desaturateColor } from "../lib/utils";
-import { getGroups, checkMatch, hasActiveGraphFilters, matchesGraphFilters } from "../lib/filterUtils";
+import { hasActiveGraphFilters } from "../lib/filterUtils";
+import { useVisibleNodeIds } from "../lib/useVisibleNodeIds";
 import { MultiDirectedGraph } from "graphology";
 
 /** UI Configuration */
@@ -70,10 +71,9 @@ const GraphManager = forwardRef<GraphViewRef, unknown>((_, ref) => {
     const {
         nodes, edges, isMultiSelect,
         toggleNodeSelection, selectedNodeId, setSelectedNodeId,
-        searchQuery, searchMode, viewLevel, setIsNodeSelecting,
+        setIsNodeSelecting,
         selectedNodeIds, pathNodeIds, pathEdgeIds,
         infoPanelMode, graphFilters: rawFilters, pathViewOnly,
-        searchResultsSemantic, searchResultsExactTitle, searchResultsFuzzyTitle, searchResultsDescription,
         committedSearchNodeIds, searchScopeActive
     } = useStore();
     const graphFilters = rawFilters ?? DEFAULT_FILTERS;
@@ -81,8 +81,7 @@ const GraphManager = forwardRef<GraphViewRef, unknown>((_, ref) => {
     const { resolvedTheme } = useTheme();
     const isDark = resolvedTheme === "dark";
 
-    // Defer search query to prevent input lag on heavy graphs
-    const deferredSearchQuery = useDeferredValue(searchQuery);
+    const visibleIds = useVisibleNodeIds();
 
     // -----------------------------------------------------------------------
     // 1. Node style computation (prominent border nodes)
@@ -156,49 +155,32 @@ const GraphManager = forwardRef<GraphViewRef, unknown>((_, ref) => {
         return index;
     }, [nodes]);
 
-    const searchMatchIds = useMemo(() => {
-        if (!deferredSearchQuery) return null;
-        const ids = new Set<string>();
-        for (const n of searchResultsExactTitle) ids.add(n.id as string);
-        for (const n of searchResultsFuzzyTitle) ids.add(n.id as string);
-        for (const n of searchResultsDescription) ids.add(n.id as string);
-        return ids.size > 0 ? ids : null;
-    }, [deferredSearchQuery, searchResultsExactTitle, searchResultsFuzzyTitle, searchResultsDescription]);
-
     const filterScopeActive = useMemo(
         () => isMultiSelect && hasActiveGraphFilters(graphFilters),
         [isMultiSelect, graphFilters]
     );
 
-    const filterMatchIds = useMemo(() => {
-        if (!filterScopeActive) return null;
-
-        const ids = new Set<string>();
-        for (const node of nodes) {
-            if (matchesGraphFilters(node, graphFilters)) ids.add(node.id);
-        }
-
-        return ids;
-    }, [filterScopeActive, nodes, graphFilters]);
-
     // Isolation data
     const isolationData = useMemo(() => {
         if (!selectedNodeId || infoPanelMode != 'node-info') return null;
 
-        const graph = sigma.getGraph();
-        if (!graph.hasNode(selectedNodeId)) return null;
+        const selectedNode = nodes.find(n => n.id === selectedNodeId);
+        if (!selectedNode) return null;
 
-        const selectedAttrs = graph.getNodeAttribute(selectedNodeId, "attributes") as Record<string, unknown> | undefined;
-        const selectedLouvain = selectedAttrs?.louvain as string | number | undefined;
+        const selectedLouvain = (selectedNode.attributes as Record<string, unknown>)?.louvain as string | number | undefined;
 
         const communityNodes: Set<string> = selectedLouvain !== undefined
             ? (communityIndex.get(selectedLouvain) ?? new Set<string>())
             : new Set<string>();
 
-        const neighborNodes = new Set<string>(graph.neighbors(selectedNodeId));
+        const neighborNodes = new Set<string>();
+        for (const e of edges) {
+            if (e.source === selectedNodeId) neighborNodes.add(e.target);
+            else if (e.target === selectedNodeId) neighborNodes.add(e.source);
+        }
 
         return { communityNodes, neighborNodes, selectedLouvain };
-    }, [selectedNodeId, sigma, communityIndex]);
+    }, [selectedNodeId, infoPanelMode, nodes, edges, communityIndex]);
 
 
     // Multi-select: derive path sets from store (populated by backend API)
@@ -311,10 +293,6 @@ const GraphManager = forwardRef<GraphViewRef, unknown>((_, ref) => {
         resetCamera: fitToView,
     }), [camera, fitToView]);
 
-    useEffect(() => {
-        if (selectedNodeId) fitToView();
-    }, [selectedNodeId, fitToView]);
-
     const prevNodeIds = useRef<Set<string>>(new Set());
     const prevEdgeIds = useRef<Set<string>>(new Set());
 
@@ -359,6 +337,9 @@ const GraphManager = forwardRef<GraphViewRef, unknown>((_, ref) => {
         }
         prevEdgeIds.current = newEdgeIds;
     }, [nodes, edges, sigma]);
+    useEffect(() => {
+        if (selectedNodeId) fitToView();
+    }, [selectedNodeId, fitToView]);
 
     // Click interactions
     useEffect(() => {
@@ -446,65 +427,12 @@ const GraphManager = forwardRef<GraphViewRef, unknown>((_, ref) => {
         stateRef.current.edgeEndpoints = cache;
     }, [edges, sigma]);
 
-    // Visibility filter – runs on search/viewLevel/selection/filter changes
+    // Visibility set is computed via the shared useVisibleNodeIds hook so
+    // GraphView and HierarchyView can't diverge.
     useEffect(() => {
-        const graph = sigma.getGraph();
-        const query = searchQuery === "" ? "" : deferredSearchQuery.toLowerCase();
-        const labelGroups = getGroups(graphFilters.labelKeywords || []);
-        const descGroups = getGroups(graphFilters.descriptionKeywords || []);
-        const committedSearchSet = new Set(committedSearchNodeIds);
-        const selectedSet = new Set(selectedNodeIds);
-        const filterMatchSet = filterMatchIds ?? new Set<string>();
-
-        const visibleNodes = new Set<string>();
-
-        graph.forEachNode((id: string, attrs: NodeAttributes) => {
-            const label = String(attrs.label ?? "");
-            const matchesSearch = !!selectedNodeId
-                                || !query
-                                || (searchMode === "keyword" && (searchMatchIds ? searchMatchIds.has(id) : label.toLowerCase().includes(query)))
-                                || (searchMode === "semantic" && (infoPanelMode === "closed" || searchResultsSemantic.filter(n => n.id == id).length > 0));
-            const level = ((attrs.attributes as Record<string, unknown>)?.viewLevel as number) ?? 1;
-
-            const nodeAttrs = attrs.attributes as Record<string, unknown>;
-            const matchesLabel = checkMatch(label, labelGroups);
-            const matchesDesc = checkMatch(
-                ((nodeAttrs?.definition as string) ?? '') +
-                ((nodeAttrs?.synonyms as string[]) ?? []).join(' '),
-                descGroups
-            );
-            const rank = (nodeAttrs?.percentile_rank as number) ?? 0;
-            const matchesImportance = rank >= graphFilters.minImportance;
-            const matchesColor = !graphFilters.excludedColors.has(attrs.color as string);
-
-            let isVisible = matchesSearch && level >= viewLevel && matchesLabel && matchesDesc && matchesImportance && matchesColor;
-
-            if (selectedNodeId && isolationData) {
-                isVisible = isVisible && (
-                    id === selectedNodeId ||
-                    isolationData.communityNodes.has(id) ||
-                    isolationData.neighborNodes.has(id)
-                );
-            }
-
-            // Multi-select path isolation
-            if (isMultiSelect && (searchScopeActive || filterScopeActive)) {
-                const inSelected = selectedSet.has(id);
-                const inPath = multiSelectPathData ? multiSelectPathData.pathNodes.has(id) : false;
-                const inCommittedSearch = committedSearchSet.has(id);
-                const inFilterMatch = filterMatchSet.has(id);
-                isVisible = inSelected || inPath || inCommittedSearch || inFilterMatch;
-            } else if (isMultiSelect && multiSelectPathData) {
-                isVisible = multiSelectPathData.pathNodes.has(id) || (multiSelectPathData.neighborNodes.has(id) && level >= viewLevel);
-            }
-
-            if (isVisible) visibleNodes.add(id);
-        });
-
-        stateRef.current.visibleNodes = visibleNodes;
-        // update graph (note: this does not perform a hard refresh on the browser)
+        stateRef.current.visibleNodes = visibleIds;
         sigma.refresh();
-    }, [nodes, edges, deferredSearchQuery, searchQuery, viewLevel, selectedNodeId, isolationData, isMultiSelect, multiSelectPathData, selectedNodeIds, committedSearchNodeIds, searchScopeActive, filterScopeActive, filterMatchIds, sigma, graphFilters, searchMatchIds, searchResultsSemantic, searchMode]);
+    }, [visibleIds, sigma]);
 
     useEffect(() => {
         const graph = sigma.getGraph();
