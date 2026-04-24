@@ -1,4 +1,7 @@
-"""Graph API endpoints — requires a running Memgraph on localhost:7687."""
+"""Graph API endpoints — requires a running Memgraph on localhost:7687.
+
+:author: aprofilef293
+"""
 
 import io
 import json

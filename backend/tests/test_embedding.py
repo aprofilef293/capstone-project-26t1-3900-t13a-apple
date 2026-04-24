@@ -1,4 +1,7 @@
-"""Embedding service: field extraction, text building, indexing, search, and HF model."""
+"""Embedding service: field extraction, text building, indexing, search, and HF model.
+
+:author: aprofilef293
+"""
 
 from __future__ import annotations
 

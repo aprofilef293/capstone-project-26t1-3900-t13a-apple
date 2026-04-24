@@ -2,6 +2,8 @@
 
 Supports both local inference via sentence-transformers and remote
 inference via the HuggingFace Inference API.
+
+:author: aprofilef293, Josephh21, dogw3lder
 """
 
 from __future__ import annotations

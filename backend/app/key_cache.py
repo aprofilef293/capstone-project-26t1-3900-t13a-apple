@@ -2,6 +2,8 @@
 
 The cache file contains keys in plaintext and should never be committed.
 The file is written with mode ``0600`` on POSIX filesystems that support it.
+
+:author: Josephh21, aprofilef293
 """
 
 from __future__ import annotations

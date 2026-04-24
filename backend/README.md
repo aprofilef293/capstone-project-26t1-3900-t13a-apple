@@ -10,6 +10,7 @@
   - [2. API Endpoints](#2-api-endpoints)
     - [2.1 Ontology](#21-ontology)
     - [2.2 Graph](#22-graph)
+    - [2.3 Settings & Health](#23-settings--health)
   - [3. Application URLs](#3-application-urls)
   - [4. Environment Variables](#4-environment-variables)
   - [5. Testing](#5-testing)
@@ -80,6 +81,25 @@ On failure, an error event is sent instead: `{error: "...", error_code: <status>
 | GET | `/api/graph/path` | Shortest path between two nodes. | `source`, `target`, `max_depth` (1-50) |
 | GET | `/api/graph/paths` | Shortest paths between multiple nodes. | `ids` (2-10 node IDs), `max_depth` (1-50) |
 | GET | `/api/graph/paths/export` | Export paths and neighbors as CSV. | `path_ids`, `selected_ids` |
+
+### 2.3 Settings & Health
+
+| Method | Endpoint | Description |
+|---|---|---|
+| GET | `/api/health` | Liveness probe. Returns `{database, query_engine}` booleans — always HTTP 200, never 500. |
+| GET | `/api/settings/api-keys` | Whether each API key is configured. Never returns the raw values. |
+| GET | `/api/settings/api-keys/validate` | Live-probe each configured key against its external API. |
+| POST | `/api/settings/api-keys` | Update API keys at runtime. Validates before committing; hot-swaps dependent services. |
+
+**POST body** (all fields optional):
+
+```json
+{ "huggingface_token": "hf_...", "gemini_api_key": "..." }
+```
+
+- Field absent / `null` — leave the current value unchanged.
+- Empty string `""` — clear / disable the key.
+- Any other string — set to the new value (validated first; an invalid key is rejected without displacing the running service).
 
 ## 3. Application URLs
 

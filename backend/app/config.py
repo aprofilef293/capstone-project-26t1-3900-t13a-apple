@@ -4,6 +4,8 @@ Uses ``pydantic-settings`` to declare every tuneable value in a single
 ``Settings`` class.  All values can be overridden via environment
 variables (case-insensitive) or through a ``.env`` file placed at the
 project root.
+
+:author: aprofilef293, Josephh21
 """
 
 from pydantic_settings import BaseSettings

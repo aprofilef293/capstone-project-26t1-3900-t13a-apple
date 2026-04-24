@@ -1,3 +1,8 @@
+"""Shared pytest fixtures and test client configuration.
+
+:author: aprofilef293
+"""
+
 import socket
 from unittest.mock import MagicMock
 
