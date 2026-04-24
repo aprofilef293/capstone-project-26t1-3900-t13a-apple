@@ -136,19 +136,25 @@ describe('happy path for multi-select', () => {
     // check that each card on the multi-select side panel have a 'colour' field
     cy.contains(/colour:/i).should('be.visible')
 
+    // make sure previous dropdown is closed first
+    cy.get('[data-slot="dropdown-menu-content"]').should('not.exist');
+
     // click on attribute dropdown + click the 'colour' field again
     cy.contains('h2', 'Path between Nodes')
       .closest('aside')
-      .within(() => {
-        cy.contains('button', /^colour$/i).should('be.visible').click();
-      });
-    cy.get('[data-slot="dropdown-menu-content"]', { timeout: 10000 })
+      .find('[data-slot="dropdown-menu-trigger"]')
       .should('be.visible')
-      .within(() => {
-        cy.contains('[data-slot="dropdown-menu-radio-item"]', /colour/i)
-          .should('be.visible')
-          .click({ force: true });
-      });
+      .click();
+    cy.contains('h2', 'Path between Nodes')
+      .closest('aside')
+      .find('[data-slot="dropdown-menu-trigger"]')
+      .should('have.attr', 'data-state', 'open');
+    cy.get('[data-slot="dropdown-menu-content"]')
+      .should('be.visible')
+      .find('[data-slot="dropdown-menu-radio-item"]')
+      .contains(/colour/i)
+      .should('be.visible')
+      .click();
 
     // check that the dropdown goes back to showing 'select attribute'
     cy.contains('button', 'Select attribute').should('be.visible')
