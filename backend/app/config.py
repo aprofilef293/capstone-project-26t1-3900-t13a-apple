@@ -73,6 +73,8 @@ class Settings(BaseSettings):
     gemini_model: str = ""
     gemini_enabled: bool = True
 
+    key_cache_path: str = "/app/.runtime_config/keys.json"
+
     cors_origins: list[str] = ["http://localhost:5173"]
     debug: bool = False
     upload_max_size_mb: int = 250

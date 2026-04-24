@@ -457,6 +457,7 @@ class EmbeddingService:
         # comments) only surface when nothing better exists.
         field_names = list(FIELD_WEIGHTS.keys())
         best_weighted_score = np.full(n, -np.inf, dtype=np.float32)
+        best_raw_score = np.full(n, -np.inf, dtype=np.float32)
         best_field_idx = np.full(n, -1, dtype=np.int8)
 
         for fi, (field, weight) in enumerate(FIELD_WEIGHTS.items()):
@@ -468,10 +469,11 @@ class EmbeddingService:
             weighted_scores = raw_scores * weight
             better = mask & (weighted_scores > best_weighted_score)
             best_weighted_score = np.where(better, weighted_scores, best_weighted_score)
+            best_raw_score = np.where(better, raw_scores, best_raw_score)
             best_field_idx = np.where(better, fi, best_field_idx)
 
-        # Terms with no fields at all keep -inf; clamp to 0.
-        final_scores = np.maximum(best_weighted_score, 0.0)
+        # Rank by weighted score but expose raw cosine so thresholds are comparable across fields.
+        final_scores = np.maximum(best_raw_score, 0.0)
 
         k = min(top_k, n)
         # argpartition is O(n) vs O(n log n) for a full sort — we only need the top-k, not full ordering

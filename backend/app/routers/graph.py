@@ -32,6 +32,10 @@ COLOR_MAP = {
     "Outcome": "#10b981",
 }
 
+# Cap on how many Gemini-expanded terms we fan out into per-term embedding
+# searches, so a verbose expansion can't multiply embedding work unboundedly.
+_MAX_EXPANSION_FANOUT = 8
+
 
 def _node_from_record(node_props: dict, index: int, total: int) -> SerializedNode:
     """Convert a raw Memgraph node property dict into a ``SerializedNode``.
@@ -649,18 +653,20 @@ async def embedding_search(
     q: str = Query(
         ...,
         min_length=1,
-        description=("Free-text search query. Separate multiple terms with commas "),
+        description=("Free-text search query. Use commas to submit an explicit term list and skip Gemini expansion."),
     ),
     limit: int = Query(20, ge=1, le=100, description="Max results (1-100)."),
-    threshold: float = Query(0.5, ge=0.0, le=1.0, description="Minimum similarity score (0-1)."),
+    threshold: float = Query(0.35, ge=0.0, le=1.0, description="Minimum similarity score (0-1)."),
 ):
     """Semantic search powered by dense vector embeddings.
 
-    If the query looks like a sentence (no commas, more than two words) and the
-    Gemini service is configured, the sentence is first expanded into a list of
-    ontology-style terms via Gemini.  Those terms are then averaged into a
-    semantic centroid for the vector search.  Falls back to a direct search if
-    Gemini is unavailable or returns nothing useful.
+    When the Gemini service is configured and the query is not already a
+    comma-separated term list, the query is expanded into ontology-style
+    terms via Gemini in parallel with the direct embedding search.  Each
+    expanded term (up to ``_MAX_EXPANSION_FANOUT``) is then searched
+    individually and merged with the direct results by best score per node.
+    Falls back to the direct search if Gemini is unavailable or returns
+    nothing useful.
     """
     t0 = time.perf_counter()
     embedding_svc = getattr(request.app.state, "embedding_service", None)
@@ -687,14 +693,16 @@ async def embedding_search(
         _safe_expand(),
     )
 
-    # If Gemini expanded, search the centroid too and merge the higher score per term
+    # If Gemini expanded, search each term individually (capped to bound fan-out)
+    # and merge the best score per node.
     if expanded_terms:
-        gemini_query = ", ".join(expanded_terms)
-        gemini_results = await embedding_svc.search(gemini_query, top_k=limit)
+        fanout_terms = expanded_terms[:_MAX_EXPANSION_FANOUT]
+        per_term_results = await asyncio.gather(*[embedding_svc.search(term, top_k=limit) for term in fanout_terms])
         score_map = {tid: (score, field) for tid, score, field in results}
-        for tid, score, field in gemini_results:
-            if tid not in score_map or score > score_map[tid][0]:
-                score_map[tid] = (score, field)
+        for term_results in per_term_results:
+            for tid, score, field in term_results:
+                if tid not in score_map or score > score_map[tid][0]:
+                    score_map[tid] = (score, field)
         results = [(tid, score, field) for tid, (score, field) in score_map.items()]
         results.sort(key=lambda x: x[1], reverse=True)
         results = results[:limit]
@@ -725,7 +733,7 @@ async def embedding_search(
             node.attributes["searchScore"] = round(score, 4)
             node.attributes["matchFields"] = [best_field]
             if expanded_terms:
-                node.attributes["expandedTerms"] = expanded_terms
+                node.attributes["geminiExpandedTerms"] = expanded_terms
 
     # Return nodes sorted by score descending (matched nodes first, then neighbors)
     graph.nodes.sort(key=lambda n: n.attributes.get("searchScore", -1), reverse=True)
@@ -733,7 +741,7 @@ async def embedding_search(
     logger.info(
         "GET /semantic-search q=%r%s completed in %.3fs (%d matches)",
         q,
-        f" expanded={expanded_terms}" if expanded_terms else "",
+        f" gemini_expanded={expanded_terms}" if expanded_terms else "",
         time.perf_counter() - t0,
         len(top_ids),
     )
