@@ -39,29 +39,29 @@ class TestExpandBypass:
         assert await extractor.expand("diabetes treatment options") is None
 
     @pytest.mark.asyncio
-    async def test_query_contains_comma(self):
-        with patch("app.services.gemini.genai"):
+    async def test_query_contains_comma_skips_api(self):
+        """Comma-separated queries are treated as explicit term lists and must not hit Gemini."""
+        with patch("app.services.gemini.genai") as mock_genai:
             extractor = GeminiTermExtractor(api_key="fake-key")
+        mock_client = mock_genai.Client.return_value
+        mock_client.models.generate_content = MagicMock()
+
         assert await extractor.expand("heart failure, stroke") is None
+        mock_client.models.generate_content.assert_not_called()
 
     @pytest.mark.asyncio
-    async def test_single_keyword(self):
-        with patch("app.services.gemini.genai"):
+    async def test_empty_query_skips_api(self):
+        with patch("app.services.gemini.genai") as mock_genai:
             extractor = GeminiTermExtractor(api_key="fake-key")
-        assert await extractor.expand("heart") is None
+        mock_client = mock_genai.Client.return_value
+        mock_client.models.generate_content = MagicMock()
 
-    @pytest.mark.asyncio
-    async def test_bare_keywords_bypassed(self):
-        """Multi-word keyword queries without question/function/medical words skip Gemini."""
-        with patch("app.services.gemini.genai"):
-            extractor = GeminiTermExtractor(api_key="fake-key")
-        assert await extractor.expand("heart failure") is None
-        assert await extractor.expand("cell division apoptosis") is None
-        assert await extractor.expand("foster daughter mother") is None
+        assert await extractor.expand("   ") is None
+        mock_client.models.generate_content.assert_not_called()
 
 
-class TestExpandDetection:
-    """Tests for the different query types that trigger Gemini expansion."""
+class TestExpandTriggers:
+    """Every non-empty, non-comma query should be sent to Gemini for expansion."""
 
     def _make_extractor(self, mock_genai):
         mock_response = MagicMock()
@@ -70,42 +70,27 @@ class TestExpandDetection:
         return GeminiTermExtractor(api_key="fake-key")
 
     @pytest.mark.asyncio
-    async def test_question_word_triggers(self):
-        """Queries starting with question words trigger Gemini."""
+    async def test_single_keyword_triggers(self):
+        """Single-word queries are expanded (synonyms, parents, children help recall)."""
         with patch("app.services.gemini.genai") as mock_genai:
             extractor = self._make_extractor(mock_genai)
-        assert await extractor.expand("what causes heart failure") is not None
-        assert await extractor.expand("how does insulin resistance develop") is not None
-        assert await extractor.expand("why do cells undergo apoptosis") is not None
+        assert await extractor.expand("neuroblastoma") == ["Term A", "Term B"]
 
     @pytest.mark.asyncio
-    async def test_question_mark_triggers(self):
-        """Any query ending with ? triggers Gemini."""
+    async def test_bare_keywords_trigger(self):
+        """Multi-word keyword queries are expanded — no natural-language gate."""
         with patch("app.services.gemini.genai") as mock_genai:
             extractor = self._make_extractor(mock_genai)
-        assert await extractor.expand("heart failure?") is not None
-        assert await extractor.expand("sleep deprivation effects?") is not None
+        assert await extractor.expand("heart failure") == ["Term A", "Term B"]
+        assert await extractor.expand("cell division apoptosis") == ["Term A", "Term B"]
 
     @pytest.mark.asyncio
-    async def test_function_words_trigger(self):
-        """Queries containing articles/prepositions trigger Gemini."""
+    async def test_sentence_style_triggers(self):
         with patch("app.services.gemini.genai") as mock_genai:
             extractor = self._make_extractor(mock_genai)
-        assert await extractor.expand("the relationship between sleep and memory") is not None
-        assert await extractor.expand("effects of alcohol on the liver") is not None
-        assert await extractor.expand("genes associated with breast cancer") is not None
-
-    @pytest.mark.asyncio
-    async def test_medical_intent_words_trigger(self):
-        """Queries containing medical intent words trigger Gemini."""
-        with patch("app.services.gemini.genai") as mock_genai:
-            extractor = self._make_extractor(mock_genai)
-        assert await extractor.expand("diabetes treatment options") is not None
-        assert await extractor.expand("lung cancer symptoms") is not None
-        assert await extractor.expand("alzheimer diagnosis criteria") is not None
-        assert await extractor.expand("stroke prevention strategies") is not None
-        assert await extractor.expand("heart failure prognosis") is not None
-        assert await extractor.expand("sepsis risk factors") is not None
+        assert await extractor.expand("what causes heart failure") == ["Term A", "Term B"]
+        assert await extractor.expand("effects of alcohol on the liver") == ["Term A", "Term B"]
+        assert await extractor.expand("heart failure?") == ["Term A", "Term B"]
 
 
 class TestExpandSuccess:

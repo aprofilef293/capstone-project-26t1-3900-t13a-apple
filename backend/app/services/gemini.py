@@ -34,15 +34,28 @@ _PROMPT = (
 
 
 def _parse_terms(text: str) -> list[str]:
+    """Split a comma-separated Gemini response into cleaned terms.
+
+    Strips surrounding whitespace and quote characters from each term and
+    discards empty segments.
+
+    Args:
+        text: Raw comma-separated string returned by the Gemini model.
+
+    Returns:
+        A list of cleaned term strings, possibly empty.
+    """
     return [t.strip().strip("\"'") for t in text.split(",") if t.strip()]
 
 
 class GeminiTermExtractor:
     """Expands search queries into ontology-style terms via Gemini.
 
-    Every non-empty query is sent to Gemini when a client is configured.
-    Successful expansions are stored in a bounded LRU cache to avoid
-    redundant API calls. Transient failures are not cached.
+    Queries that already contain commas are treated as pre-structured
+    term lists and are not expanded; every other non-empty query is
+    sent to Gemini when a client is configured. Successful expansions
+    are stored in a bounded LRU cache to avoid redundant API calls.
+    Transient failures are not cached.
 
     Args:
         api_key: Google AI Studio API key. Pass an empty string to create
@@ -58,9 +71,11 @@ class GeminiTermExtractor:
     async def expand(self, query: str) -> list[str] | None:
         """Expand a search query into a list of ontology-compatible terms.
 
-        Sends every non-empty query to Gemini when the client is configured.
-        Returns ``None`` if the client is not set, the query is empty, the
-        API call fails, or the response is unusable (e.g. safety-filtered).
+        Returns ``None`` without calling Gemini if the client is not set,
+        the query is empty, or the query already contains a comma (treated
+        as an explicit term list supplied by the caller). Otherwise the
+        query is sent to Gemini; returns ``None`` if the API call fails
+        or the response is unusable (e.g. safety-filtered).
 
         Args:
             query: The raw user search string.
@@ -72,7 +87,7 @@ class GeminiTermExtractor:
             return None
 
         query = query.strip()
-        if not query:
+        if not query or "," in query:
             return None
 
         if query in self._cache:
@@ -111,7 +126,7 @@ class GeminiTermExtractor:
             logger.warning("Gemini returned no usable terms for %r", query)
             return None
 
-        logger.info("Gemini expanded %r → %s", query, terms)
+        logger.debug("Gemini expanded %r → %s", query, terms)
         self._cache[query] = terms
         if len(self._cache) > _MAX_CACHE_SIZE:
             self._cache.popitem(last=False)
