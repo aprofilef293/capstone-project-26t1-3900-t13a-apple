@@ -594,10 +594,12 @@ const sections: ManualSection[] = [
         content: (
           <>
             Click on the
-            <span className="mx-1 inline-flex items-center gap-1 rounded-lg border border-sidebar-border bg-sidebar/95 px-2.5 py-1 text-[12px] leading-none text-sidebar-foreground/70 shadow-sm">
-              <Settings className="h-3 w-3 opacity-60" />
-              <span>Settings</span>
-            </span>
+            <Link
+              to="/settings"
+              className="mx-1 underline decoration-sidebar-foreground/40 underline-offset-2 hover:text-blue-600 dark:hover:text-blue-400"
+            >
+              Settings
+            </Link>
             tab in the left sidebar to open the page
           </>
         ),
@@ -606,10 +608,9 @@ const sections: ManualSection[] = [
         content: (
           <>
             The
-            <span className="mx-1 inline-flex items-center gap-1 rounded-lg border border-sidebar-border bg-sidebar/95 px-2.5 py-1 text-[12px] leading-none text-sidebar-foreground/70 shadow-sm">
-              <Database className="h-3 w-3 opacity-60" />
-              <span>System Status</span>
-            </span>
+            <code className="mx-1 rounded border border-sidebar-border bg-sidebar-accent/60 px-1.5 py-0.5 font-mono text-[12px] text-sidebar-foreground/80">
+              System Status
+            </code>
             section will check the status of the following services:
           </>
         ),
@@ -632,10 +633,9 @@ const sections: ManualSection[] = [
         content: (
           <>
             The
-            <span className="mx-1 inline-flex items-center gap-1 rounded-lg border border-sidebar-border bg-sidebar/95 px-2.5 py-1 text-[12px] leading-none text-sidebar-foreground/70 shadow-sm">
-              <Key className="h-3 w-3 opacity-60" />
-              <span>API Keys</span>
-            </span>
+            <code className="mx-1 rounded border border-sidebar-border bg-sidebar-accent/60 px-1.5 py-0.5 font-mono text-[12px] text-sidebar-foreground/80">
+              API Keys
+            </code>
             section allows users to enter tokens for:
           </>
         ),
