@@ -25,6 +25,8 @@ import {
   ZoomIn,
   Sun,
   Moon,
+  Settings,
+  Save,
 } from "lucide-react";
 import { PageHeader } from "../components/layout/PageHeader";
 import { Link } from "@tanstack/react-router";
@@ -56,9 +58,9 @@ const sections: ManualSection[] = [
               to="/"
               className="mx-1 underline decoration-sidebar-foreground/40 underline-offset-2 hover:text-blue-600 dark:hover:text-blue-400"
             >
-              Dashboard page
+              Dashboard
             </Link>
-            and contains an overview of the main features of the web-app
+            page and contains an overview of the main features of the web-app
           </>
         ),
       },
@@ -105,7 +107,7 @@ const sections: ManualSection[] = [
             >
               Data Manager
             </Link>
-            Page
+            page
           </>
         ),
       },
@@ -163,9 +165,9 @@ const sections: ManualSection[] = [
               to="/explorer"
               className="mx-1 underline decoration-sidebar-foreground/40 underline-offset-2 hover:text-blue-600 dark:hover:text-blue-400"
             >
-              Network Graph page
+              Network Graph
             </Link>
-            after uploading a file
+            page after uploading a file
           </>
         ),
       },
@@ -383,7 +385,7 @@ const sections: ManualSection[] = [
               Combine
             </code>
             once clicked so users can merge the two search bars back into a
-            single search bar"
+            single search bar
           </>
         ),
       },
@@ -577,6 +579,86 @@ const sections: ManualSection[] = [
               <span>Graph</span>
             </span>
             button to hide the Hierarchy Panel and return to the graph
+          </>
+        ),
+      },
+    ],
+  },
+  {
+    title: "Settings Page",
+    icon: Settings,
+    items: [
+      {
+        content: (
+          <>
+            Click on the
+            <Link
+              to="/settings"
+              className="mx-1 underline decoration-sidebar-foreground/40 underline-offset-2 hover:text-blue-600 dark:hover:text-blue-400"
+            >
+              Settings
+            </Link>
+            tab in the left sidebar to open the page
+          </>
+        ),
+      },
+      {
+        content: (
+          <>
+            The
+            <code className="mx-1 rounded border border-sidebar-border bg-sidebar-accent/60 px-1.5 py-0.5 font-mono text-[12px] text-sidebar-foreground/80">
+              System Status
+            </code>
+            section will check the status of the following services:
+          </>
+        ),
+        subItems: ["Graph Database", "LLM Query Service"],
+      },
+      {
+        content: (
+          <>
+            Click the
+            <span className="mx-1 inline-flex items-center gap-1 rounded border border-sidebar-border bg-sidebar-accent/60 px-1.5 py-1 text-[12px] leading-none text-sidebar-foreground/80 align-middle">
+              <RefreshCcw className="h-3.5 w-3.5 opacity-60" />
+              <span>Refresh</span>
+            </span>
+            button to re-check the status of the services above and update their
+            status online or offline
+          </>
+        ),
+      },
+      {
+        content: (
+          <>
+            The
+            <code className="mx-1 rounded border border-sidebar-border bg-sidebar-accent/60 px-1.5 py-0.5 font-mono text-[12px] text-sidebar-foreground/80">
+              API Keys
+            </code>
+            section allows users to enter tokens for:
+          </>
+        ),
+        subItems: ["Hugging Face", "Gemini API Key"],
+      },
+      {
+        content: (
+          <>
+            Click
+            <span className="mx-1 inline-flex items-center gap-1 rounded border border-sidebar-border bg-sidebar-accent/60 px-1.5 py-1 text-[12px] leading-none text-sidebar-foreground/80 align-middle">
+              <Save className="h-3.5 w-3.5 opacity-60" />
+              <span>Save</span>
+            </span>
+            to validate and use the entered tokens
+          </>
+        ),
+      },
+      {
+        content: (
+          <>
+            Click the
+            <span className="mx-1 inline-flex items-center gap-1 rounded-md border border-sidebar-border bg-sidebar-accent/60 px-1.5 py-1 text-[12px] leading-none text-sidebar-foreground/80 align-middle">
+              <X className="h-3.5 w-3 opacity-60" />
+            </span>
+            button next to a key to remove it
           </>
         ),
       },
