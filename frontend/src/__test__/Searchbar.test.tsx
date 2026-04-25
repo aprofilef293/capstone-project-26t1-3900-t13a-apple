@@ -83,9 +83,13 @@ vi.mock("@/store/useStore", () => ({
     typeof selector === "function" ? selector(mockState) : mockState,
 }));
 
-vi.mock("@/lib/filterUtils", () => ({
-  matchesGraphFilters: vi.fn(() => true),
-}));
+vi.mock("@/lib/filterUtils", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/filterUtils")>();
+  return {
+    ...actual,
+    matchesGraphFilters: vi.fn(() => true),
+  };
+});
 
 describe("tests for searchbar", () => {
   beforeEach(() => {

@@ -2,9 +2,21 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { HierarchyView } from "../components/explorer/HierarchyView";
 import { buildHierarchyFromGraph } from "@/lib/hierarchyUtils";
-import { matchesGraphFilters } from "@/lib/filterUtils";
+import { useVisibleNodeIds } from "@/lib/useVisibleNodeIds";
 
 const setSelectedNodeIdMock = vi.fn();
+
+const defaultHierarchy = [
+  {
+    id: "1",
+    name: "test1",
+    type: "folder" as const,
+    children: [
+      { id: "2", name: "test2", type: "file" as const, children: [] },
+      { id: "3", name: "test3", type: "folder" as const, children: [] },
+    ],
+  },
+];
 
 // mock data (3 nodes, 2 edges)
 const mockState = {
@@ -35,27 +47,19 @@ vi.mock("@/store/useStore", () => ({
 }));
 
 vi.mock("@/lib/hierarchyUtils", () => ({
-  buildHierarchyFromGraph: vi.fn(() => [
-    {
-      id: "1",
-      name: "test1",
-      type: "folder",
-      children: [
-        { id: "2", name: "test2", type: "file", children: [] },
-        { id: "3", name: "test3", type: "folder", children: [] },
-      ],
-    },
-  ]),
+  buildHierarchyFromGraph: vi.fn(),
 }));
 
-vi.mock("@/lib/filterUtils", () => ({
-  matchesGraphFilters: vi.fn(() => true),
+vi.mock("@/lib/useVisibleNodeIds", () => ({
+  useVisibleNodeIds: vi.fn(),
 }));
 
 describe("tests for hierarchy view", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockState.searchQuery = ""; 
+    vi.mocked(useVisibleNodeIds).mockReturnValue(new Set(["1", "2", "3"]));
+    vi.mocked(buildHierarchyFromGraph).mockReturnValue(defaultHierarchy);
+    mockState.searchQuery = "";
   });
 
   it("make sure the hierarchy panel render correctly", () => {
@@ -82,6 +86,10 @@ describe("tests for hierarchy view", () => {
     const { rerender } = render(<HierarchyView />);
     // search for the term "test1"
     mockState.searchQuery = "test1";
+    vi.mocked(useVisibleNodeIds).mockReturnValue(new Set(["1"]));
+    vi.mocked(buildHierarchyFromGraph).mockReturnValue([
+      { id: "1", name: "test1", type: "folder" as const, children: [] }
+    ]);
     rerender(<HierarchyView />);
 
     // only test1 should be visible after the search now
@@ -112,10 +120,7 @@ describe("tests for hierarchy view", () => {
 
   it("make sure filter panel works with heirarchy ", () => {
     // filter out node2 (ie. test2)
-    const mockMatchesGraphFilters = vi.fn((node) => {
-      return node.id !== "2";
-    });
-    vi.mocked(matchesGraphFilters).mockImplementation(mockMatchesGraphFilters);
+    vi.mocked(useVisibleNodeIds).mockReturnValueOnce(new Set(["1", "3"]));
 
     render(<HierarchyView />);
 
@@ -125,7 +130,9 @@ describe("tests for hierarchy view", () => {
         { id: "1", name: "test1", type: "folder" },
         { id: "3", name: "test3", type: "folder" },
       ],
-      mockState.edges,
+      [
+        { source: "1", target: "3" },
+      ]
     );
   });
 });
