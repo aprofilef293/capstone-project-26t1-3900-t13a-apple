@@ -1,3 +1,7 @@
+/*  Integration tests for keyword search (success) and results panel
+ *  Main Contributors: Lucy
+ */
+
 describe('happy path for keyword search', () => {
   beforeEach(() => {
     cy.intercept('POST', '/api/ontology/upload').as('uploadOntology')

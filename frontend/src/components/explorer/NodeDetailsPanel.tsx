@@ -10,6 +10,11 @@ import { Button } from "../ui/button";
 import React, { useMemo } from "react";
 import { InfoHelpIcon } from "../InfoHelpIcon";
 
+/*  Information panel for single selected node.
+ *  Location: Network Graph page (right sidebar)
+ *  Main Contributors: Jessica
+ */
+
 /* ── Reusable connection card list ── */
 interface ConnectionItem {
     id: string;

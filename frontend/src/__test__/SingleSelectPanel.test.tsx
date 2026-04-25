@@ -3,6 +3,10 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { MultiDirectedGraph } from "graphology";
 import { NodeDetailsPanel } from "../components/explorer/NodeDetailsPanel";
 
+/*  Tests for info panel about single selected node
+ *  Main Contributors: Lucy
+ */
+
 const setSelectedNodeIdMock = vi.fn();
 const setInfoPanelModeMock = vi.fn();
 const setPrevActivityMock = vi.fn();

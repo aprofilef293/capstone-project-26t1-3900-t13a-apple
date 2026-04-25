@@ -4,6 +4,10 @@ import { SlidersHorizontal } from "lucide-react";
 import { cn } from "../../lib/utils";
 import { InfoHelpIcon } from "../InfoHelpIcon";
 
+/*  Slider to filter graph based on node importance.
+ *  Location: Network Graph page
+ *  Main Contributors: Joseph
+ */
 
 export function NodeSizeFilter() {
     const { viewLevel, setViewLevel } = useStore();

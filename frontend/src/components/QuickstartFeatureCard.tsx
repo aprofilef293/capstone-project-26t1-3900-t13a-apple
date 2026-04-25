@@ -14,6 +14,11 @@ import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 
+/*  Quickstart card with steps explaining how to use a feature of the app.
+ *  Location: Dashboard page
+ *  Main Contributors: Lucy
+ */
+
 export type AppRoute = "/" | "/manager" | "/explorer" | "/settings";
 
 export interface QuickstartFeature {

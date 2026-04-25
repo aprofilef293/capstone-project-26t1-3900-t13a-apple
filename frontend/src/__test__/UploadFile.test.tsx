@@ -2,6 +2,10 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { UploadBox } from "../components/UploadBox";
 
+/*  Tests for file upload functionality
+ *  Main Contributors: Lucy
+ */
+
 const navigateMock = vi.fn();
 const startFileImportMock = vi.fn();
 const clearSelectedNodesMock = vi.fn();

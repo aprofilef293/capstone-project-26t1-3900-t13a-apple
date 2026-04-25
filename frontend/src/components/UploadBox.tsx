@@ -5,6 +5,11 @@ import { useNavigate } from "@tanstack/react-router";
 import { useStore } from "@/store/useStore";
 import { useRef } from "react";
 
+/*  Allows user to import a data file into the app.
+ *  Location: Dashboard, Data Manager pages
+ *  Main Contributors: Lucy, Joseph
+ */
+
 interface UploadBoxProps {
     className?: string;
     title?: string;

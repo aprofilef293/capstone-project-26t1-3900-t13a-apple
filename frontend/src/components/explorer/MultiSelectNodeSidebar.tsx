@@ -13,6 +13,11 @@ import {
 import { exportMultiShortestPathsCsv } from "../../lib/api";
 import { InfoHelpIcon } from "../InfoHelpIcon";
 
+/*  Information panel for nodes selected with multiselect.
+ *  Location: Network Graph page (right sidebar)
+ *  Main Contributors: Lucy
+ */
+
 type GraphNode = {
   id: string;
   label: string;

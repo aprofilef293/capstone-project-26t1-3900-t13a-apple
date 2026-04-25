@@ -1,3 +1,7 @@
+/*  Integration tests for semantic (advanced) search and search results
+ *  Main Contributors: Lucy
+ */
+
 describe('happy path for semantic search', () => {
   beforeEach(() => {
     cy.intercept('POST', '/api/ontology/upload').as('uploadOntology')

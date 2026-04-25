@@ -4,6 +4,11 @@ import { useStore } from "../store/useStore";
 import { formatDate } from "../lib/utils";
 import { useEffect, useState } from "react";
 
+/*  Information about the most recently imported file (or the file currently being imported).
+ *  Location: Data Manager page
+ *  Main Contributors: Lucy
+ */
+
 export function FileImportStatusInfo() {
     const { fileName, importStatus, importProgress, importDate, importError } = useStore();
     const [showSpinner, setShowSpinner] = useState(false);

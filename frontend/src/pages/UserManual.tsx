@@ -32,6 +32,10 @@ import { PageHeader } from "../components/layout/PageHeader";
 import { Link } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 
+/*  Complete app user manual.
+ *  Main Contributors: Lucy
+ */
+
 type ManualItem = {
   content: ReactNode;
   subItems?: ReactNode[];

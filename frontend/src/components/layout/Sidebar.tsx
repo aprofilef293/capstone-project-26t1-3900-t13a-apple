@@ -7,6 +7,11 @@ import { ThemeToggle } from "../theme-toggle";
 import { useState } from "react";
 import { cn } from "../../lib/utils";
 
+/*  Left navigation sidebar, with links to all app pages.
+ *  Location: All pages
+ *  Main Contributors: Joseph
+ */
+
 const navigation = [
     { name: "Dashboard", href: "/", icon: Activity },
     { name: "Data Manager", href: "/manager", icon: HardDrive },
