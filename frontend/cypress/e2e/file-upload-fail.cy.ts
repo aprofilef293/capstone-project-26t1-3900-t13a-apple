@@ -1,3 +1,7 @@
+/*  Integration tests for file upload (failure)
+ *  Main Contributors: Lucy
+ */
+
 describe('sad path for file upload', () => {
   beforeEach(() => {
     cy.intercept('POST', '/api/ontology/upload').as('uploadOntology')

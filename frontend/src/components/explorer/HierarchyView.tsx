@@ -6,6 +6,11 @@ import { buildHierarchyFromGraph } from "../../lib/hierarchyUtils";
 import type { HierarchyNode } from "../../lib/hierarchyUtils";
 import { useVisibleNodeIds } from "../../lib/useVisibleNodeIds";
 
+/*  Structured hierarchy view of graph data, as alternative to graph layout.
+ *  Location: Network Graph page
+ *  Main Contributors: Joseph
+ */
+
 export function HierarchyView() {
     const {
         nodes, edges, searchQuery, infoPanelMode,

@@ -2,6 +2,11 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { GraphFilterPanel } from "@/components/explorer/FilterDetailsPanel";
 
+/*  Tests for filter panel
+ *  Main Contributors: Lucy
+ */
+
+
 type TagMode = "include" | "exclude" | "mandatory";
 type TagKeyword = { text: string; mode: TagMode };
 type GraphFilters = {

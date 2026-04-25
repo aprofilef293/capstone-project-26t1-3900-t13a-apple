@@ -5,6 +5,11 @@ import { cn } from "@/lib/utils";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "../ui/accordion";
 import { InfoHelpIcon } from "../InfoHelpIcon";
 
+/*  Panel showing results of keyword or advanced search.
+ *  Location: Network Graph page (right sidebar)
+ *  Main Contributors: Jessica
+ */
+
 function SearchResults({
     items,
     icon: Icon,

@@ -4,6 +4,10 @@ import { HierarchyView } from "../components/explorer/HierarchyView";
 import { buildHierarchyFromGraph } from "@/lib/hierarchyUtils";
 import { useVisibleNodeIds } from "@/lib/useVisibleNodeIds";
 
+/*  Tests for hierarchy view of graph
+ *  Main Contributors: Lucy
+ */
+
 const setSelectedNodeIdMock = vi.fn();
 const toggleNodeSelectionMock = vi.fn();
 

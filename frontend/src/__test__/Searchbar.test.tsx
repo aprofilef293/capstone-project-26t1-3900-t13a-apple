@@ -3,6 +3,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ExplorerSearch } from "@/components/explorer/ExplorerSearch";
 import { matchesGraphFilters } from "@/lib/filterUtils";
 
+/*  Tests for keyword search feature
+ *  Main Contributors: Lucy
+ */
+
 type SearchMode = "keyword" | "semantic";
 
 type MockNode = {

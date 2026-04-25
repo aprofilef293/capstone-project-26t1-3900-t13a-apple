@@ -1,5 +1,9 @@
 import type { GraphNode, GraphFilters, TagKeyword } from "../store/useStore";
 
+/*  Helper functions for graph filtering.
+ *  Main Contributors: Joseph, Lucy
+ */
+
 export type KeywordGroups = {
     include: string[];
     mandatory: string[];

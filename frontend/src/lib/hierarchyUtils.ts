@@ -1,5 +1,9 @@
 import type { GraphNode, GraphEdge } from "../store/useStore";
 
+/*  Helper functions for graph Hierarchy View.
+ *  Main Contributors: Joseph
+ */
+
 export interface HierarchyNode {
     id: string;
     name: string;

@@ -3,6 +3,11 @@ import { type ReactNode } from "react";
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "./ui/hover-card";
 import { cn } from "@/lib/utils";
 
+/*  Question mark icon that users can hover over to see explanation/info.
+ *  Location: Network Graph page
+ *  Main Contributors: Jessica
+ */
+
 export function InfoHelpIcon({
     innerText,
     iconSize = "w-4 h-4",

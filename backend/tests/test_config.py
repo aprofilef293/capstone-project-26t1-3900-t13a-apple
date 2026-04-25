@@ -1,4 +1,7 @@
-"""Settings defaults, overrides, and env-var binding."""
+"""Settings defaults, overrides, and env-var binding.
+
+:author: aprofilef293
+"""
 
 from app.config import Settings
 

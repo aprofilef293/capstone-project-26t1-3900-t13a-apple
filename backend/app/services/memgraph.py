@@ -1,4 +1,7 @@
-"""Synchronous Memgraph database client for ontology graph storage and retrieval."""
+"""Synchronous Memgraph database client for ontology graph storage and retrieval.
+
+:author: aprofilef293
+"""
 
 from neo4j import Driver, GraphDatabase
 

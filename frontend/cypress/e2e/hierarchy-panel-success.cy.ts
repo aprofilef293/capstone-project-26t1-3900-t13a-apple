@@ -1,3 +1,7 @@
+/*  Integration tests for graph hierarchy view
+ *  Main Contributors: Lucy
+ */
+
 describe('happy path for hierarchy panel', () => {
   beforeEach(() => {
     cy.on('uncaught:exception', (err) => {

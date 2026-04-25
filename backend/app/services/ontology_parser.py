@@ -1,4 +1,7 @@
-"""Ontology file parser for OBO and OWL formats using the Pronto library."""
+"""Ontology file parser for OBO and OWL formats using the Pronto library.
+
+:author: aprofilef293
+"""
 
 import pronto
 

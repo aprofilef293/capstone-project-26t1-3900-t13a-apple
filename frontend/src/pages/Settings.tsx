@@ -11,8 +11,11 @@ import {
     type ApiKeyValidation,
 } from "../lib/api";
 
-type SaveState = "idle" | "saving" | "error";
+/*  Settings page.
+ *  Main Contributors: Joseph
+ */
 
+type SaveState = "idle" | "saving" | "error";
 const persistedValid = { hf: false, gemini: false };
 
 // ── Sub-components ────────────────────────────────────────────────────────────

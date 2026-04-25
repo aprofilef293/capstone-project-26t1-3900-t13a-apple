@@ -1,3 +1,7 @@
+/*  Integration tests for node single select and information panel
+ *  Main Contributors: Lucy
+ */
+
 export {};
 
 type GraphNode = {

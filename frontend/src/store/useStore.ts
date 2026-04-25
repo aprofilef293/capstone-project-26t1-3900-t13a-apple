@@ -4,6 +4,9 @@ import * as api from '../lib/api';
 import { MultiDirectedGraph } from 'graphology';
 import { matchesGraphFilters } from '../lib/filterUtils';
 
+// boolean constant to control whether to use test_data.json as fallback when graph fetching fails
+const ENABLE_TEST_DATA_FALLBACK = false;
+
 export interface GraphNode {
     id: string;
     label: string;
@@ -321,13 +324,22 @@ export const useStore = create<ExplorerState>((set) => ({
                 graph: createGraph(nodes, edges)
             });
         } catch (error) {
-            console.error("Error fetching graph data, falling back to test_data.json:", error);
-            const { nodes, edges } = mapTestData();
-            set({
-                nodes,
-                edges,
-                graph: createGraph(nodes, edges)
-            });
+            if (ENABLE_TEST_DATA_FALLBACK) {
+                console.error("Error fetching graph data, using test_data.json fallback:", error);
+                const { nodes, edges } = mapTestData();
+                set({
+                    nodes,
+                    edges,
+                    graph: createGraph(nodes, edges)
+                });
+            } else {
+                console.error("Error fetching graph data and fallback is disabled:", error);
+                set({
+                    nodes: [],
+                    edges: [],
+                    graph: createGraph([], [])
+                });
+            }
         } finally {
             if (isInitial) {
                 set({ isInitialGraphLoading: false });

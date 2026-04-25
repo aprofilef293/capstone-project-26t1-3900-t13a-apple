@@ -6,6 +6,11 @@ import { Button } from "../ui/button";
 import { matchesGraphFilters } from "../../lib/filterUtils";
 import { cn } from "../../lib/utils";
 
+/*  Searchbar for keyword and advanced search.
+ *  Location: Network Graph page (in toolbar)
+ *  Main Contributors: Jessica, Joseph
+ */
+
 const SEARCH_MODES: { mode: 'keyword' | 'semantic'; label: string; Icon: LucideIcon; }[] = [
     { mode: "keyword", label: "Keyword", Icon: WholeWord },
     { mode: "semantic", label: "Advanced", Icon: DatabaseSearch },
