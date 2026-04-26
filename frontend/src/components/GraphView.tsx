@@ -1,5 +1,5 @@
 import { useEffect, useCallback, useMemo, useRef, forwardRef, useImperativeHandle } from "react";
-import { SigmaContainer, useSigma, useRegisterEvents, useCamera } from "@react-sigma/core";
+import { SigmaContainer, useSigma, useRegisterEvents, useCamera, useSetSettings } from "@react-sigma/core";
 import "@react-sigma/core/lib/style.css";
 import { useStore, DEFAULT_FILTERS } from "../store/useStore";
 import { useTheme } from "./theme-provider";
@@ -73,6 +73,7 @@ const GraphManager = forwardRef<GraphViewRef, unknown>((_, ref) => {
     const sigma = useSigma();
     const camera = useCamera({ duration: 250 });
     const registerEvents = useRegisterEvents();
+    const setSigmaSettings = useSetSettings();
     const {
         nodes, edges, isMultiSelect,
         toggleNodeSelection, selectedNodeId, setSelectedNodeId,
@@ -197,12 +198,6 @@ const GraphManager = forwardRef<GraphViewRef, unknown>((_, ref) => {
         const pathEdgeSet = new Set<string>(pathEdgeIds);
         const neighborNodes = new Set<string>();
 
-        // for (const nodeId of pathNodes) {
-        //     if (!graph.hasNode(nodeId)) continue;
-        //     for (const nb of graph.neighbors(nodeId)) {
-        //         if (!pathNodes.has(nb)) neighborNodes.add(nb);
-        //     }
-        // }
         for (const edge of edges) {
             if (pathNodes.has(edge.source) && !pathNodes.has(edge.target)) {
                 neighborNodes.add(edge.target);
@@ -439,6 +434,81 @@ const GraphManager = forwardRef<GraphViewRef, unknown>((_, ref) => {
         sigma.refresh();
     }, [visibleIds, sigma]);
 
+    // Fix for graph view disappearing when toggling theme
+    const colours = useMemo(
+        () => ({
+            label: isDark ? "#f8fafc" : "#0f172a",
+            highlight: "#fbbf24",
+            highlightLabel: "#000000",
+        }),
+        [isDark],
+    );
+
+    const lastFontRef = useRef<string>("");
+
+    const drawOverlay = useCallback(
+        (ctx: CanvasRenderingContext2D, data: NodeAttributes, settings: SigmaDrawingSettings) => {
+            const { label, x, y, size } = data;
+            if (!label || x === undefined || y === undefined || size === undefined) return;
+
+            const { labelSize, labelFont, labelWeight } = settings;
+            const pad = 4;
+            const font = `${labelWeight} ${labelSize}px ${labelFont}`;
+
+            if (lastFontRef.current !== font) { ctx.font = font; lastFontRef.current = font; }
+            const textW = ctx.measureText(label).width;
+
+            ctx.beginPath();
+            ctx.fillStyle = colours.highlight;
+            ctx.arc(x, y, size + pad, 0, Math.PI * 2);
+            ctx.fill();
+
+            const rx = x + size + pad;
+            const ry = y - labelSize / 2 - pad;
+
+            ctx.beginPath();
+            ctx.fillStyle = colours.highlight;
+            ctx.shadowColor = "rgba(0,0,0,0.2)";
+            ctx.shadowBlur = 8;
+            ctx.shadowOffsetY = 2;
+
+            if (ctx.roundRect) ctx.roundRect(rx, ry, textW + pad * 2, labelSize + pad * 2, 4);
+            else ctx.rect(rx, ry, textW + pad * 2, labelSize + pad * 2);
+
+            ctx.fill();
+            ctx.shadowBlur = 0;
+
+            ctx.fillStyle = colours.highlightLabel;
+            ctx.fillText(label, rx + pad, y + labelSize / 3);
+        },
+        [colours],
+    );
+
+    const defaultDrawNodeLabel = useCallback(
+        (ctx: CanvasRenderingContext2D, data: NodeAttributes, settings: SigmaDrawingSettings) => {
+            const { label, x, y, size, highlighted } = data;
+            if (!label || x === undefined || y === undefined || size === undefined) return;
+            if (highlighted) return drawOverlay(ctx, data, settings);
+
+            const font = `${settings.labelWeight} ${settings.labelSize}px ${settings.labelFont}`;
+            if (lastFontRef.current !== font) { ctx.font = font; lastFontRef.current = font; }
+            ctx.fillStyle = colours.label;
+            ctx.fillText(label, x + size + 4, y + settings.labelSize / 3);
+        },
+        [colours, drawOverlay],
+    );
+
+    useEffect(() => {
+        setSigmaSettings({
+            labelColor: { color: colours.label },
+            defaultNodeColor: colours.label,
+            defaultEdgeColor: isDark ? EDGE_OPACITY_DARK : EDGE_OPACITY_LIGHT,
+            defaultDrawNodeHover: drawOverlay,
+            defaultDrawNodeLabel: defaultDrawNodeLabel,
+        });
+        sigma.refresh();
+    }, [setSigmaSettings, colours, isDark, drawOverlay, defaultDrawNodeLabel, sigma]);
+
     useEffect(() => {
         const graph = sigma.getGraph();
 
@@ -580,115 +650,39 @@ const GraphManager = forwardRef<GraphViewRef, unknown>((_, ref) => {
     return null;
 });
 
-// ---------------------------------------------------------------------------
-// GraphView – public component wrapping SigmaContainer with themed settings
-// ---------------------------------------------------------------------------
+
+
+const SIGMA_SETTINGS = {
+    allowInvalidContainer: true,
+    zIndex: true,
+    renderLabels: true,
+    renderEdgeLabels: false,
+    labelDensity: 0.5,
+    labelGridCellSize: 100,
+    zoomToSizeRatioFunction: (ratio: number) => ratio,
+    labelFont: "Inter, system-ui, sans-serif",
+    labelSize: 11,
+    labelWeight: "500",
+    nodeProgramClasses: {
+        circle: NodePointProgram,
+        border: NodeBorderProgram,
+    },
+    defaultNodeType: "circle",
+    edgeProgramClasses: {
+        line: EdgeLineProgram,
+    },
+    defaultEdgeType: "line",
+} as const;
 
 export const GraphView = forwardRef<GraphViewRef, unknown>((_, ref) => {
     const { resolvedTheme } = useTheme();
     const isDark = resolvedTheme === "dark";
 
-    const colours = useMemo(
-        () => ({
-            label: isDark ? "#f8fafc" : "#0f172a",
-            highlight: "#fbbf24",
-            highlightLabel: "#000000",
-        }),
-        [isDark],
-    );
-
-    const lastFontRef = useRef<string>("");
-
-    const drawOverlay = useCallback(
-        (ctx: CanvasRenderingContext2D, data: NodeAttributes, settings: SigmaDrawingSettings) => {
-            const { label, x, y, size } = data;
-            if (!label || x === undefined || y === undefined || size === undefined) return;
-
-            const { labelSize, labelFont, labelWeight } = settings;
-            const pad = 4;
-            const font = `${labelWeight} ${labelSize}px ${labelFont}`;
-
-            if (lastFontRef.current !== font) { ctx.font = font; lastFontRef.current = font; }
-            const textW = ctx.measureText(label).width;
-
-            // Highlight ring
-            ctx.beginPath();
-            ctx.fillStyle = colours.highlight;
-            ctx.arc(x, y, size + pad, 0, Math.PI * 2);
-            ctx.fill();
-
-            // Label pill
-            const rx = x + size + pad;
-            const ry = y - labelSize / 2 - pad;
-
-            ctx.beginPath();
-            ctx.fillStyle = colours.highlight;
-            ctx.shadowColor = "rgba(0,0,0,0.2)";
-            ctx.shadowBlur = 8;
-            ctx.shadowOffsetY = 2;
-
-            if (ctx.roundRect) ctx.roundRect(rx, ry, textW + pad * 2, labelSize + pad * 2, 4);
-            else ctx.rect(rx, ry, textW + pad * 2, labelSize + pad * 2);
-
-            ctx.fill();
-            ctx.shadowBlur = 0;
-
-            // Label text
-            ctx.fillStyle = colours.highlightLabel;
-            ctx.fillText(label, rx + pad, y + labelSize / 3);
-        },
-        [colours],
-    );
-
-    const defaultDrawNodeLabel = useCallback(
-        (ctx: CanvasRenderingContext2D, data: NodeAttributes, settings: SigmaDrawingSettings) => {
-            const { label, x, y, size, highlighted } = data;
-            if (!label || x === undefined || y === undefined || size === undefined) return;
-            if (highlighted) return drawOverlay(ctx, data, settings);
-
-            const font = `${settings.labelWeight} ${settings.labelSize}px ${settings.labelFont}`;
-            if (lastFontRef.current !== font) { ctx.font = font; lastFontRef.current = font; }
-            ctx.fillStyle = colours.label;
-            ctx.fillText(label, x + size + 4, y + settings.labelSize / 3);
-        },
-        [colours, drawOverlay],
-    );
-
-    const sigmaSettings = useMemo(
-        () => ({
-            allowInvalidContainer: true,
-            zIndex: true,
-            renderLabels: true,
-            renderEdgeLabels: false,
-            labelDensity: 0.5,
-            labelGridCellSize: 100,
-            zoomToSizeRatioFunction: (ratio: number) => ratio,
-            labelFont: "Inter, system-ui, sans-serif",
-            labelSize: 11,
-            labelWeight: "500",
-            labelColor: { color: colours.label },
-            defaultNodeColor: colours.label,
-            defaultEdgeColor: isDark ? EDGE_OPACITY_DARK : EDGE_OPACITY_LIGHT,
-            defaultDrawNodeHover: drawOverlay,
-            defaultDrawNodeLabel: defaultDrawNodeLabel,
-            nodeProgramClasses: {
-                circle: NodePointProgram,
-                border: NodeBorderProgram,
-            },
-            defaultNodeType: "circle",
-            edgeProgramClasses: {
-                line: EdgeLineProgram,
-            },
-            defaultEdgeType: "line",
-        }),
-        [colours, drawOverlay, defaultDrawNodeLabel, isDark],
-    );
-
     return (
         <SigmaContainer
             graph={MultiDirectedGraph}
             className={`absolute inset-0 w-full h-full ${isDark ? "!bg-black" : "!bg-white"} bg-[radial-gradient(var(--color-border)_1px,transparent_1px)] bg-[length:24px_24px]`}
-            settings={sigmaSettings}
+            settings={SIGMA_SETTINGS}
         >
             <GraphManager ref={ref} />
         </SigmaContainer>
