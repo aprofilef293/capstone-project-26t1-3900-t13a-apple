@@ -221,7 +221,7 @@ const MultiSelectNodeSidebar: React.FC = () => {
                     {selectedAttribute ? (
                       <>
                         {selectedAttribute}: &nbsp;
-                        <span className="font-mono text-gray-400 dark:text-zinc-500">
+                        <span className="font-mono text-gray-400 dark:text-zinc-500 break-all">
                           {String(
                             node.attributes[selectedAttribute] ??
                               (selectedAttribute === "colour"
@@ -234,7 +234,7 @@ const MultiSelectNodeSidebar: React.FC = () => {
                     ) : (
                       <>
                         id:&nbsp;
-                        <span className="font-mono text-gray-400 dark:text-zinc-500">
+                        <span className="font-mono text-gray-400 dark:text-zinc-500 break-all">
                           {node.id}
                         </span>
                       </>
