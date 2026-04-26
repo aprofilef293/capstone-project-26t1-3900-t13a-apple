@@ -1,12 +1,12 @@
-# Ontology Explorer
+# OBO Explorer
 
 ### 1. Abstract
 
-> Ontology Explorer is an interactive web based application for visualizing and storing implementation science data using ontology in the Open Biomedical Ontologies (OBO) and Ontology Web Language (OWL) format. Implementation science studies generate complex and interconnected data, such as implementation scenarios, barriers, facilitators, strategies, settings, and outcomes. Systematically extracting and structuring these data can improve understanding of how and why implementation strategies succeed or fail. However, this extraction process is time consuming, and the resulting data are often not preserved in formats that support reuse or secondary analysis. This project shows all of the terms in the ontology in a two dimensional space, where the edges between terms reflect their relationships. Therefore, our application aims to improve the interactivity of implementation science data and to demonstrate how ontology data formats can support interactive data visualisation and reuse.
+> OBO Explorer is an interactive web based application for visualizing and storing implementation science data using ontology in the Open Biomedical Ontologies (OBO) and Ontology Web Language (OWL) format. Implementation science studies generate complex and interconnected data, such as implementation scenarios, barriers, facilitators, strategies, settings, and outcomes. Systematically extracting and structuring these data can improve understanding of how and why implementation strategies succeed or fail. However, this extraction process is time consuming, and the resulting data are often not preserved in formats that support reuse or secondary analysis. This project shows all of the terms in the ontology in a two dimensional space, where the edges between terms reflect their relationships. Therefore, our application aims to improve the interactivity of implementation science data and to demonstrate how ontology data formats can support interactive data visualisation and reuse.
 
 ## Table of Contents
 
-- [Ontology Explorer](#ontology-explorer)
+- [OBO Explorer](#obo-explorer)
     - [1. Abstract](#1-abstract)
   - [Table of Contents](#table-of-contents)
   - [2. Introduction](#2-introduction)
@@ -116,7 +116,7 @@ The embedding model by default is run locally using `aleynahukmet/bge-medical-sm
 
 ### 3.5 HuggingFace Inference Providers
 
-HuggingFace Inference Providers is a service that hosts sentence transformer models on GPU-accelerated infrastructure through an API. When Ontology Explorer processes an ontology, it sends term data to HuggingFace's servers, which runs one of the supported models to generate text embeddings for semantic search.
+HuggingFace Inference Providers is a service that hosts sentence transformer models on GPU-accelerated infrastructure through an API. When OBO Explorer processes an ontology, it sends term data to HuggingFace's servers, which runs one of the supported models to generate text embeddings for semantic search.
 
 HuggingFace includes a monthly credit allowance that is drawn down with each inference request. Once credits run out, additional usage is billed on a pay-as-you-go basis at the same rate.
 
@@ -145,7 +145,7 @@ To disable query expansion, either leave `GEMINI_API_KEY` empty or set `GEMINI_E
 
 ### 3.7 Ontology Data Files
 
-Ontology Explorer supports uploading `.obo` and `.owl` files. Download a `.owl` file from the [Behaviour Change Intervention Ontology](https://github.com/HumanBehaviourChangeProject/ontologies) (BCIO) repository and use the upload feature in the app.
+OBO Explorer supports uploading `.obo` and `.owl` files. Download a `.owl` file from the [Behaviour Change Intervention Ontology](https://github.com/HumanBehaviourChangeProject/ontologies) (BCIO) repository and use the upload feature in the app.
 
 The following `.owl` files can be uploaded directly into the application:
 
