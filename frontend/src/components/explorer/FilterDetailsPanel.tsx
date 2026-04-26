@@ -14,10 +14,8 @@ function countActiveFilters(filters: {
     labelKeywords: TagKeyword[];
     descriptionKeywords: TagKeyword[];
     minImportance: number;
-}, isAdvanced: boolean) {
-    let n = 0;
-    if (filters.labelKeywords.length > 0) n++;
-    if (isAdvanced && filters.descriptionKeywords.length > 0) n++;
+}) {
+    let n = filters.labelKeywords.length + filters.descriptionKeywords.length;
     if (filters.minImportance > 0) n++;
     return n;
 }
@@ -214,7 +212,7 @@ export function GraphFilterPanel() {
     const [isAdvanced, setIsAdvanced] = useState(false);
     const panelRef = useRef<HTMLDivElement>(null);
 
-    const activeCount = countActiveFilters(graphFilters, isAdvanced);
+    const activeCount = countActiveFilters(graphFilters);
 
     return (
         <div ref={panelRef} className="relative pointer-events-auto">
@@ -294,26 +292,19 @@ export function GraphFilterPanel() {
                                     <TagInput
                                         id="filter-combined-keyword"
                                         tags={graphFilters.labelKeywords}
-                                        onAdd={(text) => {
-                                            const tag: TagKeyword = { text, mode: 'include' };
-                                            setGraphFilters({
-                                                labelKeywords: [...graphFilters.labelKeywords, tag],
-                                                descriptionKeywords: [...graphFilters.descriptionKeywords, tag],
-                                            });
-                                        }}
+                                        onAdd={(text) => setGraphFilters({
+                                            labelKeywords: [...graphFilters.labelKeywords, { text, mode: 'include' }],
+                                        })}
                                         onRemove={(text) => setGraphFilters({
                                             labelKeywords: graphFilters.labelKeywords.filter(t => t.text !== text),
-                                            descriptionKeywords: graphFilters.descriptionKeywords.filter(t => t.text !== text),
                                         })}
-                                        onToggleMode={(text, mode) => {
-                                            const update = (t: TagKeyword) => t.text === text 
-                                                ? { ...t, mode: mode ?? (t.mode === 'include' ? 'mandatory' : t.mode === 'mandatory' ? 'exclude' : 'include') as TagMode } 
-                                                : t;
-                                            setGraphFilters({
-                                                labelKeywords: graphFilters.labelKeywords.map(update),
-                                                descriptionKeywords: graphFilters.descriptionKeywords.map(update),
-                                            });
-                                        }}
+                                        onToggleMode={(text, mode) => setGraphFilters({
+                                            labelKeywords: graphFilters.labelKeywords.map(t =>
+                                                t.text === text
+                                                    ? { ...t, mode: mode ?? (t.mode === 'include' ? 'mandatory' : t.mode === 'mandatory' ? 'exclude' : 'include') as TagMode }
+                                                    : t
+                                            ),
+                                        })}
                                         placeholder="Filter by keywords"
                                     />
                                 </div>
@@ -329,7 +320,7 @@ export function GraphFilterPanel() {
                                                     for (const tag of graphFilters.descriptionKeywords) {
                                                         if (!merged.some(t => t.text === tag.text)) merged.push(tag);
                                                     }
-                                                    setGraphFilters({ labelKeywords: merged, descriptionKeywords: merged });
+                                                    setGraphFilters({ labelKeywords: merged, descriptionKeywords: [] });
                                                     setIsAdvanced(false);
                                                 }}
                                                 className="flex items-center text-[11px] font-medium text-muted-foreground/80 hover:text-foreground hover:bg-sidebar-accent px-1.5 py-0.5 mb-1 rounded transition-colors cursor-pointer"
