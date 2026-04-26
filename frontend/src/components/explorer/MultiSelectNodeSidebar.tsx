@@ -13,6 +13,11 @@ import {
 import { exportMultiShortestPathsCsv } from "../../lib/api";
 import { InfoHelpIcon } from "../InfoHelpIcon";
 
+/*  Information panel for nodes selected with multiselect.
+ *  Location: Network Graph page (right sidebar)
+ *  Main Contributors: Lucy
+ */
+
 type GraphNode = {
   id: string;
   label: string;
@@ -216,7 +221,7 @@ const MultiSelectNodeSidebar: React.FC = () => {
                     {selectedAttribute ? (
                       <>
                         {selectedAttribute}: &nbsp;
-                        <span className="font-mono text-gray-400 dark:text-zinc-500">
+                        <span className="font-mono text-gray-400 dark:text-zinc-500 break-all">
                           {String(
                             node.attributes[selectedAttribute] ??
                               (selectedAttribute === "colour"
@@ -229,7 +234,7 @@ const MultiSelectNodeSidebar: React.FC = () => {
                     ) : (
                       <>
                         id:&nbsp;
-                        <span className="font-mono text-gray-400 dark:text-zinc-500">
+                        <span className="font-mono text-gray-400 dark:text-zinc-500 break-all">
                           {node.id}
                         </span>
                       </>

@@ -2,6 +2,10 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { Sidebar } from "@/components/layout/Sidebar";
 
+/*  Tests for app navigation sidebar (settings and access to different pages)
+ *  Main Contributors: Lucy
+ */
+
 let mockPathname = "/";
 let mockTheme: "light" | "dark" = "light";
 

@@ -1,3 +1,7 @@
+/*  Integration tests for small UI features (toggles, documentation pages)
+ *  Main Contributors: Lucy
+ */
+
 describe("additional small ui feature checks", () => {
   beforeEach(() => {
     cy.visit("http://localhost:5173");

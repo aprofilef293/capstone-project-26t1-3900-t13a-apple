@@ -1,5 +1,9 @@
 import type { GraphNode, GraphFilters, TagKeyword } from "../store/useStore";
 
+/*  Helper functions for graph filtering.
+ *  Main Contributors: Joseph, Lucy
+ */
+
 export type KeywordGroups = {
     include: string[];
     mandatory: string[];
@@ -48,8 +52,7 @@ export function matchesGraphFilters(node: GraphNode, filters: GraphFilters): boo
 
     const isSimpleMode = (filters.descriptionKeywords || []).length === 0;
     if (isSimpleMode) {
-        // Simple mode: match if name OR description contains the keyword
-        if (!checkMatch(label, labelGroups) && !checkMatch(descText, labelGroups)) return false;
+        if (!checkMatch(label + ' ' + descText, labelGroups)) return false;
     } else {
         // Advanced mode: name must match labelGroups AND description must match descGroups
         if (!checkMatch(label, labelGroups)) return false;

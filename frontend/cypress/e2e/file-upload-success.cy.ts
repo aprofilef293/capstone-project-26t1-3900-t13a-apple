@@ -1,3 +1,7 @@
+/*  Integration tests for file upload (success)
+ *  Main Contributors: Lucy
+ */
+
 describe('happy path for file upload', () => {
   beforeEach(() => {
     cy.intercept('POST', '/api/ontology/upload').as('uploadOntology')

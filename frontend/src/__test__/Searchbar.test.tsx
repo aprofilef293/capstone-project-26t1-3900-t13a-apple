@@ -3,6 +3,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ExplorerSearch } from "@/components/explorer/ExplorerSearch";
 import { matchesGraphFilters } from "@/lib/filterUtils";
 
+/*  Tests for keyword search feature
+ *  Main Contributors: Lucy
+ */
+
 type SearchMode = "keyword" | "semantic";
 
 type MockNode = {
@@ -83,9 +87,13 @@ vi.mock("@/store/useStore", () => ({
     typeof selector === "function" ? selector(mockState) : mockState,
 }));
 
-vi.mock("@/lib/filterUtils", () => ({
-  matchesGraphFilters: vi.fn(() => true),
-}));
+vi.mock("@/lib/filterUtils", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/filterUtils")>();
+  return {
+    ...actual,
+    matchesGraphFilters: vi.fn(() => true),
+  };
+});
 
 describe("tests for searchbar", () => {
   beforeEach(() => {

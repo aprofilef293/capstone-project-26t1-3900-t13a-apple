@@ -2,6 +2,10 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import MultiSelectNodeSidebar from "../components/explorer/MultiSelectNodeSidebar";
 
+/*  Tests for multiselect feature
+ *  Main Contributors: Lucy
+ */
+
 const { exportMultiShortestPathsCsvMock } = vi.hoisted(() => ({
   exportMultiShortestPathsCsvMock: vi.fn(),
 }));

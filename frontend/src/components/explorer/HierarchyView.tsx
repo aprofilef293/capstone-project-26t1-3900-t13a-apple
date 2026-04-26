@@ -4,27 +4,38 @@ import { cn } from "../../lib/utils";
 import { useStore } from "../../store/useStore";
 import { buildHierarchyFromGraph } from "../../lib/hierarchyUtils";
 import type { HierarchyNode } from "../../lib/hierarchyUtils";
-import { matchesGraphFilters } from "../../lib/filterUtils";
+import { useVisibleNodeIds } from "../../lib/useVisibleNodeIds";
+
+/*  Structured hierarchy view of graph data, as alternative to graph layout.
+ *  Location: Network Graph page
+ *  Main Contributors: Joseph
+ */
 
 export function HierarchyView() {
     const {
-        nodes, edges, searchQuery, graphFilters,
-        infoPanelMode,
+        nodes, edges, searchQuery, infoPanelMode,
+        isMultiSelect, selectedNodeId, selectedNodeIds,
         searchResultsExactTitle, searchResultsFuzzyTitle,
         searchResultsDescription, searchResultsSemantic,
     } = useStore();
 
-    // Pre-filter nodes by graphFilters before building the hierarchy
-    const filteredNodes = useMemo(() => {
-        return nodes.filter(n => matchesGraphFilters(n, graphFilters));
-    }, [nodes, graphFilters]);
-
-    // Dynamically build the hierarchy tree from the flat graph data
-    const baseHierarchyData = useMemo(() => {
-        return buildHierarchyFromGraph(filteredNodes, edges);
-    }, [filteredNodes, edges]);
-
     const deferredSearchQuery = useDeferredValue(searchQuery);
+
+    const visibleIds = useVisibleNodeIds({ hierarchyMode: true });
+
+    // Filter edges alongside nodes
+    const { filteredNodes, filteredEdges } = useMemo(() => {
+        const fn = nodes.filter(n => visibleIds.has(n.id));
+        const fe = fn.length === nodes.length
+            ? edges
+            : edges.filter(e => visibleIds.has(e.source) && visibleIds.has(e.target));
+        return { filteredNodes: fn, filteredEdges: fe };
+    }, [nodes, edges, visibleIds]);
+
+    const baseHierarchyData = useMemo(
+        () => buildHierarchyFromGraph(filteredNodes, filteredEdges),
+        [filteredNodes, filteredEdges],
+    );
 
     // When advanced search results are active, collect all result node IDs
     const searchResultNodeIds = useMemo(() => {
@@ -38,52 +49,26 @@ export function HierarchyView() {
         return ids.size > 0 ? ids : null;
     }, [infoPanelMode, searchResultsExactTitle, searchResultsFuzzyTitle, searchResultsDescription, searchResultsSemantic]);
 
+    // Search-results mode preserves ancestors so matches stay in context.
     const hierarchyData = useMemo(() => {
-        // Advanced search results mode: filter hierarchy by result node IDs
-        if (searchResultNodeIds) {
-            const filterByResults = (node: HierarchyNode): HierarchyNode | null => {
-                const matchesResult = searchResultNodeIds.has(node.id);
-                const filteredChildren = node.children
-                    ? node.children.map(filterByResults).filter((c): c is HierarchyNode => c !== null)
-                    : [];
-                if (matchesResult || filteredChildren.length > 0) {
-                    return { ...node, children: filteredChildren };
-                }
-                return null;
-            };
-            return baseHierarchyData
-                .map(filterByResults)
-                .filter((node): node is HierarchyNode => node !== null);
-        }
-
-        // Inline text search (typing in search bar before submitting)
-        if (!deferredSearchQuery) return baseHierarchyData;
-        const lowerQuery = deferredSearchQuery.toLowerCase();
-
-        const filterNode = (node: HierarchyNode): HierarchyNode | null => {
-            const matchesQuery = node.name.toLowerCase().includes(lowerQuery);
-
-            let filteredChildren: HierarchyNode[] = [];
-            if (node.children) {
-                filteredChildren = node.children
-                    .map(filterNode)
-                    .filter((child): child is HierarchyNode => child !== null);
+        if (!searchResultNodeIds) return baseHierarchyData;
+        const prune = (node: HierarchyNode): HierarchyNode | null => {
+            const children = node.children
+                ? node.children.map(prune).filter((c): c is HierarchyNode => c !== null)
+                : [];
+            if (searchResultNodeIds.has(node.id) || children.length > 0) {
+                return { ...node, children };
             }
-
-            if (matchesQuery || filteredChildren.length > 0) {
-                return {
-                    ...node,
-                    children: filteredChildren
-                };
-            }
-
             return null;
         };
-
         return baseHierarchyData
-            .map(filterNode)
-            .filter((node): node is HierarchyNode => node !== null);
-    }, [baseHierarchyData, deferredSearchQuery, searchResultNodeIds]);
+            .map(prune)
+            .filter((n): n is HierarchyNode => n !== null);
+    }, [baseHierarchyData, searchResultNodeIds]);
+
+    const expandAll = !!deferredSearchQuery
+        || (!isMultiSelect && !!selectedNodeId && infoPanelMode === 'node-info')
+        || (isMultiSelect && selectedNodeIds.length > 0);
 
     return (
         <div className="flex h-full w-full bg-background overflow-hidden relative">
@@ -104,7 +89,7 @@ export function HierarchyView() {
                                     key={node.id}
                                     node={node}
                                     level={0}
-                                    defaultExpanded={!!deferredSearchQuery}
+                                    defaultExpanded={expandAll}
                                 />
                             ))}
                         </div>
@@ -129,8 +114,14 @@ const TreeNode = memo(function TreeNode({
     level: number;
     defaultExpanded?: boolean;
 }) {
-    const isSelected = useStore(state => state.selectedNodeId === node.id);
+    const isMultiSelect = useStore(state => state.isMultiSelect);
+    const isSelected = useStore(state =>
+        state.isMultiSelect
+            ? state.selectedNodeIds.includes(node.id)
+            : state.selectedNodeId === node.id
+    );
     const setSelectedNodeId = useStore(state => state.setSelectedNodeId);
+    const toggleNodeSelection = useStore(state => state.toggleNodeSelection);
 
     const [isOpen, setIsOpen] = useState(isSelected || defaultExpanded);
     const hasChildren = node.children && node.children.length > 0;
@@ -149,7 +140,15 @@ const TreeNode = memo(function TreeNode({
 
     const handleSelect = (e: React.MouseEvent) => {
         e.stopPropagation();
-        setSelectedNodeId(node.id);
+        if (node.isSynthetic) {
+            if (hasChildren) setIsOpen(!isOpen);
+            return;
+        }
+        if (isMultiSelect) {
+            toggleNodeSelection(node.id);
+        } else {
+            setSelectedNodeId(node.id);
+        }
     };
 
     return (

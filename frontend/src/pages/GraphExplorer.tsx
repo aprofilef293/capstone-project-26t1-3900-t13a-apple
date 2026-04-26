@@ -12,6 +12,10 @@ import { SearchResultsPanel } from "@/components/explorer/SearchResultsPanel";
 import MultiSelectNodeSidebar from "../components/explorer/MultiSelectNodeSidebar";
 import { FullScreenSpinner } from "@/components/ui/spinner";
 
+/*  Network Graph page, with graph and navigation toolbar.
+ *  Main Contributors: Joseph, Lucy, Jess
+ */
+
 export function GraphExplorer() {
     const { searchQuery, fetchGraphData, isNodeSelecting, selectedNodeIds, infoPanelMode,  isMultiSelect, fetchPath, pathViewOnly, togglePathViewOnly, pathNodeIds } = useStore();
     const [viewMode, setViewMode] = useState<'graph' | 'hierarchy'>('graph');

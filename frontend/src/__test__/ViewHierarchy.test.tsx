@@ -2,15 +2,32 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { HierarchyView } from "../components/explorer/HierarchyView";
 import { buildHierarchyFromGraph } from "@/lib/hierarchyUtils";
-import { matchesGraphFilters } from "@/lib/filterUtils";
+import { useVisibleNodeIds } from "@/lib/useVisibleNodeIds";
+
+/*  Tests for hierarchy view of graph
+ *  Main Contributors: Lucy
+ */
 
 const setSelectedNodeIdMock = vi.fn();
+const toggleNodeSelectionMock = vi.fn();
+
+const defaultHierarchy = [
+  {
+    id: "1",
+    name: "test1",
+    type: "folder" as const,
+    children: [
+      { id: "2", name: "test2", type: "file" as const, children: [] },
+      { id: "3", name: "test3", type: "folder" as const, children: [] },
+    ],
+  },
+];
 
 // mock data (3 nodes, 2 edges)
 const mockState = {
   nodes: [
     { id: "1", name: "test1", type: "folder" },
-    { id: "2", name: "test2", type: "file"},
+    { id: "2", name: "test2", type: "file" },
     { id: "3", name: "test3", type: "folder" },
   ],
   edges: [
@@ -18,9 +35,23 @@ const mockState = {
     { source: "1", target: "3" },
   ],
   searchQuery: "",
-  graphFilters: {},
-  selectedNodeId: null,
+  graphFilters: {
+    labelKeywords: [],
+    descriptionKeywords: [],
+    minImportance: 0,
+    excludedColors: new Set<string>(),
+  },
+  viewLevel: 1,
+  infoPanelMode: "closed" as "node-info" | "search-results" | "multi-select" | "closed",
+  searchResultsExactTitle: [] as { id: string }[],
+  searchResultsFuzzyTitle: [] as { id: string }[],
+  searchResultsDescription: [] as { id: string }[],
+  searchResultsSemantic: [] as { id: string }[],
+  selectedNodeId: null as string | null,
+  selectedNodeIds: [] as string[],
+  isMultiSelect: false,
   setSelectedNodeId: setSelectedNodeIdMock,
+  toggleNodeSelection: toggleNodeSelectionMock,
 };
 
 vi.mock("@/store/useStore", () => ({
@@ -29,27 +60,24 @@ vi.mock("@/store/useStore", () => ({
 }));
 
 vi.mock("@/lib/hierarchyUtils", () => ({
-  buildHierarchyFromGraph: vi.fn(() => [
-    {
-      id: "1",
-      name: "test1",
-      type: "folder",
-      children: [
-        { id: "2", name: "test2", type: "file", children: [] },
-        { id: "3", name: "test3", type: "folder", children: [] },
-      ],
-    },
-  ]),
+  buildHierarchyFromGraph: vi.fn(),
 }));
 
-vi.mock("@/lib/filterUtils", () => ({
-  matchesGraphFilters: vi.fn(() => true),
+vi.mock("@/lib/useVisibleNodeIds", () => ({
+  useVisibleNodeIds: vi.fn(),
 }));
 
 describe("tests for hierarchy view", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockState.searchQuery = ""; 
+    vi.mocked(useVisibleNodeIds).mockReturnValue(new Set(["1", "2", "3"]));
+    vi.mocked(buildHierarchyFromGraph).mockReturnValue(defaultHierarchy);
+    mockState.searchQuery = "";
+    mockState.infoPanelMode = "closed";
+    mockState.searchResultsExactTitle = [];
+    mockState.searchResultsFuzzyTitle = [];
+    mockState.searchResultsDescription = [];
+    mockState.searchResultsSemantic = [];
   });
 
   it("make sure the hierarchy panel render correctly", () => {
@@ -72,15 +100,27 @@ describe("tests for hierarchy view", () => {
     expect(screen.queryByText("test3")).not.toBeInTheDocument();
   });
 
-  it("make sure heirarchy panel works with searchbar", () => {
-    const { rerender } = render(<HierarchyView />);
-    // search for the term "test1"
+  it("prunes hierarchy to search-result nodes and their ancestors", () => {
     mockState.searchQuery = "test1";
-    rerender(<HierarchyView />);
+    mockState.infoPanelMode = "search-results";
+    mockState.searchResultsExactTitle = [{ id: "1" }];
 
-    // only test1 should be visible after the search now
+    render(<HierarchyView />);
+
     expect(screen.getByText("test1")).toBeInTheDocument();
     expect(screen.queryByText("test2")).not.toBeInTheDocument();
+    expect(screen.queryByText("test3")).not.toBeInTheDocument();
+  });
+
+  it("keeps ancestors when a descendant matches search results", () => {
+    mockState.searchQuery = "test2";
+    mockState.infoPanelMode = "search-results";
+    mockState.searchResultsExactTitle = [{ id: "2" }];
+
+    render(<HierarchyView />);
+
+    expect(screen.getByText("test1")).toBeInTheDocument();
+    expect(screen.getByText("test2")).toBeInTheDocument();
     expect(screen.queryByText("test3")).not.toBeInTheDocument();
   });
 
@@ -106,10 +146,7 @@ describe("tests for hierarchy view", () => {
 
   it("make sure filter panel works with heirarchy ", () => {
     // filter out node2 (ie. test2)
-    const mockMatchesGraphFilters = vi.fn((node) => {
-      return node.id !== "2";
-    });
-    vi.mocked(matchesGraphFilters).mockImplementation(mockMatchesGraphFilters);
+    vi.mocked(useVisibleNodeIds).mockReturnValueOnce(new Set(["1", "3"]));
 
     render(<HierarchyView />);
 
@@ -119,7 +156,9 @@ describe("tests for hierarchy view", () => {
         { id: "1", name: "test1", type: "folder" },
         { id: "3", name: "test3", type: "folder" },
       ],
-      mockState.edges,
+      [
+        { source: "1", target: "3" },
+      ]
     );
   });
 });
