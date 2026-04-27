@@ -26,19 +26,19 @@ _PROMPT = (
     "Your goal is to ANSWER the user's question by returning terms that satisfy what they "
     "are actually asking for — not just terms that describe the topic mentioned.\n\n"
     "Decide which case the query falls into:\n"
-    "  - If the user is asking HOW TO TREAT or ADDRESS a condition (e.g. \"how to treat X\", "
-    "\"ways to manage Y\", \"implementation plan for alcohol dependency\"), return GENERIC "
+    '  - If the user is asking HOW TO TREAT or ADDRESS a condition (e.g. "how to treat X", '
+    '"ways to manage Y", "implementation plan for alcohol dependency"), return GENERIC '
     "TREATMENT METHODS — broad categories of therapies, interventions, procedures, and "
-    "clinical management strategies (e.g. \"cognitive behavioral therapy\", \"detoxification\", "
-    "\"pharmacotherapy\", \"behavioral intervention\", \"relapse prevention\"). "
+    'clinical management strategies (e.g. "cognitive behavioral therapy", "detoxification", '
+    '"pharmacotherapy", "behavioral intervention", "relapse prevention"). '
     "Do NOT return specific drug or brand names (e.g. naltrexone, acamprosate, disulfiram). "
     "Do NOT return terms describing the condition itself.\n"
-    "  - If the user is asking for EXAMPLES or INSTANCES of something (e.g. \"genes that are "
-    "hereditary\", \"diseases caused by mitochondrial dysfunction\", \"enzymes involved in "
-    "glycolysis\"), return actual examples that answer the question — specific genes, "
+    '  - If the user is asking for EXAMPLES or INSTANCES of something (e.g. "genes that are '
+    'hereditary", "diseases caused by mitochondrial dysfunction", "enzymes involved in '
+    'glycolysis"), return actual examples that answer the question — specific genes, '
     "diseases, enzymes, etc. — not generic terms about the category.\n"
-    "  - If the user is asking ABOUT a concept or thing (e.g. \"alcohol dependency\", "
-    "\"mitochondria\", \"what is X\"), return terms RELATING TO that thing — synonyms, "
+    '  - If the user is asking ABOUT a concept or thing (e.g. "alcohol dependency", '
+    '"mitochondria", "what is X"), return terms RELATING TO that thing — synonyms, '
     "broader/narrower concepts, related processes, components, and mechanisms.\n\n"
     "In every case, produce a comma-separated list of concise noun phrases as they would "
     "appear in ontology term names and definitions, including synonyms, alternate phrasings, "
