@@ -101,7 +101,7 @@ These environment variables are stored in the backend. Make sure you copy .env.e
 | `EMBEDDING_LOCAL` | No | `true` | Set to `false` to use remote Hugging Face Inference instead of local model. |
 | `EMBEDDING_ENABLED` | No | `true` | Set to `false` to disable semantic search. |
 | `GEMINI_API_KEY` | No | (empty) | Google AI Studio API key for query expansion. Leave empty to disable. |
-| `GEMINI_MODEL` | No | `gemini-2.5-flash` | Gemini model ID used for query expansion. |
+| `GEMINI_MODEL` | No | `gemini-3-flash-preview` | Gemini model ID used for query expansion. |
 | `GEMINI_ENABLED` | No | `true` | Set to `false` to disable Gemini query expansion even when a key is set. |
 | `MEMGRAPH_URI` | No | `bolt://localhost:7687` | Bolt protocol URI for the Memgraph database. |
 | `MEMGRAPH_USER` | No | `memgraph` | Memgraph authentication username. |
@@ -139,7 +139,7 @@ Gemini query expansion is optional. To enable it:
 1. Create a Google AI Studio account at https://aistudio.google.com/.
 2. Go to https://aistudio.google.com/app/apikey and create an API key.
 3. Set `GEMINI_API_KEY` to the key in the `.env` file.
-4. Optionally, change the model by setting `GEMINI_MODEL`. Defaults to `gemini-2.5-flash`.
+4. Optionally, change the model by setting `GEMINI_MODEL`. Defaults to `gemini-3-flash-preview`.
 
 To disable query expansion, either leave `GEMINI_API_KEY` empty or set `GEMINI_ENABLED=false`.
 

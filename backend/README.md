@@ -119,7 +119,7 @@ On failure, an error event is sent instead: `{error: "...", error_code: <status>
 | `EMBEDDING_LOCAL` | No | `true` | Set to `false` to use remote Hugging Face Inference API instead of local model. |
 | `EMBEDDING_ENABLED` | No | `true` | Set to `false` to disable semantic search. |
 | `GEMINI_API_KEY` | No | (empty) | Google AI Studio API key for query expansion. Leave empty to disable. |
-| `GEMINI_MODEL` | No | `gemini-2.5-flash` | Gemini model ID used for query expansion. |
+| `GEMINI_MODEL` | No | `gemini-3-flash-preview` | Gemini model ID used for query expansion. |
 | `GEMINI_ENABLED` | No | `true` | Set to `false` to disable Gemini query expansion even when a key is set. |
 | `MEMGRAPH_URI` | No | `bolt://localhost:7687` | Bolt protocol URI for the Memgraph database. |
 | `MEMGRAPH_USER` | No | `memgraph` | Memgraph authentication username. |

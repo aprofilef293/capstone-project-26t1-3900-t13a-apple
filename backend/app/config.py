@@ -48,7 +48,7 @@ class Settings(BaseSettings):
 
             - ``gemini_api_key`` — Google AI Studio API key.  Obtain one at
               https://aistudio.google.com/app/apikey.  Leave empty to disable.
-            - ``gemini_model`` — Gemini model ID (default ``gemini-2.5-flash``).
+            - ``gemini_model`` — Gemini model ID (default ``gemini-3-flash-preview``).
             - ``gemini_enabled`` — Set to ``false`` to disable expansion even
               when a key is present.
 

@@ -20,17 +20,33 @@ logger = logging.getLogger(__name__)
 
 _MAX_CACHE_SIZE = 256
 _EXPAND_TIMEOUT = 15.0
-_DEFAULT_MODEL = "gemini-2.5-flash"
+_DEFAULT_MODEL = "gemini-3-flash-preview"
+# Queries with this many words or fewer skip Gemini and rely on the local
+# embedding search alone — short keyword queries don't benefit enough from
+# expansion to justify the latency.
+_MIN_EXPANSION_WORDS = 3
 _PROMPT = (
     "You are helping search a biomedical/scientific ontology database (OBO or OWL format). "
-    "Given the query below, produce a comma-separated list of ontology-compatible search terms:\n"
-    "  1. The most precise ontology terms matching the query concept\n"
-    "  2. Synonyms and alternate phrasings used in ontology definitions\n"
-    "  3. Broader parent concepts and narrower child concepts\n"
-    "  4. Related processes, functions, components, or mechanisms\n"
-    "  5. Acronyms and abbreviations commonly used in the domain\n"
-    "Use concise noun phrases as they would appear in ontology term names and definitions. "
-    "Return ONLY the comma-separated list, no explanation.\n\n"
+    "Your goal is to ANSWER the user's question by returning terms that satisfy what they "
+    "are actually asking for — not just terms that describe the topic mentioned.\n\n"
+    "Decide which case the query falls into:\n"
+    '  - If the user is asking HOW TO TREAT or ADDRESS a condition (e.g. "how to treat X", '
+    '"ways to manage Y", "implementation plan for alcohol dependency"), return GENERIC '
+    "TREATMENT METHODS — broad categories of therapies, interventions, procedures, and "
+    'clinical management strategies (e.g. "cognitive behavioral therapy", "detoxification", '
+    '"pharmacotherapy", "behavioral intervention", "relapse prevention"). '
+    "Do NOT return specific drug or brand names (e.g. naltrexone, acamprosate, disulfiram). "
+    "Do NOT return terms describing the condition itself.\n"
+    '  - If the user is asking for EXAMPLES or INSTANCES of something (e.g. "genes that are '
+    'hereditary", "diseases caused by mitochondrial dysfunction", "enzymes involved in '
+    'glycolysis"), return actual examples that answer the question — specific genes, '
+    "diseases, enzymes, etc. — not generic terms about the category.\n"
+    '  - If the user is asking ABOUT a concept or thing (e.g. "alcohol dependency", '
+    '"mitochondria", "what is X"), return terms RELATING TO that thing — synonyms, '
+    "broader/narrower concepts, related processes, components, and mechanisms.\n\n"
+    "In every case, produce a comma-separated list of concise noun phrases as they would "
+    "appear in ontology term names and definitions, including synonyms, alternate phrasings, "
+    "and common acronyms. Return ONLY the comma-separated list, no explanation.\n\n"
     'Query: "{query}"'
 )
 
@@ -54,15 +70,17 @@ class GeminiTermExtractor:
     """Expands search queries into ontology-style terms via Gemini.
 
     Queries that already contain commas are treated as pre-structured
-    term lists and are not expanded; every other non-empty query is
-    sent to Gemini when a client is configured. Successful expansions
-    are stored in a bounded LRU cache to avoid redundant API calls.
-    Transient failures are not cached.
+    term lists and are not expanded. Short queries of two words or
+    fewer also skip Gemini — the local embedding search handles those
+    well enough that the expansion latency isn't worth it. Every other
+    non-empty query is sent to Gemini when a client is configured.
+    Successful expansions are stored in a bounded LRU cache to avoid
+    redundant API calls. Transient failures are not cached.
 
     Args:
         api_key: Google AI Studio API key. Pass an empty string to create
             a no-op extractor (``expand`` always returns ``None``).
-        model: Gemini model ID (default ``gemini-2.5-flash``).
+        model: Gemini model ID (default ``gemini-3-flash-preview``).
     """
 
     def __init__(self, api_key: str, model: str = "") -> None:
@@ -74,10 +92,12 @@ class GeminiTermExtractor:
         """Expand a search query into a list of ontology-compatible terms.
 
         Returns ``None`` without calling Gemini if the client is not set,
-        the query is empty, or the query already contains a comma (treated
-        as an explicit term list supplied by the caller). Otherwise the
-        query is sent to Gemini; returns ``None`` if the API call fails
-        or the response is unusable (e.g. safety-filtered).
+        the query is empty, the query has two words or fewer (the local
+        semantic search handles short queries directly), or the query
+        already contains a comma (treated as an explicit term list
+        supplied by the caller). Otherwise the query is sent to Gemini;
+        returns ``None`` if the API call fails or the response is
+        unusable (e.g. safety-filtered).
 
         Args:
             query: The raw user search string.
@@ -92,9 +112,16 @@ class GeminiTermExtractor:
         if not query or "," in query:
             return None
 
+        if len(query.split()) < _MIN_EXPANSION_WORDS:
+            return None
+
         if query in self._cache:
             self._cache.move_to_end(query)
             return self._cache[query]
+
+        config_kwargs: dict = {"temperature": 0.0, "max_output_tokens": 256}
+        if self._model.startswith("gemini-3"):
+            config_kwargs["thinking_config"] = types.ThinkingConfig(thinking_level="medium")
 
         try:
             response = await asyncio.wait_for(
@@ -102,7 +129,7 @@ class GeminiTermExtractor:
                     self._client.models.generate_content,
                     model=self._model,
                     contents=_PROMPT.format(query=query),
-                    config=types.GenerateContentConfig(temperature=0.0, max_output_tokens=256),
+                    config=types.GenerateContentConfig(**config_kwargs),
                 ),
                 timeout=_EXPAND_TIMEOUT,
             )
