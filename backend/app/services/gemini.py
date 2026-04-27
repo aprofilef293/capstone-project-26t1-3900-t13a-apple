@@ -21,6 +21,10 @@ logger = logging.getLogger(__name__)
 _MAX_CACHE_SIZE = 256
 _EXPAND_TIMEOUT = 15.0
 _DEFAULT_MODEL = "gemini-3-flash-preview"
+# Queries with this many words or fewer skip Gemini and rely on the local
+# embedding search alone — short keyword queries don't benefit enough from
+# expansion to justify the latency.
+_MIN_EXPANSION_WORDS = 3
 _PROMPT = (
     "You are helping search a biomedical/scientific ontology database (OBO or OWL format). "
     "Your goal is to ANSWER the user's question by returning terms that satisfy what they "
@@ -66,10 +70,12 @@ class GeminiTermExtractor:
     """Expands search queries into ontology-style terms via Gemini.
 
     Queries that already contain commas are treated as pre-structured
-    term lists and are not expanded; every other non-empty query is
-    sent to Gemini when a client is configured. Successful expansions
-    are stored in a bounded LRU cache to avoid redundant API calls.
-    Transient failures are not cached.
+    term lists and are not expanded. Short queries of two words or
+    fewer also skip Gemini — the local embedding search handles those
+    well enough that the expansion latency isn't worth it. Every other
+    non-empty query is sent to Gemini when a client is configured.
+    Successful expansions are stored in a bounded LRU cache to avoid
+    redundant API calls. Transient failures are not cached.
 
     Args:
         api_key: Google AI Studio API key. Pass an empty string to create
@@ -86,10 +92,12 @@ class GeminiTermExtractor:
         """Expand a search query into a list of ontology-compatible terms.
 
         Returns ``None`` without calling Gemini if the client is not set,
-        the query is empty, or the query already contains a comma (treated
-        as an explicit term list supplied by the caller). Otherwise the
-        query is sent to Gemini; returns ``None`` if the API call fails
-        or the response is unusable (e.g. safety-filtered).
+        the query is empty, the query has two words or fewer (the local
+        semantic search handles short queries directly), or the query
+        already contains a comma (treated as an explicit term list
+        supplied by the caller). Otherwise the query is sent to Gemini;
+        returns ``None`` if the API call fails or the response is
+        unusable (e.g. safety-filtered).
 
         Args:
             query: The raw user search string.
@@ -102,6 +110,9 @@ class GeminiTermExtractor:
 
         query = query.strip()
         if not query or "," in query:
+            return None
+
+        if len(query.split()) < _MIN_EXPANSION_WORDS:
             return None
 
         if query in self._cache:

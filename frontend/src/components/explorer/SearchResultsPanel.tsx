@@ -102,7 +102,9 @@ export function SearchResultsPanel() {
             <div className="p-6 pb-4 border-b border-sidebar-border shadow-sm bg-sidebar/50">
                 <div className="flex justify-between">
                     <div className="flex justify-start gap-3 items-center">
-                        <h2 className="text-xl font-bold text-sidebar-foreground pt-2 mb-1 leading-tight">Search Results</h2>
+                        <h2 className="text-xl font-bold text-sidebar-foreground pt-2 mb-1 leading-tight">
+                            {searchMode === "semantic" ? "Advanced Search Results" : "Simple Search Results"}
+                        </h2>
                         {searchMode === "keyword" &&
                             <InfoHelpIcon
                                 innerText={<p>
