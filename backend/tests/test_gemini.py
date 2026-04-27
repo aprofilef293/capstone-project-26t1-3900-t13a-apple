@@ -62,9 +62,32 @@ class TestExpandBypass:
         assert await extractor.expand("   ") is None
         mock_client.models.generate_content.assert_not_called()
 
+    @pytest.mark.asyncio
+    async def test_single_keyword_skips_api(self):
+        """Single-word queries skip Gemini — local embedding search handles them."""
+        with patch("app.services.gemini.genai") as mock_genai:
+            extractor = GeminiTermExtractor(api_key="fake-key")
+        mock_client = mock_genai.Client.return_value
+        mock_client.models.generate_content = MagicMock()
+
+        assert await extractor.expand("neuroblastoma") is None
+        mock_client.models.generate_content.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_two_word_query_skips_api(self):
+        """Two-word queries skip Gemini — short keyword queries don't justify the latency."""
+        with patch("app.services.gemini.genai") as mock_genai:
+            extractor = GeminiTermExtractor(api_key="fake-key")
+        mock_client = mock_genai.Client.return_value
+        mock_client.models.generate_content = MagicMock()
+
+        assert await extractor.expand("heart failure") is None
+        assert await extractor.expand("heart failure?") is None
+        mock_client.models.generate_content.assert_not_called()
+
 
 class TestExpandTriggers:
-    """Every non-empty, non-comma query should be sent to Gemini for expansion."""
+    """Queries with three or more words are sent to Gemini for expansion."""
 
     def _make_extractor(self, mock_genai):
         mock_response = MagicMock()
@@ -73,18 +96,10 @@ class TestExpandTriggers:
         return GeminiTermExtractor(api_key="fake-key")
 
     @pytest.mark.asyncio
-    async def test_single_keyword_triggers(self):
-        """Single-word queries are expanded (synonyms, parents, children help recall)."""
+    async def test_three_word_keyword_triggers(self):
+        """Three-word keyword queries cross the expansion threshold."""
         with patch("app.services.gemini.genai") as mock_genai:
             extractor = self._make_extractor(mock_genai)
-        assert await extractor.expand("neuroblastoma") == ["Term A", "Term B"]
-
-    @pytest.mark.asyncio
-    async def test_bare_keywords_trigger(self):
-        """Multi-word keyword queries are expanded — no natural-language gate."""
-        with patch("app.services.gemini.genai") as mock_genai:
-            extractor = self._make_extractor(mock_genai)
-        assert await extractor.expand("heart failure") == ["Term A", "Term B"]
         assert await extractor.expand("cell division apoptosis") == ["Term A", "Term B"]
 
     @pytest.mark.asyncio
@@ -93,7 +108,6 @@ class TestExpandTriggers:
             extractor = self._make_extractor(mock_genai)
         assert await extractor.expand("what causes heart failure") == ["Term A", "Term B"]
         assert await extractor.expand("effects of alcohol on the liver") == ["Term A", "Term B"]
-        assert await extractor.expand("heart failure?") == ["Term A", "Term B"]
 
 
 class TestExpandSuccess:
