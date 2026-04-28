@@ -35,6 +35,7 @@ export function ExplorerSearch({ viewMode = "graph" }: { viewMode?: "graph" | "h
         setSearchMode,
         applySearchScope,
         clearSearchScope,
+        searchScopeActive,
     } = useStore();
 
     const [inputValue, setInputValue] = useState(searchQuery);
@@ -79,12 +80,12 @@ export function ExplorerSearch({ viewMode = "graph" }: { viewMode?: "graph" | "h
     // Search Method: fuzzy on names, exact substring on descriptions/synonyms
     const { exactResults, fuzzyResults, descriptionResults } = useMemo(() => {
         if (searchMode === "semantic") {
-            return {fuzzyResults: [], descriptionResults: []};
+            return { fuzzyResults: [], descriptionResults: [] };
         }
 
         const q = searchQuery.trim();
         if (!q) {
-            return { fuzzyResults: [], descriptionResults: []};
+            return { fuzzyResults: [], descriptionResults: [] };
         }
 
         const exactTitleHits = filteredNodes.filter(node => node.label.toLowerCase().includes(q.toLowerCase())).slice(0, 50);
@@ -123,6 +124,22 @@ export function ExplorerSearch({ viewMode = "graph" }: { viewMode?: "graph" | "h
         () => [...exactResults ?? [], ...fuzzyResults, ...descriptionResults],
         [exactResults, fuzzyResults, descriptionResults]
     );
+
+    // filter changes after a search leave stale ids in scope. Semantic results
+    // need a refetch to recover nodes that a removed filter would re-include.
+    useEffect(() => {
+        if (!searchScopeActive || !searchQuery.trim()) return;
+        if (searchMode === "semantic") {
+            void (async () => {
+                const semanticResults = await doSemanticSearch(searchQuery);
+                applySearchScope(semanticResults.map((n) => n.id));
+            })();
+        } else {
+            const ids = [...new Set([...(exactResults ?? []), ...fuzzyResults, ...descriptionResults].map((n) => n.id))];
+            applySearchScope(ids);
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [graphFilters]);
 
     const handleSearchTrigger = async () => {
         const queryStr = inputValue.trim();
@@ -172,7 +189,8 @@ export function ExplorerSearch({ viewMode = "graph" }: { viewMode?: "graph" | "h
         setSearchResultsExactTitle(exactTitleHits);
         setSearchResultsFuzzyTitle(fuzzyTitleHits);
         setSearchResultsDescription(descHits);
-        applySearchScope([...new Set([...exactTitleHits, ...fuzzyTitleHits, ...descHits].map((n) => n.id))]);    };
+        applySearchScope([...new Set([...exactTitleHits, ...fuzzyTitleHits, ...descHits].map((n) => n.id))]);
+    };
 
     return (
         <div ref={wrapperRef} className="relative w-full max-w-lg pointer-events-auto mx-auto group">
