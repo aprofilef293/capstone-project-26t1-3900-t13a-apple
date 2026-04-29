@@ -1,13 +1,13 @@
 # OBO Explorer
 
-### 1. Abstract
+### 1.  Abstract
 
-> OBO Explorer is an interactive web based application for visualizing and storing implementation science data using ontology in the Open Biomedical Ontologies (OBO) and Ontology Web Language (OWL) format. Implementation science studies generate complex and interconnected data, such as implementation scenarios, barriers, facilitators, strategies, settings, and outcomes. Systematically extracting and structuring these data can improve understanding of how and why implementation strategies succeed or fail. However, this extraction process is time consuming, and the resulting data are often not preserved in formats that support reuse or secondary analysis. This project shows all of the terms in the ontology in a two dimensional space, where the edges between terms reflect their relationships. Therefore, our application aims to improve the interactivity of implementation science data and to demonstrate how ontology data formats can support interactive data visualisation and reuse.
+OBO Explorer is an interactive web based application for visualizing and storing implementation science data using ontology in the Open Biomedical Ontologies (OBO) and Ontology Web Language (OWL) format. Implementation science studies generate complex and interconnected data, such as implementation scenarios, barriers, facilitators, strategies, settings, and outcomes (Fontaine et al. 2025). Systematically extracting and structuring these data can improve understanding of how and why implementation strategies succeed or fail. However, this extraction process is time consuming, and the resulting data are often not preserved in formats that support reuse or secondary analysis (Chan et al. 2025). This project shows all of the terms in the ontology in a two dimensional space, where the edges between terms reflect their relationships. Therefore, our application aims to improve the interactivity of implementation science data and to demonstrate how ontology data formats can support interactive data visualisation and reuse.
 
 ## Table of Contents
 
 - [OBO Explorer](#obo-explorer)
-    - [1. Abstract](#1-abstract)
+    - [1.  Abstract](#1--abstract)
   - [Table of Contents](#table-of-contents)
   - [2. Introduction](#2-introduction)
   - [3. Installation Manual](#3-installation-manual)
@@ -24,6 +24,7 @@
   - [4. Contributing](#4-contributing)
   - [5. License](#5-license)
   - [6. Acknowledgements](#6-acknowledgements)
+  - [7. References](#7-references)
 
 ## 2. Introduction
 
@@ -64,7 +65,7 @@ docker compose down -v                          # Or to remove the volumes
 
 **Running Frontend and Backend Separately**
 
-To run frontend and backend as separate containers, it's similar to the steps previously. Open two terminals, and follow these commands:
+To run frontend and backend as separate containers, it's similar to the steps previously. Open two terminals, and start the backend container first, then the frontend, since the frontend depends on the backend.
 
 ```bash
 # Terminal 1: Backend, In project root
@@ -97,12 +98,12 @@ These environment variables are stored in the backend. Make sure you copy .env.e
 | Variable | Required | Default | Description |
 |---|---|---|---|
 | `EMBEDDING_HF_TOKEN` | No | (empty) | Hugging Face API token. Only required when `EMBEDDING_LOCAL=false`. |
-| `EMBEDDING_MODEL_NAME` | No | `aleynahukmet/bge-medical-small-en-v1.5` | Sentence Transformer model for embeddings. Local mode uses the medical fine-tune; for remote HF Inference use `BAAI/bge-small-en-v1.5` instead (the medical model is not hosted on HF Inference). |
-| `EMBEDDING_LOCAL` | No | `true` | Set to `false` to use remote Hugging Face Inference instead of local model. |
-| `EMBEDDING_ENABLED` | No | `true` | Set to `false` to disable semantic search. |
-| `GEMINI_API_KEY` | No | (empty) | Google AI Studio API key for query expansion. Leave empty to disable. |
-| `GEMINI_MODEL` | No | `gemini-3-flash-preview` | Gemini model ID used for query expansion. |
-| `GEMINI_ENABLED` | No | `true` | Set to `false` to disable Gemini query expansion even when a key is set. |
+| `EMBEDDING_MODEL_NAME` | Yes | `aleynahukmet/bge-medical-small-en-v1.5` | Sentence Transformer model for embeddings. Local mode uses the medical fine-tune; for remote HF Inference use `BAAI/bge-small-en-v1.5` instead (the medical model is not hosted on HF Inference). Any other Sentence Transformer compatible model can be switched to. |
+| `EMBEDDING_LOCAL` | Yes | `true` | Set to `false` to use remote Hugging Face Inference instead of local model. |
+| `EMBEDDING_ENABLED` | Yes | `true` | Set to `false` to disable semantic search. |
+| `GEMINI_API_KEY` | Yes | (empty) | Google AI Studio API key for query expansion. Leave empty to disable. |
+| `GEMINI_MODEL` | Yes | `gemini-3-flash-preview` | Gemini model ID used for query expansion. |
+| `GEMINI_ENABLED` | Yes | `true` | Set to `false` to disable Gemini query expansion even when a key is set. |
 | `MEMGRAPH_URI` | No | `bolt://localhost:7687` | Bolt protocol URI for the Memgraph database. |
 | `MEMGRAPH_USER` | No | `memgraph` | Memgraph authentication username. |
 | `MEMGRAPH_PASSWORD` | No | `memgraph` | Memgraph authentication password. |
@@ -129,6 +130,7 @@ To use Inference Providers, a HuggingFace API token is required:
 5. Set `EMBEDDING_ENABLED=true` in the `.env` file to enable the hosted embedding service.
 6. Set `EMBEDDING_LOCAL=false` in the `.env` file to use the HuggingFace Inference.
 7. Set `EMBEDDING_MODEL_NAME=BAAI/bge-small-en-v1.5` — the default medical model (`aleynahukmet/bge-medical-small-en-v1.5`) is not hosted on HF Inference.
+8. Optionally, switch to any other model supported by Sentence Transformers.
 
 ### 3.6 Gemini Query Expansion
 
@@ -177,10 +179,16 @@ This project is licensed under the [MIT License](backend/LICENSE).
 
 ## 6. Acknowledgements
 
-This project was developed by the COMP3900 T13A-APPLE team at UNSW Sydney.
+Project was developed by the 3900-T13A-APPLE team at UNSW Sydney.
 
 We would like to thank our supervisors for their guidance throughout the project:
 - **Dr Jeffery Chan**: Primary supervisor.
 - **Prof Natalie Taylor**: Co-supervisor.
 - **Dr Janna Hastings**: Co-supervisor.
 - **Dr Shuang Liang**: Co-supervisor.
+
+## 7. References
+
+Chan, J, Hastings, J, Tiernan, G, Paterson, J, Lovell, N, Betbeder-Matibet, L, Tung, PKM, Pink, S, Lanzeni, D, Donovan, T, Milat, A, Jorm, L, Mazariego, C, Zhang, C, Fontaine, G, Best, S, Kennedy, G, Michie, S, Lin, F, The ImpleMATE Network & Taylor, N 2025, 'Combining implementation and data sciences to accelerate evidence integration into healthcare – ImpleMATE', *F1000Research*, vol. 14, 1184, viewed 24 April 2026, <https://doi.org/10.12688/f1000research.169999.1>.
+
+Fontaine, G, Mooney, M, Porat-Dahlerbruch, J, Cahir, K, Ellen, M, Spinewine, A, Taylor, N, Laritz, R, Bourbeau-Allard, È & Grimshaw, JM 2025, 'Advancing the selection of implementation science theories, models, and frameworks: a scoping review and the development of the SELECT-IT meta-framework', *Implementation Science*, vol. 20, no. 1, 24, viewed 10 April 2026, <https://doi.org/10.1186/s13012-025-01436-5>.
